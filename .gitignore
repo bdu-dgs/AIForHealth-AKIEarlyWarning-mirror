@@ -1,6 +1,31 @@
-# Repository ignore rules for local MIMIC data, derived artifacts, models, notebook outputs, and environment files will be defined here.
+# Local data, generated artifacts, credentials, caches, and task-only context.
 AGENTS.md
 CONTEXT.md
 checkpoints/
-.env
 AIForHealth-AKIEarlyWarning-summary-site/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.tsbuildinfo
+node_modules/
+dashboard/web/dist/
+dist/
+build/
+*.spec
+AKIWorkbench/
+local_data/
+icu_pre_admission_data/
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+*.sqlite*
+*.log
+.wrangler/
+data/
+models/
+artifacts/*
+!artifacts/README.md
+MIMIC.docx
