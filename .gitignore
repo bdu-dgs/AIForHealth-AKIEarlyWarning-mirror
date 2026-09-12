@@ -1,1 +1,5 @@
 # Repository ignore rules for local MIMIC data, derived artifacts, models, notebook outputs, and environment files will be defined here.
+AGENTS.md
+CONTEXT.md
+checkpoints/
+.env
