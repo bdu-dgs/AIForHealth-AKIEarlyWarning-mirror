@@ -1,204 +1,180 @@
-# 网站开发与后端接入指南
+# Website Development and Backend Integration Guide
 
-本文只负责网站架构、后端接入流程和修改规范。安装与日常操作见 [README.md](README.md)；JSON 字段的规范性定义见 [DATA-CONTRACT.md](DATA-CONTRACT.md)；测试结果见 [VALIDATION.md](VALIDATION.md)。
+This document covers website architecture, backend integration, and change conventions. Installation and routine operation are in [README.md](README.md); normative JSON fields are in [DATA-CONTRACT.md](DATA-CONTRACT.md); test evidence is in [VALIDATION.md](VALIDATION.md).
 
-当前网站由一个本地 FastAPI 进程提供 React 页面、HTTP API、SSE 更新和 SQLite 数据层。当前没有 AKI 推理实现。
+The website currently uses one local FastAPI process for the React page, HTTP API, SSE updates, and SQLite data layer. An AKI inference implementation is not currently present.
 
-## 文档维护规则
+## Documentation maintenance
 
-同一事实只在一份主文档中完整维护，其他位置使用链接和一句必要摘要：
+Maintain each fact fully in one primary document and use links plus a short summary elsewhere:
 
-| 信息 | 唯一主文档 |
+| Information | Primary document |
 |---|---|
-| 研究目标、候选模型方案、notebook 和研究产物 | 仓库根 `README.md` |
-| 用户如何安装、启动和操作网站 | `dashboard/README.md` |
-| 模块职责、接入顺序、API 目录和开发流程 | 本文 |
-| JSON 字段、类型、时间等式、修订和指纹算法 | `DATA-CONTRACT.md` |
-| 某项检查何时运行、结果及不能证明什么 | `VALIDATION.md` |
-| 接手时旧总结与仓库的差异 | `HANDOFF-CHECK.md` |
+| Research goals, candidate models, notebooks, and research artifacts | Root `README.md` |
+| User installation, startup, and website operation | `dashboard/README.md` |
+| Module responsibilities, integration order, API inventory, and development workflow | This document |
+| JSON fields, types, time equations, revisions, and fingerprint algorithm | `DATA-CONTRACT.md` |
+| When checks run, their results, and what they cannot prove | `VALIDATION.md` |
+| Historical handoff differences | `HANDOFF-CHECK.md` |
 
-更新文档时遵循：
+When updating documentation:
 
-- 字段改变时修改 schema 和 DATA-CONTRACT；本文只更新接入流程。
-- 新测试结果只追加到 VALIDATION；README 不维护通过数量。
-- 页面操作变化只修改网站 README；本文只记录实现约定。
-- 研究候选方案变化只修改根 README；不能把候选方案写成网站硬限制。
-- 已完成事项从待办中移除；历史差异保留在 HANDOFF-CHECK。
-- “计划”“已实现”“已测试”“已交付”必须使用与证据一致的措辞。
+- Change the schema and data contract when fields change; update this document only for integration steps.
+- Append new test results to `VALIDATION.md`; do not maintain pass counts in the root README.
+- Put page-operation changes in the website README; record implementation conventions here.
+- Put research-candidate changes in the root README; do not present candidates as website constraints.
+- Remove completed items from TODO lists and preserve historical differences in `HANDOFF-CHECK.md`.
+- Use evidence-consistent wording for planned, implemented, tested, and delivered work.
 
-## 必须保持的系统边界
+## System boundaries
 
-- React 负责录入、查询和显示；模型计算通过版本化契约接入。
-- 所有观测按追加和修订保存，历史回放只读。
-- 测量时间、来源可用时间、本机接收时间、预测起点和生成时间不可混用。
-- 没有模型输出时保持空状态；不得生成演示、规则或随机风险。
-- 只有带完整 validation 元数据且 `locked=true` 的阈值才能产生 AKI 警告。
-- 本地实时工作流与 MIMIC CSV 预览相互隔离。
-- 不提交本地数据库、MIMIC 文件、照片、模型、患者级产物或凭据。
-- Windows 运行包只在用户明确要求后构建。
+- React handles entry, queries, and display; model computation enters through the versioned contract.
+- Store observations by append and revision; historical replay is read-only.
+- Do not conflate measurement time, source availability time, local receipt time, prediction origin time, or generation time.
+- Without model output, keep an empty state; do not generate demo, rule-based, or random risk.
+- Only thresholds with complete validation metadata and `locked=true` may produce an AKI alert.
+- Keep the local real-time workflow separate from the MIMIC CSV preview.
+- Do not commit local databases, MIMIC files, photos, models, patient-level artifacts, or credentials.
+- Build Windows packages only after an explicit request.
 
-## 模块分工
+## Module responsibilities
 
-| 位置 | 责任 |
+| Location | Responsibility |
 |---|---|
-| `api/schemas.py` | 输入、观测、预测、阈值、贡献和轨迹的机器校验 |
-| `api/storage.py` | SQLite 事务、修订、时间可见性、指纹和 outbox |
-| `api/watcher.py` | 监听 JSON、稳定文件检查、重试和错误摘要 |
-| `api/exchange.py` | JSON/ZIP 导入导出和分卷 |
-| `api/model_adapter.py` | 模型进程的接口边界；当前仅定义 Protocol |
-| `api/dataset_preview.py` | 只读 MIMIC 子集预览 |
-| `api/main.py` | HTTP、SSE、本地请求保护和编译后页面 |
-| `web/lib/api.ts` | 前端共享类型、请求、历史分页和告警判定 |
-| `web/components/clinical/` | 患者卡片、详情、录入、预览和曲线 |
-| `web/app/page.tsx` | 页面路由、总览状态和实时更新 |
+| `api/schemas.py` | Machine validation for input, observations, predictions, thresholds, drivers, and trajectories |
+| `api/storage.py` | SQLite transactions, revisions, time visibility, fingerprints, and outbox |
+| `api/watcher.py` | JSON watching, stable-file checks, retries, and error summaries |
+| `api/exchange.py` | JSON/ZIP import, export, and volume splitting |
+| `api/model_adapter.py` | Model-process boundary; currently defines only a Protocol |
+| `api/dataset_preview.py` | Read-only MIMIC subset preview |
+| `api/main.py` | HTTP, SSE, local request protection, and compiled page |
+| `web/lib/api.ts` | Shared frontend types, requests, historical pagination, and alert decisions |
+| `web/components/clinical/` | Patient cards, details, entry, preview, and charts |
+| `web/app/page.tsx` | Page routing, overview state, and live updates |
 
-新增功能应进入对应模块。模型预处理不能写进 React，模型进程不能直接修改 SQLite。
+New functionality should go into the corresponding module. Model preprocessing must not be placed in React, and the model process must not modify SQLite directly.
 
-## 后端输入通道
+## Backend input channels
 
-### 网页与 HTTP
+### Web and HTTP
 
-网页向 `POST /api/import` 提交 `input` 或 `prediction` 批次。`POST /api/import-file` 接受本站 JSON/ZIP。一个批次在同一 SQLite 事务中校验，失败时不会部分写入。
+The page submits `input` or `prediction` batches to `POST /api/import`. `POST /api/import-file` accepts this site's JSON/ZIP exchange files. A batch is validated in one SQLite transaction and is not partially written on failure.
 
-主要查询接口：
-
-| 接口 | 用途 |
+| Endpoint | Purpose |
 |---|---|
-| `GET /api/health` | 服务、修订号、监听错误、outbox 状态 |
-| `GET /api/settings` | 数据和交换目录、模型状态 |
-| `GET /api/patients` | 总览 |
-| `GET /api/patients/{id}/history` | 历史与回放 |
-| `GET /api/patients/{id}/snapshot` | 指定时刻和截止点的输入指纹 |
-| `GET /api/patients/{id}/current-predictions` | 当前模型结果 |
-| `GET /api/patients/{id}/quality` | 新鲜度和数据密度统计 |
-| `GET /api/events` | SSE 修订通知 |
-| `GET /api/datasets/icu-preview` | 只读 CSV 预览 |
-| `GET /api/patients/{id}/export-plan/{kind}` | 导出分卷计划 |
-| `GET /api/patients/{id}/export/{kind}` | 下载输入或预测分卷 |
+| `GET /api/health` | Service, revision, listener errors, and outbox status |
+| `GET /api/settings` | Data and exchange directories and model status |
+| `GET /api/patients` | Overview |
+| `GET /api/patients/{id}/history` | History and replay |
+| `GET /api/patients/{id}/snapshot` | Input fingerprint at a specified time and cutoff |
+| `GET /api/patients/{id}/current-predictions` | Current model results |
+| `GET /api/patients/{id}/quality` | Freshness and data-density statistics |
+| `GET /api/events` | SSE revision notifications |
+| `GET /api/datasets/icu-preview` | Read-only CSV preview |
+| `GET /api/patients/{id}/export-plan/{kind}` | Export volume plan |
+| `GET /api/patients/{id}/export/{kind}` | Download input or prediction volumes |
 
-运行中的 `/openapi.json` 是 HTTP 请求结构的机器可读入口。服务只监听回环地址并限制 Host，浏览器写请求还会检查 Origin。若未来允许其他电脑访问，必须先设计认证、权限、TLS、审计和部署方式，不能只改成监听 `0.0.0.0`。
+The running `/openapi.json` is the machine-readable source for HTTP request structures. The service listens only on the loopback address, restricts Host, and checks Origin for browser writes. Any future remote access requires authentication, authorization, TLS, auditing, and a deployment design; simply listening on `0.0.0.0` is not sufficient.
 
-### 外部程序写文件
+### External file writers
 
-外部程序可将完整 JSON 原子写入：
+External programs may atomically write complete JSON files to:
 
 ```text
 <data-root>/inbox/input/*.json
 <data-root>/inbox/prediction/*.json
 ```
 
-生产者必须：
+Producers must:
 
-1. 先写同目录临时文件，完成后原子重命名为 `.json`。
-2. 使用稳定 `record_id`；更正时递增 `revision`。
-3. 允许同一批次幂等重试。
-4. 保证顶层 `kind` 与目录一致。
-5. 单文件不超过 16 MB。
-6. 不通过删除数据库、`accepted` 或 outbox 来清理错误。
+1. Write a temporary file in the same directory, then atomically rename it to `.json`.
+2. Use stable `record_id` values and increment `revision` for corrections.
+3. Permit idempotent retries of the same batch.
+4. Keep top-level `kind` consistent with the directory.
+5. Keep each file at or below 16 MB.
+6. Never clean up errors by deleting the database, `accepted`, or outbox data.
 
-监听器由文件事件唤醒，并约每秒补扫；只处理稳定文件。失败文件不会替换有效记录，错误摘要从 health 接口读取。
+The watcher wakes on file events and rescans about once per second. It processes only stable files. Failed files do not replace valid records; read error summaries from the health endpoint.
 
-## 实时观测接入
+## Real-time observation integration
 
-字段和完整 JSON 示例只在 [DATA-CONTRACT.md](DATA-CONTRACT.md) 维护。接入程序还需遵守以下流程规则：
+Keep field definitions and complete JSON examples only in [DATA-CONTRACT.md](DATA-CONTRACT.md). Integration code must also follow these rules:
 
-- 患者必须先登记，观测的患者与 `encounter_id` 必须一致。
-- 当前一个 `patient_id` 只对应一个住院实例；再次住院需新的唯一条目标识，正式一人多次住院尚未实现。
-- 实时时间使用带时区 ISO 8601，并在存储层标准化为 UTC。
-- 缺少来源 `available_at` 时，后端使用首次接收时刻，确保补录数据不会出现在更早的回放中。
-- 变量代码、单位、临床范围、换算、插值和缺失处理由采集与模型预处理共同定义；当前后端不替代这些规则。
+- Register the patient first; patient and `encounter_id` must match.
+- One `patient_id` currently maps to one encounter; a later admission needs a new unique identifier.
+- Use timezone-aware ISO 8601 timestamps and normalize them to UTC in storage.
+- If source `available_at` is missing, use first-receipt time so late-arriving data cannot appear in earlier replay.
+- The collector and model preprocessing jointly define variable codes, units, ranges, conversions, interpolation, and missingness. The backend does not replace these rules.
 
-成功输入后，事务写入 SQLite 和 durable outbox。outbox 再生成 `accepted/input` 归档及最新的患者模型请求。文件写入失败时 outbox 保留并重试。
+Successful input writes SQLite and a durable outbox. The outbox creates an `accepted/input` archive and the latest model request. Failed file writes remain in the outbox and are retried.
 
-## 模型工作进程
+## Model worker
 
-输入变化后，后端更新：
+When input changes, the backend updates:
 
 ```text
 <data-root>/requests/{patient_id}.json
 ```
 
-请求文件表示“等待处理”，包含患者、住院、输入版本、最新指纹，以及历史和输入导出接口位置。模型工作进程按以下流程接入：
+The request means “pending processing” and includes patient and encounter IDs, input version, the latest fingerprint, and locations for history and input export. A model worker should:
 
-1. 监视或轮询 requests。
-2. 按患者合并任务，只保留最新输入版本。
-3. 读取完整可见历史并选择 `data_cutoff`、`origin_time` 和 horizon。
-4. 调用 snapshot 接口取得该截止点的 `input_fingerprint`。
-5. 执行预处理、推理、校准和解释。
-6. 写出前再次检查请求版本，丢弃被新输入取代的任务。
-7. 原子写入 prediction inbox，或调用 import API。
-8. 分别记录排队、读取、预处理、推理、解释、写入和网页刷新耗时。
+1. Watch or poll `requests`.
+2. Merge tasks by patient and retain only the newest input version.
+3. Read visible history and select `data_cutoff`, `origin_time`, and horizon.
+4. Call the snapshot endpoint for the fingerprint at that cutoff.
+5. Run preprocessing, inference, calibration, and explanation.
+6. Recheck the request version before writing and discard superseded work.
+7. Atomically write the prediction inbox or call the import API.
+8. Record queue, read, preprocessing, inference, explanation, write, and page-refresh latency separately.
 
-不要使用请求文件中的最新指纹代表较早的截止点。历史截止点必须调用：
+Do not use the latest request fingerprint for an earlier cutoff. Historical cutoffs must call:
 
 ```text
-GET /api/patients/{id}/snapshot?as_of=<生成时已可用的时刻>&cutoff=<数据截止时刻>
+GET /api/patients/{id}/snapshot?as_of=<time available at generation>&cutoff=<data cutoff>
 ```
 
-后端会重新计算指纹并拒绝不匹配的预测。新观测到达后，网页会把仍引用旧输入的结果标为待更新。
+The backend recomputes the fingerprint and rejects mismatched predictions. When a new observation arrives, the page marks results that reference old input as stale.
 
-结果的字段、时间约束和可选解释项以数据契约为准。前端按模型、版本、目标和实际 horizon 分组，不限制半小时、一小时或 8/12/24 小时。模型进程应取消过期任务，避免旧队列拖延当前结果。
+The data contract defines result fields, time constraints, and optional explanations. The frontend groups by model, version, target, and actual horizon; it does not impose half-hour, one-hour, or 8/12/24-hour limits. Workers should cancel expired tasks so old queues do not delay current results.
 
-## 历史回放
+## Historical replay
 
-history 接口使用：
+The history endpoint uses `start/end` for event-time range, `as_of` for the information-availability boundary, `kind` for observation or prediction, and `offset/limit` for pagination. Storage first selects the highest revision visible at `as_of`, then filters by event time, preventing superseded versions from reappearing. Queries and replay do not trigger model computation.
 
-- `start/end`：事件时间范围。
-- `as_of`：当时已经可用的信息边界。
-- `kind`：observation 或 prediction。
-- `offset/limit`：分页。
+The frontend loads at most 24,000 records per history type with bounded caching. Larger ranges should use pagination, a shorter window, or export. Chart downsampling is display-only and must not be used as model input or export data.
 
-存储层先选择 `as_of` 时已经可见的最高修订，再按事件时间过滤，避免修订后旧版本重新出现。查询和滑动回放不触发模型计算。
+## Frontend conventions
 
-前端每类历史最多加载 24,000 条，缓存有界；更大范围应分页、缩短窗口或导出。图表降采样只用于显示，不可作为模型输入或导出数据。
+Use `web/lib/api.ts` for `/api` requests. Update TypeScript types when backend schemas change. SSE sends only the global revision; it does not send patient data. The page queries again after receiving a new revision.
 
-## 前端约定
+Keep one horizontal card per patient: identity and reminders on the left, observation curves in the middle, and prediction risk or trajectories on the right. Risk plots use red above and green below. `data_confidence` may affect visual prominence but not the probability. Distinguish missing thresholds, unlocked thresholds, changed input, and ended windows.
 
-前端统一通过 `web/lib/api.ts` 请求 `/api`。后端 schema 改动时同步 TypeScript 类型。SSE 只传全局 revision，不传患者数据；页面收到新版本后重新查询。
+## CSV preview boundaries
 
-患者总览保持一位患者一张横向卡片：
+Operation and current field mapping are in [README.md](README.md). Implementation must preserve three-ID matching, separate stays for the same patient, original timezone-free source strings, relative hours within one ICU stay, read-only behavior, and small-subset loading. Full MIMIC data requires independent offline extraction and pagination. Error responses must not echo source rows, raw values, or full local paths.
 
-- 左侧：图片或姓名替代图、患者信息、提醒。
-- 中间：观测曲线。
-- 右侧：预测风险或轨迹。
-- 点击卡片：进入详情，按需加载更长历史。
+## Changing the data contract
 
-风险图上红下绿；显眼程度可参考模型提供的 `data_confidence`，概率数值保持原值。缺失阈值、阈值未锁定、输入变化和窗口结束必须显示不同状态。
+1. Define clinical meaning, time, units, keys, revisions, and compatibility.
+2. Update `api/schemas.py`.
+3. Update storage, HTTP, exchange, and model-adapter layers.
+4. Update `web/lib/api.ts` and consuming components.
+5. Add contract tests with purely synthetic data.
+6. Update [DATA-CONTRACT.md](DATA-CONTRACT.md).
+7. Build the page and complete HTTP and browser checks.
+8. Append actual results to [VALIDATION.md](VALIDATION.md).
 
-## CSV 预览的开发边界
+The current format is `schema_version: 1`; unknown fields are rejected. Do not loosen the strict schema to hide producer/consumer mismatches.
 
-操作方法和当前字段映射见 [README.md](README.md)。实现上必须保持：
+## Development verification
 
-- 三个 ID 联合匹配，同患者不同住院不合并。
-- 无时区源时间原样显示，只在同一 ICU stay 内计算相对小时。
-- 不写 SQLite，不生成患者登记、风险、阈值或可信度。
-- 每次请求重新读取小型子集；完整 MIMIC 数据应走独立离线提取和分页产物。
-- 错误响应不回显源行、原始值或本地完整路径。
-
-## 修改数据契约
-
-修改契约时依次完成：
-
-1. 明确字段临床含义、时间、单位、主键、修订和兼容性。
-2. 修改 `api/schemas.py`。
-3. 修改 storage、HTTP、交换和模型适配层。
-4. 更新 `web/lib/api.ts` 和使用字段的组件。
-5. 使用纯合成数据增加契约测试。
-6. 更新 [DATA-CONTRACT.md](DATA-CONTRACT.md)。
-7. 构建页面并完成 HTTP 与浏览器检查。
-8. 把实际结果追加到 [VALIDATION.md](VALIDATION.md)。
-
-当前格式为 `schema_version: 1`，未知字段会被拒绝。删除、重命名、改变单位或时间含义通常需要新 schema 版本和迁移方案。不要放宽 strict schema 来掩盖生产者与消费者不一致。
-
-## 开发验证
-
-后端：
+Backend:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest dashboard/tests -q
 ```
 
-前端：
+Frontend:
 
 ```powershell
 cd dashboard\web
@@ -206,17 +182,17 @@ pnpm test
 pnpm build
 ```
 
-涉及相应功能时还要检查事务回滚、幂等修订、文件事件、SSE、`as_of`、旧预测状态、空模型状态、实际路由和浏览器交互。测试只能证明覆盖的代码路径，验证结论统一记录在 VALIDATION，不在本文维护通过数量。
+When relevant, also check transaction rollback, idempotent revisions, file events, SSE, `as_of`, stale predictions, empty model state, actual routes, and browser interactions. Tests prove only the covered code paths; record validation conclusions in `VALIDATION.md`.
 
-## 后续开发顺序
+## Development order
 
-1. 核对获准建模数据、变量字典、队列和结局定义。
-2. 建立独立的 MIMIC 离线提取与训练数据流程。
-3. 比较不同数据截止时间的预测稳定性。
-4. 在 validation set 选择并锁定阈值，关联稳定性结果。
-5. 实现遵守现有契约的模型工作进程。
-6. 根据实际数据密度定义并验证综合可信度。
-7. 测量持续负载、模型延迟、故障恢复和医生使用流程。
-8. 用户明确要求后再评估 Windows 运行包。
+1. Confirm approved modeling data, variable dictionary, cohort, and outcome definitions.
+2. Build an independent MIMIC offline extraction and training-data workflow.
+3. Compare prediction stability across data cutoffs.
+4. Select and lock thresholds on the validation set and link stability results.
+5. Implement a model worker that follows the existing contract.
+6. Define and validate composite confidence from actual data density.
+7. Measure sustained load, model latency, failure recovery, and physician workflow.
+8. Evaluate a Windows package only after an explicit request.
 
-若 GitHub 与本地冲突，应列出具体文件和差异，保留本地成果，再决定合并方式。不得用旧总结覆盖当前源码，也不得把计划或接口占位写成已实现。
+When GitHub and local work conflict, list the exact files and differences, preserve local work, and then choose the merge strategy. Do not let an old summary overwrite current source, and do not describe plans or placeholder interfaces as implemented functionality.

@@ -2,7 +2,7 @@
 
 A small, local-only CSV/TSV cleaning application with a Python backend and a browser frontend. Load a file, configure filtering and cleaning rules, preview the result, and download the cleaned CSV.
 
-The interface opens in **English** by default. Click **中文** or **English** in the page header to switch languages without losing your file, rules, or results. Reloading the page resets the interface language to English. Uploaded column names, cell values, filenames, and user-entered filter values are never translated.
+The interface opens in **English** by default. Click **Simplified Chinese** or **English** in the page header to switch languages without losing your file, rules, or results. Reloading the page resets the interface language to English. Uploaded column names, cell values, filenames, and user-entered filter values are never translated.
 
 ## Scope
 

@@ -1,30 +1,30 @@
-# 交接核对记录
+# Handoff Reconciliation Record
 
-本文只保留接手时的历史事实和差异，不作为当前运行、接口或验证说明。当前操作见 [README.md](README.md)，开发接入见 [DEVELOPMENT.md](DEVELOPMENT.md)，当前证据见 [VALIDATION.md](VALIDATION.md)。
+This document preserves historical facts and differences identified during handoff. It is not the current runtime, interface, or validation guide. Current operation is described in [README.md](README.md), development integration in [DEVELOPMENT.md](DEVELOPMENT.md), and current evidence in [VALIDATION.md](VALIDATION.md).
 
-## 原总结与实际仓库
+## Original summary and actual repository
 
-原总结记录 `main=860b68b377b3408b771310601de96c6a7368f34b`，并称仓库只有初始 README。实际接手时 main 已为 `fbee3beddbc550cb9a2cc35b5740a1253d897ff6`。
+The original summary recorded `main=860b68b377b3408b771310601de96c6a7368f34b` and stated that the repository contained only the initial README. At handoff, `main` was already `fbee3beddbc550cb9a2cc35b5740a1253d897ff6`.
 
-该版本已有研究 README、三份 pipeline notebook、配置和产物说明，以及仅含 Streamlit 入口注释的 `dashboard/app.py`。notebook 代码格为空且没有执行输出，因此当时仍没有模型或可运行网站。上述远程内容已保留。
+That version already contained the research README, three pipeline notebooks, configuration and artifact notes, and `dashboard/app.py` containing only comments for a Streamlit entry point. Notebook code cells were empty and had no execution output, so there was still no model or runnable website at that time. The remote content was preserved.
 
-## 本地实现与旧总结的差异
+## Differences between the local implementation and the old summary
 
-用户确认技术选择和网站搭建后，本地工作区新增 React/TypeScript、FastAPI、SQLite 网站、Windows 源码安装和启动脚本。原研究 README 中的小时快照及 8/12/24 小时是研究候选设计，不限制网页输入频率和模型 horizon。
+After the user confirmed the technical choices and website build, the local workspace added a React/TypeScript, FastAPI, and SQLite website, Windows source installation and startup scripts. The hourly snapshots and 8/12/24-hour horizons in the original research README are candidate research designs; they do not limit web input frequency or model horizons.
 
-总览采用一位患者一张横向卡片，卡内并列观测与预测；详情支持更长历史和回放。后续又增加了与实时数据库隔离的 MIMIC CSV 只读预览。
+The overview uses one horizontal card per patient, with observations and predictions side by side. Details support longer history and replay. A read-only MIMIC CSV preview, isolated from the real-time database, was added later.
 
-这些实现及验证状态以当前源码和 [VALIDATION.md](VALIDATION.md) 为准。它们尚未提交或推送时，远程 GitHub 不包含本地成果。
+These implementation and validation states are defined by the current source and [VALIDATION.md](VALIDATION.md). Until they are committed and pushed, the remote GitHub repository does not contain the local work.
 
-## 仍适用的交接约束
+## Handoff constraints that still apply
 
-- 比较不同数据截止时间的预测稳定性。
-- 在 validation set 选择并锁定 warning 阈值，并与稳定性结果结合。
-- 网页随新数据更新风险、贡献因素和趋势。
-- 最终目标包含 Windows 完全本地、无需云服务器并可从 GitHub 获取源码运行。
-- 模型、综合可信度、具体安装打包和跨电脑机制仍需根据数据及用户决定继续落实。
-- 未经明确要求，不构建 Windows 便携包、EXE 或安装器。
-- GitHub 与本地冲突时，列出具体冲突并保留本地成果。
-- 不把方案、占位接口、读取成功或演示结果写成已实现模型或临床验证。
+- Compare prediction stability across different data cutoffs.
+- Select and lock warning thresholds on the validation set, incorporating stability results.
+- Update risk, drivers, and trends as new data arrives.
+- The final goal includes a fully local Windows workflow that requires no cloud server and can run from source obtained from GitHub.
+- The model, composite confidence, packaging, and cross-computer mechanisms still require decisions based on data and user requirements.
+- Do not build a Windows portable package, EXE, or installer without an explicit request.
+- When GitHub and local work conflict, list the specific conflicts and preserve local work.
+- Do not describe a plan, placeholder interface, successful read, or demo result as an implemented model or clinical validation.
 
-本记录不包含凭据、密钥或患者原始数据。
+This record contains no credentials, secrets, or raw patient data.

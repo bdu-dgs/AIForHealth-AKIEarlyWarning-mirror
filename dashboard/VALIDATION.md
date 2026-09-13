@@ -1,66 +1,66 @@
-# 验证记录
+# Validation Record
 
-本文只记录实际执行的检查、环境、结果和适用边界。运行方法与开发验收清单见 [DEVELOPMENT.md](DEVELOPMENT.md)，字段规则见 [DATA-CONTRACT.md](DATA-CONTRACT.md)。
+This document records checks actually executed, the environment, results, and applicable boundaries. Run methods and the development acceptance checklist are in [DEVELOPMENT.md](DEVELOPMENT.md); field rules are in [DATA-CONTRACT.md](DATA-CONTRACT.md).
 
-## 当前验证摘要
+## Current validation summary
 
-| 日期 | 检查 | 结果 | 覆盖范围 |
+| Date | Check | Result | Coverage |
 |---|---|---|---|
-| 2026-09-10 | 后端自动化 | 19 passed | 追加、修订、事务、回放、指纹、文件监听、分页、分卷、照片、请求校验 |
-| 2026-09-10 | 前端契约 | 3 passed | 阈值缺失/未锁定、比较符、旧输入、过期窗口、模型版本与 horizon |
-| 2026-09-10 | 干净源码安装与 HTTP | 通过 | 新副本安装、构建、单进程页面/API、静态资源 |
-| 2026-09-10 | 文件事件与 SSE | 通过 | 合成观测文件触发导入、修订通知和查询 |
-| 2026-09-12 | 后端自动化 | 25 passed，2 warnings | 原 19 项加 6 项 CSV 只读预览测试 |
-| 2026-09-12 | 前端测试与生产构建 | 3 passed；构建通过 | Node 测试、TypeScript、Vite 生产资源 |
-| 2026-09-12 | 本地 HTTP 与浏览器 | 通过 | health、CSV API、dataset 路由、横向卡片、切换、明细、分页、搜索 |
-| 2026-09-12 | Git 忽略与依赖重建 | 通过 | 数据集被忽略；改名后的依赖以当前目录实体文件重建 |
+| 2026-09-10 | Backend automation | 19 passed | Append, revision, transactions, replay, fingerprints, file watching, pagination, volumes, photos, and request validation |
+| 2026-09-10 | Frontend contract | 3 passed | Missing/unlocked thresholds, comparison operators, stale input, expired windows, model versions, and horizons |
+| 2026-09-10 | Clean source installation and HTTP | Passed | Fresh-copy installation, build, single-process page/API, and static assets |
+| 2026-09-10 | File events and SSE | Passed | Synthetic observation file import, revision notification, and query |
+| 2026-09-12 | Backend automation | 25 passed, 2 warnings | Original 19 checks plus 6 CSV read-only preview tests |
+| 2026-09-12 | Frontend tests and production build | 3 passed; build passed | Node tests, TypeScript, and Vite production assets |
+| 2026-09-12 | Local HTTP and browser | Passed | Health, CSV API, dataset route, horizontal cards, switching, details, pagination, and search |
+| 2026-09-12 | Git ignore and dependency rebuild | Passed | Dataset ignored; renamed dependencies rebuilt from files in the current directory |
 
-2026-09-12 后端测试有两条依赖弃用提示，来自 Starlette TestClient 对 httpx 和 AnyIO BlockingPortal 别名的未来兼容性提示；测试本身通过。
+The two backend warnings on 2026-09-12 were future-compatibility deprecation notices from Starlette TestClient for httpx and AnyIO BlockingPortal aliases; the tests themselves passed.
 
-## 容量相关测试证据
+## Capacity-related test evidence
 
-已使用纯合成数据验证：
+Synthetic data was used to verify:
 
-- 100 位患者。
-- 8 个并发提交线程的一次突发写入。
-- 10,001 条历史记录的分页和交换。
-- 25,001 条记录的分卷恢复。
-- CSV 预览的联合 ID 匹配、同患者不同住院隔离、变量单位、无时区相对时间、异常数据、缺失文件、只读数据库和文件更新。
+- 100 patients.
+- One burst of writes from 8 concurrent submission threads.
+- Pagination and exchange of 10,001 historical records.
+- Recovery of 25,001 records split into volumes.
+- CSV preview ID matching, isolation of separate stays for the same patient, variable units, timezone-free relative time, malformed data, missing files, read-only database behavior, and file updates.
 
-这些用例证明相应有限条件下的功能行为，不代表 100 人每分钟持续运行的长时间性能。
+These cases demonstrate behavior under the stated limited conditions. They do not represent sustained long-running performance for 100 people per minute.
 
-## 本地 CSV 子集核对
+## Local CSV subset check
 
-2026-09-12 对项目内用户提供的子集只做聚合核对，没有把源行复制到测试或报告：
+On 2026-09-12, only aggregate checks were performed on the user-provided subset in the project. Source rows were not copied into tests or reports:
 
-- 100 条入选 ICU 记录。
-- 17 条 ICU 记录包含当前选定变量。
-- 31 条心率、23 条血氧，共 54 个显示点。
-- 三个 ID 联合匹配后，选中记录无错配或解析失败。
-- 54 个点的 CHARTTIME 均早于对应 INTIME。
-- 日期为脱敏后的 2100 年，显示时保留源时间。
+- 100 selected ICU records.
+- 17 ICU records containing the currently selected variables.
+- 31 heart-rate points and 23 oxygen-saturation points, for 54 displayed points total.
+- No mismatches or parse failures among selected records after matching the three IDs.
+- All 54 `CHARTTIME` values preceded the corresponding `INTIME`.
+- Dates were de-identified 2100 dates and were displayed unchanged.
 
-这只是文件读取与匹配验证，不是 MIMIC 队列、变量、标签或模型结果验证。
+This verifies file reading and matching only. It is not validation of the MIMIC cohort, variables, labels, or model results.
 
-## 尚未实现或尚未验证
+## Not implemented or not yet validated
 
-- AKI 模型训练、推理、校准和解释工作进程。
-- 不同数据截止时间的稳定性实验。
-- validation set 阈值选择和锁定。
-- 综合数据可信度公式。
-- 实际医院系统集成、远程多用户访问和鉴权。
-- 多小时持续负载、GPU 推理及端到端延迟。
-- 另一台物理电脑上的源码安装复验。
-- Windows EXE、ZIP 运行包、安装器或便携包。
-- 临床有效性、安全性和医生真实工作流验收。
+- AKI model training, inference, calibration, and explanation worker.
+- Stability experiments across different data cutoffs.
+- Validation-set threshold selection and locking.
+- Composite data-confidence formula.
+- Actual hospital-system integration, remote multi-user access, and authentication.
+- Sustained multi-hour load, GPU inference, and end-to-end latency.
+- Source installation recheck on another physical computer.
+- Windows EXE, ZIP package, installer, or portable package.
+- Clinical effectiveness, safety, and physician workflow acceptance.
 
-当前网页交互检查使用本地数据集预览，不能替代完整录入、模型输出、故障恢复和临床使用验收。
+Current browser interaction checks use the local dataset preview. They cannot replace full input, model-output, failure-recovery, and clinical-use acceptance.
 
-## 证据边界
+## Evidence boundaries
 
-- 构建通过不等于每个页面流程已完成。
-- HTTP 200 不等于数据语义正确。
-- 本地吞吐测试不等于长期负载能力。
-- 文件可读取不等于研究队列和标签正确。
-- 页面能显示风险字段不等于模型已接入或有效。
-- 自动化测试全部使用合成数据；患者级原始数据、凭据和密钥不写入本文件。
+- A successful build does not mean every page flow is complete.
+- HTTP 200 does not mean that data semantics are correct.
+- Local throughput testing does not mean long-term load capacity.
+- A readable file does not mean that the research cohort and labels are correct.
+- A page displaying risk fields does not mean that a model is integrated or effective.
+- All automated tests use synthetic data; patient-level raw data, credentials, and secrets are not written to this file.

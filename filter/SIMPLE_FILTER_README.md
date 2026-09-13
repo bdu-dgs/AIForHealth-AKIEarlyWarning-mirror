@@ -1,37 +1,39 @@
-# 本地 CSV 清洗工具
+# Local CSV Cleaning Tool
 
-双击 `start_filter.bat`。浏览器会自动打开本机地址；控制台按 Ctrl+C 关闭服务。
-原有 `start.bat`、AKI 后端和前端不变。新版位于 `simple_app/`，Python 3.11+，只使用标准库，无需下载依赖。
+Double-click `start_filter.bat`. The browser opens the local address automatically; press Ctrl+C in the console to stop the service.
+The existing `start.bat`, AKI backend, and frontend are unchanged. The new version is in `simple_app/`, uses Python 3.11+, and requires only the standard library.
 
-1. 选择 CSV/TSV 文件，设置编码和分隔符，点击“上传到本机”。
-2. 添加按列筛选条件，可选择全部满足或任意满足。
-3. 设置输出列、空值删行列、去重键及固定填充值。
-4. 点击 **Porcess**，浏览前 100 行及处理统计。
-5. 下载完整 UTF-8 BOM CSV。请在浏览器设置中启用“下载前询问保存位置”，选择不受云盘同步的本地目录。
+1. Select a CSV/TSV file, set its encoding and delimiter, and click “Upload locally”.
+2. Add column filters and choose whether all or any conditions must match.
+3. Configure output columns, missing-value row removal, a deduplication key, and a constant fill value.
+4. Click **Porcess**, then review the first 100 rows and processing statistics.
+5. Download the complete UTF-8 BOM CSV. Enable “Ask where to save each file” in the browser and choose a local directory outside cloud synchronization.
 
-## 处理语义
+## Processing semantics
 
-- 字段作为文本读取，保留患者编号前导零。文本比较区分大小写；数值比较无法解析或遇空值时不匹配。
-- 空字符串始终为空；可设置额外标记，每行一个。勾选去空格时先对所有字段去首尾空格。
-- 顺序：去空格、条件筛选、空值删行、按选定键去重（保留第一条）、固定值填补、输出列选择。
-- 多个去重键按组合去重；不同空值标记在去重键中视作同一个空值。
-- 多个空值删行列中任一列为空就删除该行。填补不会挽回前面已删除的行。
-- 每次处理从原始上传内容开始。不执行自动单位换算、异常值判断、AKI 标签或统计填补，避免未经确认改变研究含义。
-- 支持最多 50 MB、200,000 行、1000 列；适合已抽取的小中型表格，不适合直接处理完整 CHARTEVENTS。
-- 原始文件不被修改。输出保留原有文本内容，包括以公式字符开头的文本；如使用 Excel，请按文本方式导入不可信来源的 CSV。
+- Fields are read as text, preserving leading zeros in patient identifiers. Text comparisons are case-sensitive; numeric comparisons do not match unparsable values or missing values.
+- Empty strings are always missing. Additional markers can be configured, one per line. When trimming is enabled, leading and trailing whitespace is removed from all fields first.
+- Order: trim whitespace, filter conditions, remove rows with missing values, deduplicate by the selected key while keeping the first row, fill constants, and select output columns.
+- Multiple deduplication keys are combined; different missing markers represent the same missing key value.
+- A row is removed when any selected missing-value column is empty. Filling cannot restore rows removed earlier.
+- Each run starts from the original upload. The tool does not automatically convert units, detect outliers, assign AKI labels, or impute statistics, avoiding unconfirmed changes to research meaning.
+- Supports up to 50 MB, 200,000 rows, and 1,000 columns. It is intended for small or medium extracted tables, not the complete `CHARTEVENTS` table.
+- The source file is not modified. Output preserves original text, including text beginning with formula characters; when using Excel, import untrusted CSV files as text.
 
-## 本地数据边界
+## Local data boundary
 
-后端仅绑定 127.0.0.1，使用随机可用端口。前端脚本、样式全在本机，无 CDN、分析统计或外部 API。检查 Host、Origin 和会话令牌；浏览器的资源策略只允许同源资源。后端没有上传外网的代码。
+The backend binds only to `127.0.0.1` and uses an automatically selected available port. Frontend scripts and styles are local, with no CDN, analytics, or external API. Host, Origin, and session tokens are checked; the browser resource policy allows same-origin resources only. The backend contains no code for uploading data externally.
 
-程序不把上传内容或处理结果写入磁盘，不记录请求内容。数据保留于 Python 内存，清空会话或关闭程序后释放；这不等同于操作系统级安全擦除。单用户工具，多浏览器标签共享一个会话。
+The program does not write uploaded content or processing results to disk or log request contents. Data stays in Python memory and is released when the session is cleared or the program closes; this is not an operating-system-level secure-erasure guarantee. This is a single-user tool, and multiple browser tabs share one session.
 
-程序文件位于用户指定的 OneDrive 目录；OneDrive 是独立同步软件，程序无法控制其行为。原始数据及用户下载的结果应位于未同步的本地目录。浏览器下载位置由浏览器设置决定。
+The program files may be located in a user-selected OneDrive directory; OneDrive is separate synchronization software whose behavior the program cannot control. Keep source data and downloaded results in a local directory that is not synchronized. The browser controls the download location.
 
-## 文件
+## Files
 
-- `simple_app/server.py`：本地 HTTP 后端和清洗逻辑。
-- `simple_app/index.html`、`app.js`、`style.css`：浏览器前端。
-- `simple_app/test_filter.py`：使用虚构数据的清洗与 HTTP 测试。
+- `simple_app/server.py`: local HTTP backend and cleaning logic.
+- `simple_app/index.html`, `app.js`, `style.css`: browser frontend.
+- `simple_app/test_filter.py`: synthetic-data cleaning and HTTP tests.
 
-运行测试：`.venv\Scripts\python.exe -B -m unittest discover -s simple_app -p test_filter.py -v`
+Run tests:
+
+`.venv\Scripts\python.exe -B -m unittest discover -s simple_app -p test_filter.py -v`

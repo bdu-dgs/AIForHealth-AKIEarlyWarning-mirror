@@ -19,11 +19,12 @@ The sections below describe the planned research pipeline. They are study-design
 
 ```text
 Local MIMIC-III tables
--> adult, first-ICU-stay cohort and exclusions
+-> validated identifiers and deterministic one-stay-per-patient cohort
+-> patient-level development split manifest (before snapshots)
 -> timestamped KDIGO AKI onset
 -> hourly prediction snapshots
 -> leakage-safe multimodal features
--> patient-level train / validation / test split
+-> fixed train / validation / test assignment inherited by every snapshot
 -> pooled LR, RF, and boosted-tree model families
 -> 6h / 12h / 24h / 48h AKI risks
 -> validation-selected model, monitoring window, threshold, and alert policy
@@ -33,7 +34,8 @@ Local MIMIC-III tables
 
 ## Prediction design
 
-- Population: adults, first ICU stay per patient, sufficient follow-up, and prespecified ESKD/dialysis exclusions.
+- Population: adults, one deterministically selected eligible ICU stay per patient, sufficient follow-up, and prespecified ESKD/dialysis exclusions.
+- Identity: `subject_id` is the source patient key; `hadm_id` is the hospital admission key; `icustay_id` is the ICU-stay key. A local `patient_id` surrogate may be added for modeling/export, but it must map one-to-one to `subject_id` within a dataset version.
 - Sampling: one training snapshot per ICU hour during the eligible monitoring period.
 - Prediction targets: AKI within 6, 12, 24, and 48 hours; the operational horizon is selected on validation data.
 - Reporting checkpoints: 6, 12, 24, and 48 hours after ICU admission, without training separate checkpoint-specific models.
@@ -55,9 +57,15 @@ label_window = (snapshot_time, snapshot_time + horizon]
 - Stop generating snapshots at AKI onset, ICU discharge, or the configured monitoring endpoint.
 - Post-snapshot urine may define a future outcome but must never enter the current feature vector.
 - Overlapping hourly labels are expected; all snapshots from one patient must remain in one split.
+- The unique-stay selection and patient split manifest are frozen before snapshots, labels, or features are generated. A later table join must never re-select a stay using outcome information.
 - Imputation, scaling, feature selection, weighting, calibration, and tuning must not use test information.
 
 ## Data split and model selection
+
+- First select exactly one eligible ICU stay per patient using a prespecified rule based only on cohort eligibility and source chronology (for example, the earliest eligible ICU stay). Do not choose a stay using AKI outcome, feature completeness, or model performance.
+- Create one reproducible row per patient in the split manifest: `patient_id`, source `subject_id`, selected `icustay_id`, and `split`.
+- Generate snapshots, labels, and features only from the selected stay. Every row derived from that patient inherits the manifest assignment.
+- Never randomly split snapshot rows or independently split `hadm_id`/`icustay_id` rows after snapshot generation.
 
 - Train: fit preprocessing and models; use patient-grouped internal cross-validation for hyperparameters when needed.
 - Validation: compare model families, inspect calibration and predictor stability, select the monitoring window, horizon, threshold, and alert policy.
@@ -79,7 +87,7 @@ After the classification MVP, add prediction of future serum creatinine and urin
 
 | Notebook | Owner responsibility |
 |---|---|
-| `pipeline/01_dataset_construction.ipynb` | Source validation, cohort, KDIGO timelines, hourly snapshots, multi-horizon labels, features, and patient splits |
+| `pipeline/01_dataset_construction.ipynb` | Source validation, ID crosswalk, one-stay-per-patient cohort, pre-snapshot patient splits, KDIGO timelines, hourly snapshots, multi-horizon labels, and features |
 | `pipeline/02_ml_pipeline.ipynb` | Preprocessing, patient weighting, three pooled model-family pipelines, calibration, risk outputs, and trajectory extension |
 | `pipeline/03_evaluation_and_testing.ipynb` | Leakage tests, validation decisions, locked test evaluation, patient/event metrics, SHAP, robustness, and dashboard exports |
 
@@ -89,9 +97,9 @@ Every numbered Part in each notebook is followed by an empty code cell for imple
 
 | Producer | Local output | Unit of observation |
 |---|---|---|
-| Dataset notebook | `artifacts/datasets/cohort.parquet` | One ICU stay |
+| Dataset notebook | `artifacts/datasets/cohort.parquet` | One selected ICU stay per patient, with source IDs and dataset-local patient ID |
 | Dataset notebook | `artifacts/datasets/snapshot_dataset.parquet` | One ICU stay and hourly snapshot, with horizon-specific labels and eligibility flags |
-| Dataset notebook | `artifacts/splits/patient_split.parquet` | One patient |
+| Dataset notebook | `artifacts/splits/patient_split.parquet` | One patient and its selected ICU stay, assigned before snapshots |
 | ML notebook | `artifacts/models/<run_id>/` | One fitted model-family pipeline |
 | ML notebook | `artifacts/predictions/<run_id>.parquet` | One model, ICU stay, snapshot, and horizon |
 | Evaluation notebook | `artifacts/reports/<run_id>/` | Aggregate metrics and figures |
