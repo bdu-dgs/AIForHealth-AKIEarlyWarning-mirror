@@ -1,6 +1,19 @@
 # AI for Health - Dynamic AKI Early Warning
 
-This project builds a reproducible, local-only dynamic acute kidney injury (AKI) early-warning pipeline using MIMIC-III v1.4. It is a research and clinician decision-support prototype, not a treatment recommendation or clinical product.
+This project develops a reproducible, local-only dynamic acute kidney injury (AKI) early-warning research pipeline and an ICU-facing course-project website. It is a research and decision-support prototype, not a treatment recommendation or validated clinical product.
+
+The sections below describe the planned research pipeline. They are study-design targets rather than completed model results and do not restrict the website to fixed sampling intervals or prediction horizons.
+
+## Documentation
+
+| Document | Scope |
+|---|---|
+| This README | Research objective, candidate study design, notebook ownership, privacy, and repository-wide status |
+| [dashboard/README.md](dashboard/README.md) | Website installation, startup, daily use, and local CSV preview |
+| [dashboard/DEVELOPMENT.md](dashboard/DEVELOPMENT.md) | Website architecture, backend/model integration, and development workflow |
+| [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md) | Normative live JSON field and time contract |
+| [dashboard/VALIDATION.md](dashboard/VALIDATION.md) | Tests actually run and their limits |
+| [dashboard/HANDOFF-CHECK.md](dashboard/HANDOFF-CHECK.md) | Historical comparison between the handoff summary and repository |
 
 ## Core pipeline
 
@@ -72,7 +85,7 @@ After the classification MVP, add prediction of future serum creatinine and urin
 
 Every numbered Part in each notebook is followed by an empty code cell for implementation. Notebooks exchange versioned local Parquet artifacts rather than in-memory variables.
 
-## Data contracts
+## Planned research artifact contracts
 
 | Producer | Local output | Unit of observation |
 |---|---|---|
@@ -83,6 +96,8 @@ Every numbered Part in each notebook is followed by an empty code cell for imple
 | ML notebook | `artifacts/predictions/<run_id>.parquet` | One model, ICU stay, snapshot, and horizon |
 | Evaluation notebook | `artifacts/reports/<run_id>/` | Aggregate metrics and figures |
 | Evaluation notebook | `artifacts/dashboard/` | Local dashboard-ready records |
+
+These planned Parquet and experiment artifacts are separate from the website's live JSON exchange contract. The live contract is defined only in [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md).
 
 ## Repository layout
 
@@ -99,7 +114,17 @@ Every numbered Part in each notebook is followed by an empty code cell for imple
 |   |-- 02_ml_pipeline.ipynb
 |   `-- 03_evaluation_and_testing.ipynb
 |-- dashboard/
-|   `-- app.py
+|   |-- app.py                 # preserved original placeholder
+|   |-- README.md              # website operation
+|   |-- DEVELOPMENT.md         # developer and backend integration guide
+|   |-- DATA-CONTRACT.md       # live JSON contract
+|   |-- api/                   # FastAPI, SQLite, file ingestion
+|   |-- web/                   # React and TypeScript frontend
+|   `-- tests/                 # synthetic backend tests
+|-- filter/                     # separately added cohort/filter prototype
+|-- Setup-AKI.cmd
+|-- Start-AKI.cmd
+|-- scripts/
 `-- artifacts/
     `-- README.md
 ```
@@ -133,4 +158,8 @@ Stable shared code should be extracted into a Python package only when multiple 
 
 ## Current status
 
-The repository currently contains the planned layout and notebook documentation only. Implementation will proceed incrementally after study definitions and interfaces are confirmed.
+The research notebooks still contain structure and documentation rather than an implemented AKI model. No model training, cutoff-stability result, validation-selected threshold, calibration result, or clinical validation is currently available.
+
+The local working tree contains a runnable website with patient registration, append-only observations and revisions, file exchange, historical replay, local SQLite storage, SSE refresh, and a read-only MIMIC CSV subset preview. The website keeps predictions empty until a model is connected through the documented contract. Current test evidence and limitations are recorded in [dashboard/VALIDATION.md](dashboard/VALIDATION.md).
+
+Local website changes do not become available from GitHub until they are explicitly committed and pushed. Windows EXE, installer, and portable runtime packaging have not been built.
