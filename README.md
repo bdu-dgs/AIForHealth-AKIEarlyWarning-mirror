@@ -12,7 +12,7 @@ Local MIMIC-III tables
 -> leakage-safe multimodal features
 -> patient-level train / validation / test split
 -> pooled LR, RF, and boosted-tree model families
--> 12h / 24h / 48h AKI risks
+-> 6h / 12h / 24h / 48h AKI risks
 -> validation-selected model, monitoring window, threshold, and alert policy
 -> locked test evaluation at snapshot, patient, and AKI-event levels
 -> event-driven dashboard and robustness analyses
@@ -22,13 +22,13 @@ Local MIMIC-III tables
 
 - Population: adults, first ICU stay per patient, sufficient follow-up, and prespecified ESKD/dialysis exclusions.
 - Sampling: one training snapshot per ICU hour during the eligible monitoring period.
-- Primary outcome: AKI within 48 hours; 12-hour and 24-hour horizons are secondary operational targets.
-- Reporting checkpoints: 8, 12, and 24 hours after ICU admission, without training separate checkpoint-specific models.
+- Prediction targets: AKI within 6, 12, 24, and 48 hours; the operational horizon is selected on validation data.
+- Reporting checkpoints: 6, 12, 24, and 48 hours after ICU admission, without training separate checkpoint-specific models.
 - Primary label: creatinine-based KDIGO; robustness label: creatinine plus urine-output KDIGO.
 - Model families: Logistic Regression, Random Forest, and XGBoost or LightGBM, compared independently.
 - Deployment simulation: recompute features and risk whenever a relevant new EHR event arrives; the fitted weights are not updated during prediction.
 
-Each model-family pipeline may contain horizon-specific output heads for 12h, 24h, and 48h. This keeps one reproducible pipeline per family while allowing each horizon to be calibrated and evaluated correctly.
+Each model-family pipeline contains horizon-specific output heads for 6h, 12h, 24h, and 48h. This keeps one reproducible pipeline per family while allowing each horizon to be calibrated and evaluated correctly.
 
 ## Temporal rules
 
