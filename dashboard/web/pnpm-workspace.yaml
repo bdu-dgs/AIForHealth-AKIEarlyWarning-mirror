@@ -5,3 +5,6 @@ allowBuilds:
 enableGlobalVirtualStore: false
 nodeLinker: hoisted
 packageImportMethod: copy
+
+# Keep the cache local to avoid global project-registration symlinks.
+storeDir: .pnpm-store

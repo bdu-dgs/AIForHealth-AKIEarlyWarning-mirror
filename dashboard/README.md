@@ -14,7 +14,7 @@ This document explains how to use the course project's website. The current loca
 
 ## Installation and startup
 
-Environment: Windows, Python 3.11 or later, and Node.js 22.13 or later (Node 24 recommended). Internet access is required for the first dependency installation; routine operation does not require a cloud server or external network resources.
+Environment: Windows x64 or ARM64 and Python 3.11 or later. Setup reuses Node.js 22.13+ with npx when available; otherwise it automatically installs the pinned official Node.js 24.21.0 release for the current user. Internet access is required for the first dependency installation; routine operation does not require a cloud server or external network resources.
 
 After obtaining the website version from GitHub:
 
@@ -27,7 +27,7 @@ cd AIForHealth-AKIEarlyWarning
 
 If the local website code has not been committed or pushed, a GitHub clone still contains only the remote version and does not automatically include local changes.
 
-`Setup-AKI.cmd` creates the project Python environment, installs pinned dependencies, and builds the frontend. `Start-AKI.cmd` starts the local service and opens `http://127.0.0.1:8765`. Keep the terminal open; press Ctrl+C to stop. After closing the terminal or restarting the computer, run the startup script again.
+`Setup-AKI.cmd` first checks Node.js, then creates the project Python environment, installs pinned dependencies, and builds the frontend. Automatic Node.js installation downloads only from nodejs.org, verifies the archive against the official SHA256 list, and extracts it to `%LOCALAPPDATA%\Programs\NodeJS\node-v24.21.0-win-<architecture>`. It updates the current process and user PATH without requiring administrator access or changing antivirus settings. Existing terminals may need to be reopened. Download or checksum failures stop setup with an error; rerun after resolving the network or file issue. Python must still be installed separately. `Start-AKI.cmd` starts the local service and opens `http://127.0.0.1:8765`. The terminal immediately prints the full URL (clickable in terminals that support links). After the health check succeeds, the Windows default browser opens. Running the script again opens an existing AKI service on the same port instead of reporting a port conflict, unless an explicit --data-dir was supplied. Use `Start-AKI.cmd --no-browser` to suppress automatic browser opening. Keep the server terminal open; press Ctrl+C to stop. After closing the terminal or restarting the computer, run the startup script again.
 
 If Python is not on `PATH`:
 
@@ -35,7 +35,7 @@ If Python is not on `PATH`:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-windows.ps1 -PythonExecutable "C:\actual\path\python.exe"
 ```
 
-The `ExecutionPolicy` setting applies only to this script process. If dependencies stop working after moving or renaming the project, run `Setup-AKI.cmd` again. Frontend dependencies use files in the current project and do not rely on links to an old project directory.
+The `ExecutionPolicy` setting applies only to this script process. If dependencies stop working after moving or renaming the project, run `Setup-AKI.cmd` again. Frontend dependencies use files in the current project and do not rely on links to an old project directory. The ignored `dashboard/web/.pnpm-store` cache avoids pnpm global project-registration links and uses additional local disk space.
 
 The default real-time data directory is `%LOCALAPPDATA%\AKIWorkbench\data`. To change it:
 

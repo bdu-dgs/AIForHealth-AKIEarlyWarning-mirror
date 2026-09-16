@@ -6,5 +6,7 @@ if not exist ".venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
-".venv\Scripts\python.exe" -m dashboard.launcher %*
-if errorlevel 1 pause
+".venv\Scripts\python.exe" -u -m dashboard.launcher %*
+set "startExit=%ERRORLEVEL%"
+if not "%startExit%"=="0" pause
+exit /b %startExit%

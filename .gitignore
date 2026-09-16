@@ -29,3 +29,5 @@ models/
 artifacts/*
 !artifacts/README.md
 MIMIC.docx
+
+.pnpm-store/

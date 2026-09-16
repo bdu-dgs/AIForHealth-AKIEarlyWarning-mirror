@@ -2,6 +2,8 @@ param([string]$PythonExecutable = '')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $projectRoot
+. (Join-Path $PSScriptRoot 'ensure-node.ps1')
+Ensure-AkiNode
 function Invoke-Checked { param([string]$Command, [string[]]$Arguments)
     & $Command @Arguments
     if ($LASTEXITCODE -ne 0) { throw "Command failed: $Command" }
@@ -13,11 +15,11 @@ if (-not (Test-Path -LiteralPath '.venv\Scripts\python.exe')) {
         Invoke-Checked 'py' @('-3', '-m', 'venv', '.venv')
     } elseif (Get-Command python -ErrorAction SilentlyContinue) {
         Invoke-Checked 'python' @('-m', 'venv', '.venv')
-    } else { throw 'Source setup needs Python 3.11+ and Node 22.13+ installed and available on PATH.' }
+    } else { throw 'Source setup needs Python 3.11+ installed and available on PATH, or -PythonExecutable.' }
 }
 Invoke-Checked '.\.venv\Scripts\python.exe' @('-c', 'import sys; assert sys.version_info >= (3,11), "Python 3.11+ required"')
 Invoke-Checked '.\.venv\Scripts\python.exe' @('-m', 'pip', 'install', '-r', 'dashboard/requirements.txt')
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw 'Install Node.js 22.13+ to build frontend source.' }
+
 Push-Location -LiteralPath 'dashboard\web'
 try {
     $installedPnpm = Get-Command pnpm.cmd -ErrorAction SilentlyContinue
