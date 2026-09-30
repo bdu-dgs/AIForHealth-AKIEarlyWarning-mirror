@@ -103,15 +103,18 @@ Every numbered Part in each notebook is followed by an empty code cell for imple
 
 | Producer | Local output | Unit of observation |
 |---|---|---|
-| Dataset notebook | `artifacts/datasets/cohort.parquet` | One selected ICU stay per patient, with source IDs and dataset-local patient ID |
-| Dataset notebook | `artifacts/datasets/snapshot_dataset.parquet` | One ICU stay and hourly snapshot, with horizon-specific labels and eligibility flags |
-| Dataset notebook | `artifacts/splits/patient_split.parquet` | One patient and its selected ICU stay, assigned before snapshots |
+| Dataset notebook | `<output_root>/datasets/cohort.parquet` | One selected ICU stay per patient, with source IDs and dataset-local patient ID |
+| Dataset notebook | `<output_root>/datasets/snapshot_dataset.parquet` | One ICU stay and hourly snapshot, with horizon-specific labels and eligibility flags |
+| Dataset notebook | `<output_root>/splits/patient_split.parquet` | One patient and its selected ICU stay, assigned before snapshots |
+| Dataset notebook | `<output_root>/datasets/feature_dictionary.csv` | One column of the snapshot dataset, with role (feature, label, eligibility, identifier, ...), unit, window, and source |
+| Dataset notebook | `<output_root>/datasets/event_stream.parquet` | One timestamped model-input event of a modeled stay, for event-driven replay |
+| Dataset notebook | `<output_root>/dataset_manifest.json`, `<output_root>/reports/` | Provenance (config hash, commit, file hashes) and aggregate quality reports |
 | ML notebook | `artifacts/models/<run_id>/` | One fitted model-family pipeline |
 | ML notebook | `artifacts/predictions/<run_id>.parquet` | One model, ICU stay, snapshot, and horizon |
 | Evaluation notebook | `artifacts/reports/<run_id>/` | Aggregate metrics and figures |
 | Evaluation notebook | `artifacts/dashboard/` | Local dashboard-ready records |
 
-These planned Parquet and experiment artifacts are separate from the website's live JSON exchange contract. The live contract is defined only in [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md).
+For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/default.yaml` (default `../Cleaned`, outside the repository); filtered source caches go to `artifacts/interim/`. These planned Parquet and experiment artifacts are separate from the website's live JSON exchange contract. The live contract is defined only in [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md).
 
 ## Repository layout
 
@@ -172,7 +175,7 @@ Stable shared code should be extracted into a Python package only when multiple 
 
 ## Current status
 
-The research notebooks still contain structure and documentation rather than an implemented AKI model. No model training, cutoff-stability result, validation-selected threshold, calibration result, or clinical validation is currently available.
+`pipeline/01_dataset_construction.ipynb` is implemented: it builds the cohort, KDIGO timelines, frozen patient split, hourly snapshots, multi-horizon labels, and leakage-safe features from local MIMIC-III v1.4 using `configs/default.yaml`. Notebooks 02 and 03 still contain structure and documentation only. No model training, cutoff-stability result, validation-selected threshold, calibration result, or clinical validation is currently available.
 
 The local working tree contains a runnable website with patient registration, append-only observations and revisions, file exchange, historical replay, local SQLite storage, SSE refresh, and a read-only MIMIC CSV subset preview. The website keeps predictions empty until a model is connected through the documented contract. Current test evidence and limitations are recorded in [dashboard/VALIDATION.md](dashboard/VALIDATION.md).
 

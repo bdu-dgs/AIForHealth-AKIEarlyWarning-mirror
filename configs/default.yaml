@@ -1,1 +1,262 @@
-# Default cohort, labeling, feature-window, split, model, and output configuration will be defined here.
+# Study configuration for pipeline/01_dataset_construction.ipynb.
+# Every cohort, label, feature, coverage, and split choice lives here. Changing any study choice
+# requires a new dataset.version; notebooks record the SHA-256 of this file with every artifact.
+
+dataset:
+  version: "aki_hourly_v1.0"
+  source: "MIMIC-III Clinical Database v1.4"
+
+paths:                                   # relative paths are resolved from the repository root
+  mimic_root: "../mimiciii/1.4"          # local, approved MIMIC-III CSV directory
+  output_root: "../Cleaned"              # analysis-ready outputs consumed by notebook 02
+  interim_root: "artifacts/interim"      # filtered source caches (local only, never commit)
+
+processing:
+  csv_block_mb: 64                       # streaming block size for large CSV tables
+  stay_partition_size: 4000              # ICU stays per feature-building partition (memory bound)
+  reuse_interim_cache: true              # reuse filtered Parquet caches when they cover the request
+
+cohort:
+  selection_rule_version: "earliest_adult_icu_stay_v1"   # earliest INTIME, tie-break ICUSTAY_ID
+  min_age_years: 18
+  shifted_age_threshold_years: 150       # MIMIC shifts ages > 89 to about 300 years
+  shifted_age_value_years: 91.4          # median true age of the shifted group (MIMIC documentation)
+  min_followup_hours: 7                  # first snapshot (1 h) + shortest horizon (6 h), from min(OUTTIME, DEATHTIME)
+  exclude_no_chartevents: true           # ADMISSIONS.HAS_CHARTEVENTS_DATA == 0
+  eskd_pre_icu_creatinine_mg_dl: 4.0     # lowest creatinine in the 7 d before ICU >= this: presumed CKD 5 / ESKD
+  # Chronic kidney failure / dialysis / transplant codes (exact match; index and prior admissions).
+  eskd_icd9_diagnoses: ["5855", "5856", "V451", "V4511", "V4512", "V560", "V561", "V562", "V5631",
+                        "V5632", "V568", "99656", "99668", "99673"]
+  eskd_icd9_procedures: ["5498", "3927", "3942", "3943"]
+  # Chronic hemodialysis proxy for CareVue-era coding: hemodialysis procedure + CKD/hypertensive-CKD
+  # code + no acute kidney failure code on the index admission.
+  chronic_hd_proxy: {procedure: "3995", ckd_prefixes: ["585", "403", "404"], acute_prefix: "584"}
+  kidney_transplant_icd9_diagnoses: ["V420", "99681"]
+  kidney_transplant_icd9_procedures: ["5569", "5561", "5553"]
+
+monitoring:
+  first_snapshot_hour: 1                 # snapshot_time = ICU INTIME + k hours
+  last_snapshot_hour: 72                 # candidate monitoring period; notebook 03 locks the operational window
+  snapshot_interval_hours: 1
+  reporting_checkpoints_hours: [6, 12, 24, 48]
+
+labels:
+  horizons_hours: [6, 12, 24, 48]
+  primary_target: "creatinine_kdigo"
+  operational_horizon: "selected_on_validation"          # chosen in notebook 03, not here
+  censoring_events: ["icu_discharge", "death", "rrt_start"]
+  creatinine_kdigo:
+    version: "kdigo2012_scr_v1"
+    abs_rise_mg_dl: 0.3                  # increase >= 0.3 mg/dL over the lowest value in the prior 48 h
+    abs_window_hours: 48
+    rel_rise_ratio: 1.5                  # >= 1.5 x the lowest value in the prior 7 days
+    rel_window_days: 7
+    stage2_ratio: 2.0
+    stage3_ratio: 3.0
+    stage3_abs_mg_dl: 4.0
+    onset_lookback_days: 7               # an onset in the 7 d before ICU admission = AKI already present
+  baseline_creatinine:
+    version: "baseline_v1"
+    primary: "rolling_7d_min"            # at each measurement: lowest value in the prior 7 days (past only)
+    history_window_days: [8, 365]        # historic (outpatient/earlier) median, used by an alternative
+    mdrd_assumed_egfr: 75                # KDIGO-suggested back-calculation for a missing baseline
+    alternatives: ["mdrd_if_missing", "min_with_history"]
+  urine_output_kdigo:
+    enabled: true
+    version: "kdigo2012_uo_v1"
+    standard: "KDIGO 2012 urine-output criteria (robustness endpoint only)"
+    weight_source: "first ICU admission weight, else first daily weight, else MetaVision order weight"
+    weight_window_hours: [-24, 24]       # relative to ICU INTIME
+    stage1_rate_ml_kg_h: 0.5             # < 0.5 mL/kg/h for 6 h (stage 1) or 12 h (stage 2)
+    stage3_rate_ml_kg_h: 0.3             # < 0.3 mL/kg/h for 24 h, or anuria for 12 h (stage 3)
+    max_interval_hours: 6                # charted volume covers the interval since the previous charting;
+                                         # longer intervals are undocumented, not zero output
+    min_window_coverage: 1.0             # fraction of window hours that must be documented
+    rrt_rule: "censor"                   # urine output is not assessed after RRT starts
+
+coverage:                                # applied separately from horizon eligibility
+  prior_creatinine_lookback_days: 7      # snapshot needs >= 1 creatinine in the prior 7 days (or earlier ICU)
+  require_prior_heart_rate: true         # and >= 1 charted heart rate in the ICU at or before the snapshot
+  drop_snapshots_failing_coverage: true  # failing snapshots are removed and counted, never labelled negative
+
+features:
+  vital_windows_hours: [6, 24]
+  lab_lookback_days: 7                   # lab history (incl. pre-ICU) visible to "latest value" features
+  lab_result_delay_hours: 1              # LABEVENTS time is the draw time; a result is usable 1 h later
+                                         # (features and coverage only; KDIGO onsets stay at draw time)
+  urine_windows_hours: [6, 12, 24]
+  infusion_windows_hours: [2, 24]        # vasoactive infusion running within the past 2 h / 24 h
+  bolus_windows_hours: [24]
+  prescription_availability_delay_hours: 24   # PRESCRIPTIONS has dates only: usable from the end of the start day
+  ventilation_window_hours: 8
+  float_dtype: "float32"
+
+split:
+  version: "patient_split_v1"
+  seed: 20260929
+  proportions: {train: 0.70, validation: 0.15, test: 0.15}
+  stratify_by: ["source_system"]         # CareVue / MetaVision / both; never outcome-based
+
+# Source item mappings (verified against D_ITEMS / D_LABITEMS and the data; see notebook Part 3).
+sources:
+  chart:                                 # CHARTEVENTS numeric concepts: itemids, unit conversion, valid range
+    heart_rate:  {itemids: [211, 220045], range: [0, 300]}
+    sbp:         {itemids: [51, 442, 455, 6701, 220179, 220050, 225309, 224167, 227243], range: [0, 400]}
+    dbp:         {itemids: [8368, 8440, 8441, 8555, 220180, 220051, 225310, 224643, 227242], range: [0, 300]}
+    mbp:         {itemids: [456, 52, 6702, 443, 220052, 220181, 225312], range: [0, 300]}
+    resp_rate:   {itemids: [615, 618, 220210, 224690], range: [0, 70]}
+    temp_c:      {itemids: [223762, 676], range: [25, 45], fahrenheit_itemids: [223761, 678]}
+    spo2:        {itemids: [646, 220277], range: [0, 100], closed_high: true}
+    glucose_poc: {itemids: [807, 225664, 226537], range: [10, 2000]}
+    gcs_eye:     {itemids: [184, 220739], range: [1, 4], closed: true}
+    gcs_verbal:  {itemids: [723, 223900], range: [1, 5], closed: true}
+    gcs_motor:   {itemids: [454, 223901], range: [1, 6], closed: true}
+    fio2:        {itemids: [190, 3420, 3422, 223835], range: [0.21, 1.0], closed: true}
+    weight_admit_kg: {itemids: [226512, 762], range: [30, 300], closed: true, pound_itemids: [226531]}
+    weight_daily_kg: {itemids: [224639, 763], range: [30, 300], closed: true}
+    height_cm:   {itemids: [226730], range: [120, 230], closed: true, inch_itemids: [920, 1394, 226707]}
+    dialysis_history: {itemids: [225126], range: [1, 1], closed: true}   # MetaVision "Dialysis patient" checked
+  arterial_line_itemids: [51, 6701, 220050, 225309, 8368, 8555, 220051, 225310, 52, 6702, 220052, 225312]
+  gcs_verbal_ett_text: ["1.0 ET/Trach", "No Response-ETT"]
+  labs:                                  # LABEVENTS central-lab blood concepts (blood-gas whole-blood items not merged)
+    creatinine:  {itemids: [50912], range: [0.1, 40]}
+    bun:         {itemids: [51006], range: [1, 300]}
+    sodium:      {itemids: [50983], range: [100, 190]}
+    potassium:   {itemids: [50971], range: [1, 12]}
+    chloride:    {itemids: [50902], range: [60, 160]}
+    bicarbonate: {itemids: [50882], range: [2, 60]}
+    anion_gap:   {itemids: [50868], range: [0, 60]}
+    glucose:     {itemids: [50931], range: [10, 2000]}
+    calcium:     {itemids: [50893], range: [3, 20]}
+    magnesium:   {itemids: [50960], range: [0.3, 10]}
+    phosphate:   {itemids: [50970], range: [0.2, 20]}
+    hemoglobin:  {itemids: [51222], range: [2, 25]}
+    platelets:   {itemids: [51265], range: [1, 2000]}
+    wbc:         {itemids: [51301, 51300], range: [0.1, 1000]}
+    inr:         {itemids: [51237], range: [0.5, 25]}
+    ptt:         {itemids: [51275], range: [10, 200]}
+    lactate:     {itemids: [50813], range: [0.1, 40]}
+    bilirubin:   {itemids: [50885], range: [0.1, 80]}
+    albumin:     {itemids: [50862], range: [0.5, 7]}
+    ph:          {itemids: [50820], range: [6.5, 8.0]}
+    creatine_kinase: {itemids: [50910], range: [1, 500000]}
+  urine_output:                          # OUTPUTEVENTS urine volumes (mL); OR/PACU/cath-lab urine excluded
+    itemids: [40055, 40069, 40094, 40715, 40473, 40085, 40057, 40056, 40405, 40428, 40096, 40651,
+              41184, 41868, 41839, 44676,
+              226559, 226560, 226561, 226584, 226563, 226564, 226565, 226567, 226557, 226558]
+    range_ml: [0, 5000]
+    gu_irrigant_itemids: [227488, 227489]  # bladder irrigation: urine-output KDIGO not assessable for the stay
+    gu_irrigant_input_itemids: [30168, 30169, 30170, 30171, 40750, 40795, 41246, 42061, 42099, 42699, 43882,
+                                44387, 44949, 226401, 226402, 226403]   # irrigation charted as input (CareVue + MetaVision)
+  # Renal replacement therapy START evidence (therapy running). Catheter/access-only items are not used.
+  rrt:
+    chartevents_itemids: [146, 147, 611, 612, 79, 29, 173, 192, 624, 142, 5683, 665, 582, 150, 152, 7949,
+                          224144, 224145, 224149, 224150, 224151, 224152, 224153, 224154, 228004, 228005,
+                          228006, 226457, 224191, 225183, 226499, 225806, 225807, 225810,
+                          227290, 224146, 225976, 225977, 225958]
+    # Rule per chart item: positive (VALUENUM > 0), nonzero (pressures can be negative), notnull, or a
+    # VALUE include/exclude list for categorical items.
+    chartevents_rules:
+      positive: [146, 611, 79, 224144, 224145, 224153, 224154, 228004, 228005, 228006, 226457, 224191,
+                 226499, 225806, 225807, 225810]
+      nonzero: [29, 173, 192, 624, 224149, 224150, 224151, 224152]
+      notnull: [142, 5683, 150, 152, 7949, 225183, 227290, 225976, 225977, 225958]
+    chartevents_text_rules:
+      147: {include: ["Yes"]}
+      612: {exclude: ["No"]}
+      665: {include: ["Active", "Clot Increasing", "Clots Present", "No Clot Present", "Initiated"]}
+      582: {include: ["CAVH Start", "CVVHD Start", "Hemodialysis st", "CAVH D/C", "CVVHD D/C", "Hemodialysis end"]}
+      224146: {include: ["Active", "Clots Present", "Clots Increasing", "No Clot Present", "New Filter", "Reinitiated"]}
+    outputevents_itemids: [40286, 40386, 40425, 40426, 40507, 40613, 40624, 40690, 40745, 40881, 41016, 41112,
+                           41250, 41374, 41417, 41500, 41527, 41635, 41750, 41829, 41842, 42289, 42388, 42464,
+                           42524, 42536, 42868, 42928, 42972, 43016, 43052, 43115, 44027, 44085, 44193, 44199,
+                           44216, 44567, 44857, 44901, 44943, 45828, 46464, 46741, 41818, 41705, 42254, 41809,
+                           42248, 46675, 43019, 44295, 44097, 41634, 46473, 41793, 44349, 44890, 46622, 43703,
+                           40789, 41069, 41623, 41713, 40910, 44843, 46394, 44623, 43127, 46178, 44996, 40584,
+                           43862, 45144, 42032, 41049, 42555, 44055, 41034, 45479, 46230, 43941, 43098, 43687,
+                           44845, 44286, 46232, 46712, 46713, 46715]
+    inputevents_cv_itemids: [44927, 45157, 45268, 45352, 45353, 46012, 46013, 46172, 46173, 46293, 46284, 46417,
+                             43778, 46730, 46665, 46651, 46636, 46791, 46772, 46798, 46747, 46603, 46460, 46693,
+                             46292, 46311, 46389, 46574, 46681, 46769, 46773, 46714, 46795, 40788, 40907, 41063,
+                             41147, 41307, 41460, 41620, 41711, 41791, 41792, 42562, 43829, 44037, 44526, 44527,
+                             44584, 44591, 44698, 46262, 46720, 43141, 42456, 46165, 44994, 45427, 44621, 42452,
+                             45143, 43864, 44822, 42477, 44054, 46538, 43861, 41354, 41429, 41474, 41122, 41220,
+                             41555, 41662, 44270, 42234, 45097, 41077, 43689, 45012, 45732, 42931]
+    inputevents_mv_itemids: [227536, 227525, 227526, 227529, 227528]
+    procedureevents_mv_itemids: [225802, 225441, 225805, 225803, 225809, 225955, 225436]
+  medications:
+    infusions:                           # running: CareVue RATE/AMOUNT > 0 at CHARTTIME; MetaVision RATE > 0 interval
+      vasopressor: {cv_itemids: [30047, 30120, 30044, 30119, 30309, 30043, 30307, 30127, 30128, 30051, 42273, 42802],
+                    mv_itemids: [221906, 221289, 221662, 221749, 222315]}
+      inotrope: {cv_itemids: [30042, 30306, 30125], mv_itemids: [221653, 221986]}
+    boluses:                             # administration (CareVue CHARTTIME, MetaVision STARTTIME)
+      loop_diuretic: {cv_itemids: [30123, 41518, 43047, 45275, 46554, 46690, 46197, 46771], mv_itemids: [221794, 228340]}
+    fluid_amount_units: ["ml", "cc"]     # MetaVision 'L' rows are converted x1000
+    fluid_max_row_ml: 10000
+    # Not patient intake in the ICU: OR / PACU / pre-admission lump sums, bladder irrigant, CRRT circuit fluid.
+    fluid_exclude_itemids: [30101, 30054, 30102, 30104, 30055, 30103, 30105, 30108, 30053, 30107, 30106, 30109,
+                            30168, 30169, 30170, 30171, 226361, 226363, 226364, 226365, 226367, 226368, 226369,
+                            226370, 226371, 226372, 226375, 226376, 226377, 227070, 227071, 227072, 225173,
+                            226401, 226402, 226403, 227528, 227529]
+    fluid_exclude_label_regex: 'pre-?admi|\bor\b|pacu|cath lab|irrig|_gu\b|cell ?saver|ed intake|citrat|prisma|dialys|crrt|cvvh|\bebl\b|ascites|autologous'
+    fluid_exclude_mv_categories: ["16-Pre Admission"]
+  ventilation:
+    # Compact invasive-ventilation evidence (charting times only; no retrospective procedure intervals).
+    chart_itemids: [720, 467, 683, 682, 506, 535, 543, 444, 450, 223849, 223848, 226732, 224684, 224685,
+                    220339, 224695, 224696, 224697, 224687]
+    numeric_rules:
+      positive: [683, 682, 506, 535, 543, 444, 450, 224684, 224685, 220339, 224695, 224696, 224697, 224687]
+      notnull: [223849]
+    text_rules:
+      720: {exclude: ["Other/Remarks"]}
+      467: {include: ["Ventilator"]}
+      223848: {exclude: ["Other"]}
+      226732: {include: ["Endotracheal tube"]}
+  lab_specimen_itemid: 50800               # blood-gas SPECIMEN TYPE
+  lab_nonarterial_specimens: ["VEN", "MIX", "CENTRAL VENOUS"]
+  lab_arterial_concepts: ["ph"]
+  surgical_services: ["CSURG", "SURG", "NSURG", "TSURG", "VSURG", "PSURG", "ORTHO"]
+  prescriptions:                           # regex on lower(DRUG) only; optional ROUTE filters
+    vancomycin_iv: {regex: "vanco", exclude_regex: "oral|enema|lock|ophth|intrathecal|intraventricular|inhal",
+                    routes: ["IV", "IV DRIP", "IV BOLUS", "PB"]}
+    aminoglycoside: {regex: "gentamicin|tobramycin|amikacin|streptomycin", exclude_regex: "inhal|ophth",
+                     routes: ["IV", "IV DRIP", "IV BOLUS", "PB", "IM"]}
+    nsaid: {regex: "ketorolac|toradol|ibuprofen|motrin|naproxen|indomethacin|celecoxib|celebrex|diclofenac|voltaren|meloxicam|mobic|nabumetone|sulindac|etodolac|piroxicam|ketoprofen|oxaprozin|diflunisal",
+            exclude_regex: 'ophth|acular|gel|patch|0\.03%',
+            exclude_routes: ["OU", "OS", "OD", "BOTH EYES", "LEFT EYE", "RIGHT EYE", "TP", "AD", "AS", "AU", "IRR", "IR", "IH", "NEB"]}
+    acei_arb: {regex: "(?:capto|enala|lisino|rami|quina|benaze|fosino|moexi|perindo|trandola)pril|monopril|lotensin|lotrel|altace|capoten|zestril|prinivil|vasotec|accupril|sartan|cozaar|hyzaar|diovan|avapro|atacand|benicar|micardis"}
+    loop_diuretic: {regex: "furosemide|lasix|bumetanide|bumex|torsemide|demadex|ethacryn", exclude_routes: ["IH"]}
+    calcineurin_inhibitor: {regex: "tacrolimus|prograf|cyclosporin|neoral|sandimmun|gengraf",
+                            exclude_regex: "restasis|protopic|ophth|ointment",
+                            exclude_routes: ["OU", "OS", "OD", "BOTH EYES", "LEFT EYE", "RIGHT EYE", "TP"]}
+    other_nephrotoxic_antimicrobial: {regex: "amphotericin|ambisome|abelcet|(?<!val)acyclovir|zovirax|foscarnet|foscavir|colisti",
+                                      routes: ["IV", "IV DRIP", "IV BOLUS", "PB", "IM"]}
+    piperacillin_tazobactam: {regex: "piperacillin|zosyn"}
+  # Chronic comorbidity flags (Quan 2005 enhanced ICD-9-CM Elixhauser, prefix match on the index and any
+  # earlier admission). DIAGNOSES_ICD is coded at discharge, so these features carry a "_dc" suffix and are
+  # documented as a proxy for history known at admission; acute/AKI codes are never used as features.
+  comorbidities_icd9_prefix:
+    ckd_dc: ["5851", "5852", "5853", "5854", "5859", "585", "40300", "40310", "40390", "40400", "40401",
+             "40410", "40411", "40490", "40491", "28521", "5880", "40301", "40311", "40391", "40402",
+             "40403", "40412", "40413", "40492", "40493"]
+    chf_dc: ["39891", "40201", "40211", "40291", "40401", "40403", "40411", "40413", "40491", "40493",
+             "4254", "4255", "4257", "4258", "4259", "428"]
+    hypertension_dc: ["401", "402", "403", "404", "405"]
+    diabetes_dc: ["250"]
+    chronic_pulmonary_dc: ["4168", "4169", "490", "491", "492", "493", "494", "495", "496", "497", "498",
+                           "499", "500", "501", "502", "503", "504", "505", "5064", "5081", "5088"]
+    liver_disease_dc: ["07022", "07023", "07032", "07033", "07044", "07054", "0706", "0709", "4560",
+                       "4561", "4562", "571", "5722", "5723", "5725", "5726", "5727", "5728", "5733",
+                       "5734", "5738", "5739", "V427"]
+    metastatic_cancer_dc: ["196", "197", "198", "199"]
+    solid_tumor_dc: ["140", "141", "142", "143", "144", "145", "146", "147", "148", "149", "150", "151",
+                     "152", "153", "154", "155", "156", "157", "158", "159", "160", "161", "162", "163",
+                     "164", "165", "166", "167", "168", "169", "170", "171", "172", "174", "175", "176",
+                     "177", "178", "179", "180", "181", "182", "183", "184", "185", "186", "187", "188",
+                     "189", "190", "191", "192", "193", "194", "195"]
+    lymphoma_myeloma_dc: ["200", "201", "202", "2030", "2386"]
+    obesity_dc: ["2780"]
+    peripheral_vascular_dc: ["0930", "4373", "440", "441", "4431", "4432", "4433", "4434", "4435",
+                             "4436", "4437", "4438", "4439", "4471", "5571", "5579", "V434"]
+    rheumatic_vascular_dc: ["446", "7010", "7100", "7101", "7102", "7103", "7104", "7108", "7109",
+                            "7112", "714", "7193", "720", "725", "7285", "72889", "72930"]
