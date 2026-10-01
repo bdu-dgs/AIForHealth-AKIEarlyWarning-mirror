@@ -1,0 +1,97 @@
+# Model-training configuration for pipeline/02_ml_pipeline.ipynb.
+# Kept separate from default.yaml so the dataset config hash recorded by notebook 01 stays valid.
+# The run_id embeds the SHA-256 of this file, the 02 code cells, and src/aki_ml, so any change starts a new run.
+
+run:
+  version: "aki_ml_v1"
+  dataset_config: "configs/default.yaml"   # must match dataset_manifest.json config_sha256
+  expected_dataset_version: "aki_hourly_v1.0"
+  artifacts_root: "artifacts"              # models/<run_id>/ and predictions/<run_id>.parquet
+  seed: 20260930
+  horizons_hours: [6, 12, 24, 48]
+  loaded_splits: [train, validation]       # test features and labels are never loaded in notebook 02
+  n_jobs: -1                               # CPU threads for LR / RF / boosting (-1 = all cores)
+  min_free_disk_gb: 5
+
+features:
+  sets:                                    # feature-dictionary groups removed from role == 'feature'
+    full: []
+    no_dc: [comorbidity_discharge_coded]   # discharge-coded comorbidities (ablation)
+  primary_set: full
+
+cv:
+  n_folds: 5                               # patient-level folds over training patients only
+  stratify_patients_by: [source_system, ever_cr_aki]
+
+weighting:
+  exposure: inverse_patient_rows           # each patient's eligible rows sum to one within a horizon
+  class_imbalance: balanced                # weighted positives and negatives each carry half the total
+  normalize_mean_to_one: true
+  calibration_weights: none                # calibrators target snapshot-level risk (unweighted)
+
+preprocessing:
+  lr:                                      # fitted on the current training partition only
+    winsorize_quantiles: [0.005, 0.995]
+    impute: median
+    missing_indicator_min_fraction: 0.01   # add an indicator when the training missing fraction >= this
+    scale: standard
+    fit_sample_rows: 300000                # rows sampled (seeded) to estimate quantiles/medians/scales
+    time_spline: {feature: hours_since_icu, n_knots: 5, degree: 3}
+  trees: native_missing                    # no imputation or scaling; NaN routed by the learners
+
+selection_metric: weighted_log_loss        # out-of-fold, training weights; lower is better
+
+families:
+  lr:
+    role: linear_reference
+    solver: newton-cholesky
+    C_grid: [0.00001, 0.0001, 0.001, 0.01, 0.1]
+    max_iter: 100
+  rf:
+    role: bagged_trees
+    fixed: {n_estimators: 300, max_samples: 0.25, max_depth: 18, bootstrap: true, criterion: gini}
+    grid:
+      - {min_samples_leaf: 100, max_features: sqrt}
+      - {min_samples_leaf: 400, max_features: 0.2}
+  lightgbm:
+    role: primary                          # primary boosted-tree family
+    n_random_configs: 6
+    num_boost_round: 3000
+    early_stopping_rounds: 100             # on the held-out training-patient fold, never validation/test
+    fixed: {objective: binary, metric: binary_logloss, learning_rate: 0.05, bagging_freq: 1, max_bin: 255,
+            feature_pre_filter: false, deterministic: true, verbose: -1}
+    search:
+      num_leaves: [31, 63, 127]
+      min_child_samples: [100, 300, 1000]
+      feature_fraction: [0.5, 0.7, 0.9]
+      bagging_fraction: [0.7, 0.9]
+      lambda_l2: [0.0, 1.0, 10.0]
+  xgboost:
+    role: comparator                       # secondary boosted-tree family, reported against LightGBM
+    n_random_configs: 4
+    num_boost_round: 3000
+    early_stopping_rounds: 100
+    fixed: {objective: "binary:logistic", eval_metric: logloss, eta: 0.05, tree_method: hist, max_bin: 256}
+    search:
+      max_depth: [4, 6, 8]
+      min_child_weight: [5, 20, 50]
+      subsample: [0.7, 0.9]
+      colsample_bytree: [0.5, 0.7, 0.9]
+      lambda: [1.0, 10.0]
+
+ablations:                                 # refit with the primary run's selected per-horizon config
+  - {family: lightgbm, feature_set: no_dc}
+
+calibration:
+  primary: platt
+  sensitivity: [isotonic]
+  fit_on: train_oof                        # out-of-fold training predictions; validation stays untouched
+  clip_eps: 1.0e-6
+
+checks:
+  hours_bins: [0, 6, 12, 24, 48, 72]
+  leakage_screen_rows: 200000
+  leakage_auroc_flag: 0.85                 # single-feature AUROC reported for review
+  leakage_auroc_stop: 0.95                 # stop before training
+  suspicious_name_tokens: [aki, onset, label, eligible, future, outcome, censor, discharge_time, death, los_]
+  baseline_lr_C: 0.001
