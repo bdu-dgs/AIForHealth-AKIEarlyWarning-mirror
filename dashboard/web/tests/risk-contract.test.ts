@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { alertOf, groupKey, type Prediction } from '../lib/api.ts';
+import { alertOf, defaultGroup, groupKey, type Prediction } from '../lib/api.ts';
 const reference = Date.parse('2020-01-01T01:00:00Z');
 const result = {
   risk: 0.6,
@@ -48,4 +48,10 @@ test('model versions and arbitrary horizons create independent series', () => {
     groupKey(result),
     groupKey({ ...result, model_version: 'fixture-2' }),
   );
+});
+test('default series is the one with a locked threshold', () => {
+  const display = { ...result, horizon_end: '2020-01-01T01:38:00Z', threshold: null };
+  assert.equal(defaultGroup([display, result]), groupKey(result));
+  assert.equal(defaultGroup([display]), groupKey(display));
+  assert.equal(defaultGroup([]), '');
 });

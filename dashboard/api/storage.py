@@ -247,7 +247,10 @@ class Store:
                 predictions = db.execute('''WITH visible AS (SELECT body,ROW_NUMBER() OVER(PARTITION BY id ORDER BY revision DESC) AS rank
                     FROM records WHERE patient=? AND kind='prediction') SELECT body FROM visible WHERE rank=1''', (row['id'],)).fetchall()
                 candidates = [json.loads(p[0]) for p in predictions]
-                prediction = max(candidates, key=lambda p: (p['input_fingerprint'] == row['input_fingerprint'], p['origin_time'], p['available_at']), default=None)
+                # The overview shows one result: prefer the alerting series (locked threshold) over display-only horizons.
+                prediction = max(candidates, key=lambda p: (bool((p.get('threshold') or {}).get('locked')),
+                                                            p['input_fingerprint'] == row['input_fingerprint'],
+                                                            p['origin_time'], p['available_at']), default=None)
                 result.append({**json.loads(row['body']), 'input_revision': row['input_revision'],
                                'input_fingerprint': row['input_fingerprint'], 'photo': row['photo'], 'latest_measurement': latest,
                                'prediction': prediction, 'stale': bool(prediction and prediction['input_fingerprint'] != row['input_fingerprint'])})

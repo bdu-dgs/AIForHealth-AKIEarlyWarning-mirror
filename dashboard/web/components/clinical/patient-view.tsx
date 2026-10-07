@@ -21,6 +21,7 @@ import {
   duration,
   localTime,
   groupKey,
+  defaultGroup,
   groupLabel,
   alertOf,
   type Patient,
@@ -258,7 +259,7 @@ export function PatientView({
   );
   const groupId = groups.some((g) => g.value === group)
     ? group
-    : (groups[0]?.value ?? '');
+    : defaultGroup([...(data?.current ?? []), ...(data?.predictions ?? [])]);
   const predictions = (data?.predictions ?? [])
     .filter((p) => groupKey(p) === groupId)
     .sort(

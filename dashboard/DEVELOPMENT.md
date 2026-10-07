@@ -135,7 +135,7 @@ GET /api/patients/{id}/snapshot?as_of=<time available at generation>&cutoff=<dat
 
 The backend recomputes the fingerprint and rejects mismatched predictions. When a new observation arrives, the page marks results that reference old input as stale.
 
-The data contract defines result fields, time constraints, and optional explanations. The frontend groups by model, version, target, and actual horizon; it does not impose half-hour, one-hour, or 8/12/24-hour limits. Workers should cancel expired tasks so old queues do not delay current results.
+The data contract defines result fields, time constraints, and optional explanations. The frontend groups by model, version, target, and actual horizon; it does not impose half-hour, one-hour, or 8/12/24-hour limits. When several series exist, the patient overview and the detail view's default series prefer a prediction with a locked threshold (the alerting horizon); display-only horizons remain selectable. Workers should cancel expired tasks so old queues do not delay current results.
 
 ## Historical replay
 

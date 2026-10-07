@@ -111,6 +111,16 @@ def test_future_information_cannot_enter_old_prediction(store):
     assert store.patients()[0]['stale'] is True
 
 
+def test_overview_prefers_locked_threshold_series_over_display_only_horizons(store):
+    store.ingest(InputBatch(observations=[observation()]))
+    locked = {'value': .1, 'comparison': '>=', 'validation_run_id': 'fixture', 'policy_version': 'fixture-v0',
+              'monitoring_window': 'fixture', 'calibration_version': 'fixture', 'locked': True, 'selection_basis': 'test'}
+    store.ingest(PredictionBatch(predictions=[
+        prediction(store, record_id='alerting', threshold=locked),
+        prediction(store, record_id='display-only', horizon_end='2020-01-01T02:30:00Z')]))
+    assert store.patients()[0]['prediction']['record_id'] == 'alerting'
+
+
 def test_cross_machine_predictions_use_fingerprint_not_local_batch_count(store, tmp_path):
     store.ingest(InputBatch(observations=[observation()]))
     store.ingest(InputBatch(observations=[observation('o2')]))

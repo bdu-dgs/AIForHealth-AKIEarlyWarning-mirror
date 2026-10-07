@@ -154,6 +154,11 @@ export function groupKey(p: Prediction) {
     new Date(p.horizon_end).getTime() - new Date(p.origin_time).getTime(),
   ]);
 }
+// Default series: the one carrying a locked threshold (the alerting horizon), else the first.
+export function defaultGroup(predictions: Prediction[]) {
+  const p = predictions.find((x) => x.threshold?.locked) ?? predictions[0];
+  return p ? groupKey(p) : '';
+}
 export function groupLabel(p: Prediction) {
   return (
     p.target +
