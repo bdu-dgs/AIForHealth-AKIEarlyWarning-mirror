@@ -45,7 +45,8 @@ When updating documentation:
 | `api/storage.py` | SQLite transactions, revisions, time visibility, fingerprints, and outbox |
 | `api/watcher.py` | JSON watching, stable-file checks, retries, and error summaries |
 | `api/exchange.py` | JSON/ZIP import, export, and volume splitting |
-| `api/model_adapter.py` | Model-process boundary; currently defines only a Protocol |
+| `api/model_adapter.py` | Model-process boundary (Protocol); the implemented worker is `model_worker.py` |
+| `api/demo.py` | Demo playback: staged stay, stepped clock, hourly release |
 | `api/dataset_preview.py` | Read-only MIMIC subset preview |
 | `api/main.py` | HTTP, SSE, local request protection, and compiled page |
 | `web/lib/api.ts` | Shared frontend types, requests, historical pagination, and alert decisions |
@@ -110,7 +111,30 @@ Successful input writes SQLite and a durable outbox. The outbox creates an `acce
 
 ## Model worker
 
-When input changes, the backend updates:
+The implemented worker is `dashboard/model_worker.py`, started by the launcher as a separate process (skip it with
+`--no-model`). It loads the locked model named in `artifacts/demo_i/policy.json` (LightGBM `no_dc`, Platt, `demo-v1`
+threshold and monitoring window) with the shared scoring code in `src/aki_ml/scoring.py`, and needs the pinned
+packages in `requirements-model.txt` (installed by setup). It is event-driven: every accepted input batch creates a
+patient input revision (`GET /api/patients/{id}/revisions` lists them with their arrival time), and the worker
+scores each new revision at its arrival time (origin = data cutoff) from all observations measured up to then.
+Revisions are not merged, so every arrival gets a result; times outside ICU hours 1-72 or before the first usable
+creatinine get none. The 24h prediction carries the locked threshold inside the monitoring window; 6/12/48h are
+display-only. The worker reports itself with `POST /api/model/heartbeat` every few seconds; `GET /api/health`
+shows `model_status` (`running`, `error`, `offline`, `not_configured`). For retrospective hourly scoring of data
+that is already stored, use `scripts/score_dashboard.py`.
+
+### Demo playback
+
+`Start-AKI-Demo.cmd` (or `launcher --demo [FILE]`) starts a fresh data directory under
+`%LOCALAPPDATA%\AKIWorkbench\demo-runs\` and loads an InputBatch (default: the built-in synthetic patients). Every
+admission is moved to the demo start (72 h before the current hour) and observations are staged. The service clock
+(`schemas.now()`) is then frozen at the demo time: `POST /api/demo/advance?hours=1` moves it forward one hour and
+imports the observations that became available in that hour, which triggers the model worker as live data would.
+`GET /api/clock` reports the clock; the frontend uses it instead of the browser clock (`nowMs()` in `lib/api.ts`).
+
+### Request files
+
+When input changes, the backend also updates:
 
 ```text
 <data-root>/requests/{patient_id}.json

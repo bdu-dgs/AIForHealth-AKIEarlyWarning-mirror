@@ -4,8 +4,17 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validator
 
 
+_clock = None
+
+
+def set_clock(source=None):
+    """Replace the service clock (demo playback); None restores real UTC time."""
+    global _clock
+    _clock = source
+
+
 def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return _clock() if _clock else datetime.now(timezone.utc).isoformat()
 
 
 def stamp(value: datetime | str) -> str:
@@ -122,6 +131,14 @@ class Prediction(Strict):
                     raise ValueError('Trajectory upper bound is less than the predicted value')
                 previous = point.time
         return self
+
+
+class ModelHeartbeat(Strict):
+    status: Literal['ready', 'scoring', 'error']
+    model_id: Text
+    model_version: Text
+    policy_version: Text
+    detail: str = Field(default='', max_length=500)
 
 
 class InputBatch(Strict):

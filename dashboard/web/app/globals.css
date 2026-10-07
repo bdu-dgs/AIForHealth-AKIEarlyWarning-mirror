@@ -1038,3 +1038,14 @@ footer {
 .dataset-table-scroll { overflow: auto; max-height: 240px; }
 .dataset-records table { border-collapse: collapse; width: 100%; white-space: nowrap; }
 .dataset-records th, .dataset-records td { padding: 7px 8px; text-align: left; border-bottom: 1px solid #edf1f4; }
+
+.demo-clock {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+.demo-clock small {
+  margin-top: 0;
+}

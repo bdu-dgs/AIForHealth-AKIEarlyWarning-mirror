@@ -260,3 +260,40 @@ def test_export_volumes_stay_importable_and_cover_all_rows(store):
     restored = [item for part in parts for batch in unpack(pack(part), 'volume.zip') for item in batch.observations]
     assert len(restored) == 25001
     assert len({item.record_id for item in restored}) == 25001
+
+
+def demo_batch():
+    obs = [observation('d0', measured='2020-01-01T00:00:00Z', available=None),
+           observation('d1', measured='2020-01-01T00:30:00Z', available='2020-01-01T01:30:00Z'),
+           observation('d2', measured='2020-01-01T02:00:00Z', available=None)]
+    return {'schema_version': 1, 'kind': 'input', 'patients': [PATIENT], 'observations': obs}
+
+
+def test_demo_playback_releases_data_hour_by_hour_on_a_frozen_clock(tmp_path):
+    start = datetime(2021, 6, 1, tzinfo=timezone.utc)      # admission is moved to the demo start
+    app = create_app(tmp_path / 'demo', watch=False, demo_batch=demo_batch(), demo_start=start)
+    with TestClient(app) as client:
+        clock = client.get('/api/clock').json()
+        assert clock['mode'] == 'demo' and clock['hours_elapsed'] == 0 and clock['staged_remaining'] == 2
+        assert client.get('/api/health').json()['server_time'] == stamp(start)
+        patient = client.get('/api/patients/synthetic_01').json()
+        assert patient['icu_admitted_at'] == stamp(start)
+        seen = lambda: [o['record_id'] for o in client.get('/api/patients/synthetic_01/history').json()['items']]
+        assert seen() == ['d0']
+        assert client.post('/api/demo/advance').json()['hours_elapsed'] == 1
+        assert seen() == ['d0']                              # d1 is measured at 0:30 but available at 1:30
+        assert client.post('/api/demo/advance?hours=1').json()['staged_remaining'] == 0
+        assert seen() == ['d0', 'd1', 'd2']
+        revisions = client.get('/api/patients/synthetic_01/revisions').json()
+        assert [r['available_at'] for r in revisions][-1] == stamp(start + timedelta(hours=2))
+    assert now() > stamp(start + timedelta(days=365))        # real clock restored after shutdown
+
+
+def test_demo_advance_requires_playback_and_model_heartbeat_sets_status(tmp_path):
+    with TestClient(create_app(tmp_path / 'live', watch=False)) as client:
+        assert client.post('/api/demo/advance').status_code == 409
+        assert client.get('/api/clock').json()['mode'] == 'real'
+        assert client.get('/api/health').json()['model_status'] == 'not_configured'
+        beat = {'status': 'ready', 'model_id': 'm', 'model_version': 'v', 'policy_version': 'p'}
+        assert client.post('/api/model/heartbeat', json=beat).json()['model_status'] == 'running'
+        assert client.get('/api/health').json()['model']['policy_version'] == 'p'

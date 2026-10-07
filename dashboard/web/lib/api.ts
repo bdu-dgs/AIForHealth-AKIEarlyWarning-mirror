@@ -87,13 +87,37 @@ export type Quality = {
   score_status: string;
   reference_time: string;
 };
+export type Clock = {
+  mode: 'real' | 'demo';
+  now: string;
+  start?: string;
+  hours_elapsed?: number;
+  staged_remaining?: number;
+};
 export type Health = {
   status: string;
   revision: number;
   model_status: string;
+  model: null | {
+    status: string;
+    model_id: string;
+    model_version: string;
+    policy_version: string;
+    detail: string;
+  };
+  clock: Clock;
   watcher: { running: boolean; errors: { file: string; message: string }[] };
   file_writes_pending: number;
+  server_time: string;
 };
+// Service clock: real time, or the frozen demo-playback time reported by the backend.
+let demoNow: number | null = null;
+export function setServiceClock(clock?: Clock | null) {
+  demoNow = clock?.mode === 'demo' ? Date.parse(clock.now) : null;
+}
+export function nowMs() {
+  return demoNow ?? Date.now();
+}
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch('/api' + path, init);
   if (!response.ok) {
@@ -174,7 +198,7 @@ export function groupLabel(p: Prediction) {
 export function alertOf(
   p?: Prediction | null,
   stale = false,
-  referenceTime = Date.now(),
+  referenceTime = nowMs(),
 ) {
   if (!p) return 'Awaiting model result';
   if (stale) return 'Data updated · result pending';

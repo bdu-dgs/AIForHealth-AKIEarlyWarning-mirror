@@ -1,6 +1,6 @@
 # Local AKI ICU Workbench
 
-This document explains how to use the course project's website. The current local workspace supports patient entry, historical observations, file exchange, and dataset preview. The AKI model, validation thresholds, and clinical effectiveness have not been implemented.
+This document explains how to use the course project's website. The current local workspace supports patient entry, historical observations, file exchange, dataset preview, and a live AKI model (LightGBM, locked `demo-v1` threshold) that scores each new input as it arrives. Clinical effectiveness has not been established; this is a course project, not a clinical tool.
 
 ## Documentation map
 
@@ -55,6 +55,12 @@ The browser message “127.0.0.1 refused to connect” usually means that the se
 - **Dataset preview:** Read-only display of the project's MIMIC CSV subset, matching heart rate and oxygen saturation by patient, hospital admission, and ICU record. It does not write to the real-time database or calculate risk.
 
 A new database is empty; it does not automatically add demo patients or simulated risk. When no model is available, the risk area shows a waiting state.
+
+## Live model and demo playback
+
+`Start-AKI.cmd` also starts the model worker. Whenever new observations are accepted (entered on the Data entry tab, imported as JSON, or dropped in the inbox folder), the model scores the patient at that moment and the risk, the 24h AKI warning status, and the top drivers appear within seconds. The header shows whether the model is running. The model needs its local files in `artifacts/` (not in git), so it runs only on the computer that holds them.
+
+For a presentation, run `Start-AKI-Demo.cmd`. It opens a fresh demo data folder with four synthetic (fictional) patients registered at ICU admission and a demo clock in the header. Each **+1 h** click moves the clock forward one hour, releases the observations recorded in that hour, and the model updates every patient's risk. Use only synthetic patients when presenting to people without PhysioNet access. To play another InputBatch file: `Start-AKI-Demo.cmd --demo path\to\file.json`.
 
 ## Local CSV dataset preview
 

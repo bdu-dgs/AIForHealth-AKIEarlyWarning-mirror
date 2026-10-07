@@ -3,7 +3,7 @@ import { Plus, Upload, Save, Trash2, FolderInput } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Choice } from './choice';
-import { api, post, localTime, type Patient } from '@/lib/api';
+import { api, post, nowMs, localTime, type Patient } from '@/lib/api';
 type Row = {
   id: string;
   metric: string;
@@ -18,7 +18,7 @@ const newRow = (): Row => ({
   label: '',
   unit: '',
   value: '',
-  time: localTime(new Date()),
+  time: localTime(nowMs()),
 });
 export function InputPanel({
   patients,
@@ -46,7 +46,7 @@ export function InputPanel({
     name: '',
     bed: '',
     note: '',
-    icu_admitted_at: localTime(new Date()),
+    icu_admitted_at: localTime(nowMs()),
   });
   const [settings, setSettings] = useState<{
     input_directory: string;
@@ -175,7 +175,7 @@ export function InputPanel({
                 type="datetime-local"
                 required
                 value={form.icu_admitted_at}
-                max={localTime(new Date())}
+                max={localTime(nowMs())}
                 onChange={(e) =>
                   setForm({ ...form, icu_admitted_at: e.target.value })
                 }
@@ -306,7 +306,7 @@ export function InputPanel({
                     type="datetime-local"
                     required
                     value={r.time}
-                    max={localTime(new Date())}
+                    max={localTime(nowMs())}
                     min={
                       patient ? localTime(patient.icu_admitted_at) : undefined
                     }

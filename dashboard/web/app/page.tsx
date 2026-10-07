@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  FastForward,
   Users,
   X,
 } from 'lucide-react';
@@ -17,7 +18,16 @@ import { PatientView } from '@/components/clinical/patient-view';
 import { InputPanel } from '@/components/clinical/input-panel';
 import { DatasetPreview } from '@/components/clinical/dataset-preview';
 import { Choice } from '@/components/clinical/choice';
-import { api, alertOf, type Patient, type Health } from '@/lib/api';
+import {
+  api,
+  post,
+  fmt,
+  alertOf,
+  setServiceClock,
+  type Clock,
+  type Patient,
+  type Health,
+} from '@/lib/api';
 type ModelContext = {
   registerTool: (
     tool: {
@@ -34,6 +44,9 @@ export default function App() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [health, setHealth] = useState<Health | null>(null);
   const [revision, setRevision] = useState(0);
+  // Views reload on viewRevision, which follows revision only after the service clock has been refreshed.
+  const [viewRevision, setViewRevision] = useState(0);
+  const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState('');
   const [connected, setConnected] = useState(false);
   const [search, setSearch] = useState('');
@@ -73,13 +86,50 @@ export default function App() {
         if (!control.signal.aborted) setError(e.message);
       });
     return () => control.abort();
-  }, [revision, refresh]);
+  }, [viewRevision, refresh]);
+  useEffect(() => {
+    let active = true;
+    void api<Health>('/health')
+      .then((h) => {
+        if (!active) return;
+        setServiceClock(h.clock);
+        setHealth(h);
+        setViewRevision(h.revision);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [revision]);
+  const advance = async (hours: number) => {
+    setAdvancing(true);
+    try {
+      setServiceClock(await post<Clock>('/demo/advance?hours=' + hours, {}));
+      const h = await api<Health>('/health');
+      setHealth(h);
+      setViewRevision(h.revision);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not advance the demo clock');
+    } finally {
+      setAdvancing(false);
+    }
+  };
+  const demo = health?.clock.mode === 'demo' ? health.clock : null;
+  const modelText =
+    health?.model_status === 'running'
+      ? 'Model running · ' + health.model?.policy_version
+      : health?.model_status === 'error'
+        ? 'Model error · ' + (health.model?.detail ?? '')
+        : health?.model_status === 'offline'
+          ? 'Model offline'
+          : 'Model not connected';
   useEffect(() => {
     let active = true;
     const check = () =>
       void api<Health>('/health')
         .then((h) => {
           if (active) {
+            setServiceClock(h.clock);
             setHealth(h);
             setRevision(h.revision);
           }
@@ -185,7 +235,25 @@ export default function App() {
                 ? 'Restoring live connection'
                 : 'Local service not connected'}
           </span>
-          <small>Model not yet connected</small>
+          <small title={health?.model?.detail || undefined}>{modelText}</small>
+          {demo && (
+            <div className="demo-clock">
+              <small>
+                Demo clock · ICU hour {Math.round(demo.hours_elapsed ?? 0)} ·{' '}
+                {fmt(demo.now)}
+              </small>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={advancing}
+                onClick={() => void advance(1)}
+                aria-label="Advance the demo clock by 1 hour"
+              >
+                <FastForward size={14} />
+                +1 h
+              </Button>
+            </div>
+          )}
         </div>
       </header>
       <main>
@@ -270,7 +338,7 @@ export default function App() {
             <PatientView
               key={detail.patient_id}
               patient={detail}
-              revision={revision}
+              revision={viewRevision}
               detail
               onError={setError}
             />
@@ -326,7 +394,7 @@ export default function App() {
                     <PatientView
                       key={patient.patient_id}
                       patient={patient}
-                      revision={revision}
+                      revision={viewRevision}
                       onOpen={() => navigate('/patients/' + patient.patient_id)}
                       onError={setError}
                     />

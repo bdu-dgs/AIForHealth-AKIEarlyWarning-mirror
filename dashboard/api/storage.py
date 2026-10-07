@@ -311,6 +311,14 @@ class Store:
             db.execute('UPDATE patients SET photo=? WHERE id=?', (filename, patient_id))
             db.execute("UPDATE meta SET value=value+1 WHERE key='revision'")
 
+    def revisions(self, patient_id):
+        """Input revisions of one patient with the time each became available (model worker trigger points)."""
+        self.patient(patient_id)
+        with self.connection() as db:
+            rows = db.execute('SELECT version, available_at FROM revisions WHERE patient=? ORDER BY version',
+                              (patient_id,)).fetchall()
+        return [{'input_revision': r[0], 'available_at': r[1]} for r in rows]
+
     def outbox_pending(self):
         with self.connection() as db:
             return db.execute('SELECT COUNT(*) FROM outbox').fetchone()[0]

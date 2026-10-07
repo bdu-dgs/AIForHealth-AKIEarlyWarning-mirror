@@ -3,6 +3,7 @@ import csv
 import io
 import json
 import os
+import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -16,7 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from PIL import Image, UnidentifiedImageError
 
-from .schemas import Batch, now, stamp
+from .schemas import Batch, InputBatch, ModelHeartbeat, now, set_clock, stamp
+from .demo import DemoPlayback
 from .storage import Store
 from .watcher import Watcher
 from .exchange import pack, unpack, volumes
@@ -28,12 +30,20 @@ BASE = Path(__file__).resolve().parents[2]
 Image.MAX_IMAGE_PIXELS = 20_000_000
 
 
-def create_app(data_root=None, watch=True, dataset_root=None):
+MODEL_HEARTBEAT_SECONDS = 20
+
+
+def create_app(data_root=None, watch=True, dataset_root=None, demo_batch=None, demo_start=None):
+    """demo_batch (InputBatch dict) + demo_start (aware datetime) load demo playback into an empty data directory."""
     # No filesystem mutation at module import; tests and servers own their lifecycle.
     @asynccontextmanager
     async def lifespan(app):
         default_root = Path(os.environ.get('LOCALAPPDATA', str(BASE))) / 'AKIWorkbench' / 'data'
         app.state.store = Store(data_root or os.environ.get('AKI_DATA_DIR', str(default_root)))
+        app.state.demo = DemoPlayback(app.state.store)
+        if demo_batch is not None and not app.state.demo.active:
+            app.state.demo.load(InputBatch(**demo_batch), demo_start)
+        app.state.model = None
         app.state.watcher = Watcher(app.state.store)
         if watch:
             app.state.watcher.start()
@@ -42,6 +52,7 @@ def create_app(data_root=None, watch=True, dataset_root=None):
         finally:
             if watch:
                 app.state.watcher.close()
+            set_clock(None)
 
     app = FastAPI(title='AKI Local Workbench', version='0.1.0', lifespan=lifespan,
                   docs_url=None, redoc_url=None)
@@ -82,17 +93,48 @@ def create_app(data_root=None, watch=True, dataset_root=None):
     async def missing(request, exc):
         return JSONResponse({'detail': 'Patient not found'}, status_code=404)
 
+    def model_status():
+        beat = app.state.model
+        if beat is None:
+            return 'not_configured'
+        if time.monotonic() - beat['seen'] > MODEL_HEARTBEAT_SECONDS:
+            return 'offline'
+        return 'error' if beat['status'] == 'error' else 'running'
+
+    def model_info():
+        beat = app.state.model
+        return None if beat is None else {k: v for k, v in beat.items() if k != 'seen'}
+
     @app.get('/api/health')
     def health():
-        return {'status': 'ok', 'revision': app.state.store.revision, 'model_status': 'not_configured',
+        return {'status': 'ok', 'revision': app.state.store.revision, 'model_status': model_status(),
+                'model': model_info(), 'clock': app.state.demo.status(),
                 'watcher': app.state.watcher.status(), 'file_writes_pending': app.state.store.outbox_pending(),
                 'server_time': now()}
+
+    @app.post('/api/model/heartbeat')
+    def model_heartbeat(beat: ModelHeartbeat):
+        # Sent by the local model worker; wall-clock age (not the demo clock) decides whether it is alive.
+        app.state.model = {**beat.model_dump(), 'seen': time.monotonic()}
+        return {'model_status': model_status()}
+
+    @app.get('/api/clock')
+    def clock():
+        return app.state.demo.status()
+
+    @app.post('/api/demo/advance')
+    async def demo_advance(hours: int = Query(1, ge=1, le=24)):
+        if not app.state.demo.active:
+            raise HTTPException(409, 'Demo playback is not active; start the website with --demo')
+        result = await asyncio.to_thread(app.state.demo.advance, hours)
+        app.state.watcher.wake.set()
+        return result
 
     @app.get('/api/settings')
     def settings():
         return {'data_directory': str(app.state.store.root), 'input_directory': str(app.state.store.root / 'inbox/input'),
                 'prediction_directory': str(app.state.store.root / 'inbox/prediction'),
-                'model_status': 'not_configured', 'max_import_mb': 16,
+                'model_status': model_status(), 'max_import_mb': 16,
                 'research': {'cutoff_stability': 'not_evaluated', 'validation_threshold': 'not_selected'}}
 
     @app.get('/api/patients')
@@ -155,6 +197,10 @@ def create_app(data_root=None, watch=True, dataset_root=None):
         known = min(stamp(as_of), now()) if as_of else now()
         end = min(stamp(cutoff), known) if cutoff else known
         return {'input_fingerprint': app.state.store.input_snapshot(patient_id, known, end), 'as_of': known, 'data_cutoff': end}
+
+    @app.get('/api/patients/{patient_id}/revisions')
+    def revisions(patient_id: str):
+        return app.state.store.revisions(patient_id)
 
     @app.get('/api/patients/{patient_id}/current-predictions')
     def current_predictions(patient_id: str, as_of: str | None = None):

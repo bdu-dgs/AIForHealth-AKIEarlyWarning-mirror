@@ -19,6 +19,8 @@ if (-not (Test-Path -LiteralPath '.venv\Scripts\python.exe')) {
 }
 Invoke-Checked '.\.venv\Scripts\python.exe' @('-c', 'import sys; assert sys.version_info >= (3,11), "Python 3.11+ required"')
 Invoke-Checked '.\.venv\Scripts\python.exe' @('-m', 'pip', 'install', '-r', 'dashboard/requirements.txt')
+# Model worker (LightGBM etc.), pinned to the versions that trained the local model.
+Invoke-Checked '.\.venv\Scripts\python.exe' @('-m', 'pip', 'install', '-r', 'dashboard/requirements-model.txt')
 
 Push-Location -LiteralPath 'dashboard\web'
 try {

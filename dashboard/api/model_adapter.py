@@ -1,4 +1,4 @@
-"""Model integration contract only. No statistical model or invented predictions."""
+"""Model integration contract. The implemented worker is dashboard/model_worker.py (a separate process)."""
 from typing import Protocol
 from .schemas import PredictionBatch
 

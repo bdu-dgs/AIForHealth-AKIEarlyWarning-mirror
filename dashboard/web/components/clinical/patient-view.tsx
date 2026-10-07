@@ -22,6 +22,7 @@ import {
   localTime,
   groupKey,
   defaultGroup,
+  nowMs,
   groupLabel,
   alertOf,
   type Patient,
@@ -107,7 +108,7 @@ export function PatientView({
   const [speed, setSpeed] = useState('60');
   const [metric, setMetric] = useState('');
   const [group, setGroup] = useState('');
-  const [clock, setClock] = useState(Date.now());
+  const [clock, setClock] = useState(nowMs());
   const [loaded, setData] = useState<ViewData | null>(null);
   const [dataKey, setDataKey] = useState('');
   const [loadedQuality, setQuality] = useState<Quality | null>(null);
@@ -123,9 +124,9 @@ export function PatientView({
   const queryKey = [patient.patient_id, revision, start, end].join('|');
   const data = dataKey === queryKey ? loaded : null;
   const quality = qualityKey === queryKey ? loadedQuality : null;
-  useEffect(() => setClock(Date.now()), [revision]);
+  useEffect(() => setClock(nowMs()), [revision]);
   useEffect(() => {
-    const timer = setInterval(() => setClock(Date.now()), 30000);
+    const timer = setInterval(() => setClock(nowMs()), 30000);
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
@@ -134,7 +135,7 @@ export function PatientView({
       () =>
         setReplay((old) => {
           const next = (old ?? admitted) + Number(speed) * 1000;
-          if (next >= Date.now()) {
+          if (next >= nowMs()) {
             setPlaying(false);
             return null;
           }
@@ -412,7 +413,7 @@ export function PatientView({
               onClick={() => {
                 setReplay(null);
                 setPlaying(false);
-                setClock(Date.now());
+                setClock(nowMs());
               }}
             >
               <RotateCcw size={15} />
