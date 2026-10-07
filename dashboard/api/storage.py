@@ -89,10 +89,10 @@ class Store:
                     body = patient.model_dump(mode='json')
                     body['icu_admitted_at'] = stamp(patient.icu_admitted_at)
                     if body['icu_admitted_at'] > moment:
-                        raise ValueError('入 ICU 时间不能在未来')
+                        raise ValueError('ICU admission time cannot be in the future')
                     old = db.execute('SELECT body FROM patients WHERE id=?', (patient.patient_id,)).fetchone()
                     if old and old['body'] != encode(body):
-                        raise ValueError('患者 ID 已存在且资料不同；保留原资料，请核对患者与住院标识')
+                        raise ValueError('Patient ID already exists with different details; the original details were kept. Check the patient and encounter IDs')
                     if not old:
                         db.execute('INSERT INTO patients(id,encounter,body,created_at) VALUES(?,?,?,?)',
                                    (patient.patient_id, patient.encounter_id, encode(body), moment))
@@ -107,7 +107,7 @@ class Store:
             for record in records:
                 patient = db.execute('SELECT * FROM patients WHERE id=?', (record.patient_id,)).fetchone()
                 if not patient or patient['encounter'] != record.encounter_id:
-                    raise ValueError('患者不存在或 encounter_id 不匹配；请先登记患者')
+                    raise ValueError('Patient not found or encounter_id does not match; register the patient first')
                 body = record.model_dump(mode='json')
                 time_keys = ('measured_at', 'available_at') if kind == 'observation' else (
                     'origin_time', 'data_cutoff', 'horizon_end', 'generated_at', 'available_at')
@@ -124,27 +124,27 @@ class Store:
                     if candidate['available_at'] is None:
                         candidate['available_at'] = old_body['available_at']
                     if encode(old_body) != encode(candidate):
-                        raise ValueError('相同记录 ID 与 revision 对应不同内容；请增加 revision')
+                        raise ValueError('The same record ID and revision have different content; increase the revision')
                     continue
                 event_at = body['measured_at' if kind == 'observation' else 'origin_time']
                 if event_at < json.loads(patient['body'])['icu_admitted_at'] or event_at > moment:
-                    raise ValueError('观测／预测起点必须位于入 ICU 后至当前时间之间')
+                    raise ValueError('Observation/prediction origin time must be between ICU admission and the current time')
                 available = body['available_at'] or moment
                 if available < event_at or available > moment:
-                    raise ValueError('available_at 必须位于测量／预测起点与当前时间之间')
+                    raise ValueError('available_at must be between the measurement/prediction origin time and the current time')
                 if kind == 'prediction':
                     if body['generated_at'] > available:
-                        raise ValueError('预测可用时间不能早于生成时间')
+                        raise ValueError('Prediction availability time cannot be earlier than its generation time')
                     snapshot = self.snapshot(db, record.patient_id, body['generated_at'], body['data_cutoff'])
                     if snapshot != record.input_fingerprint:
-                        raise ValueError('预测引用的输入快照与当时可用观测不匹配；请核对 input_fingerprint 与时间')
+                        raise ValueError('The input snapshot referenced by the prediction does not match the observations available at that time; check input_fingerprint and times')
                 # A correction may change event time, but cannot reverse its availability ordering.
                 conflict = db.execute('''SELECT 1 FROM records WHERE kind=? AND patient=? AND id=?
                     AND ((revision<? AND available_at>?) OR (revision>? AND available_at<?)) LIMIT 1''',
                     (kind, record.patient_id, record.record_id, record.revision, available,
                      record.revision, available)).fetchone()
                 if conflict:
-                    raise ValueError('记录修订的 available_at 顺序与 revision 冲突')
+                    raise ValueError('available_at order of record revisions conflicts with revision numbers')
                 body['available_at'] = available
                 body['availability_basis'] = 'source' if record.available_at else 'local_received'
                 db.execute('INSERT INTO records VALUES(?,?,?,?,?,?,?,?,?,?)',

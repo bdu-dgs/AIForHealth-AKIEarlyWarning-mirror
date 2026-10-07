@@ -9,7 +9,7 @@ Usage: python scripts/make_synthetic_demo_patients.py <output.json> [--end-at-no
 
 --end-at-now moves every admission so that ICU hour 72 ends a few minutes before the current time. Use it for a
 live dashboard demo: with the fixed default dates every prediction window has already ended, so the dashboard
-shows "预测窗口已结束" instead of an alert status. A dashboard data directory accepts one admission time per
+shows "Prediction window ended" instead of an alert status. A dashboard data directory accepts one admission time per
 patient, so import a shifted file into a fresh `--data-dir`. Without the flag the output is identical on every run.
 """
 import json

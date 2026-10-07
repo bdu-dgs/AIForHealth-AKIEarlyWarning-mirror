@@ -14,7 +14,7 @@ const result = {
 test('missing and unlocked thresholds never invent a warning', () => {
   assert.equal(
     alertOf({ ...result, threshold: null }, false, reference),
-    '阈值未锁定',
+    'Threshold not locked',
   );
   assert.equal(
     alertOf(
@@ -22,22 +22,22 @@ test('missing and unlocked thresholds never invent a warning', () => {
       false,
       reference,
     ),
-    '阈值未锁定',
+    'Threshold not locked',
   );
-  assert.equal(alertOf(null, false, reference), '等待模型结果');
+  assert.equal(alertOf(null, false, reference), 'Awaiting model result');
 });
 test('threshold comparator, stale inputs and expired windows remain distinct', () => {
-  assert.equal(alertOf(result, false, reference), 'AKI 警告');
+  assert.equal(alertOf(result, false, reference), 'AKI warning');
   assert.equal(
     alertOf(
       { ...result, threshold: { ...result.threshold!, comparison: '>' } },
       false,
       reference,
     ),
-    '未触发阈值',
+    'Below threshold',
   );
-  assert.equal(alertOf(result, true, reference), '数据已更新 · 结果待更新');
-  assert.equal(alertOf(result, false, reference + 3600000), '预测窗口已结束');
+  assert.equal(alertOf(result, true, reference), 'Data updated · result pending');
+  assert.equal(alertOf(result, false, reference + 3600000), 'Prediction window ended');
 });
 test('model versions and arbitrary horizons create independent series', () => {
   assert.notEqual(

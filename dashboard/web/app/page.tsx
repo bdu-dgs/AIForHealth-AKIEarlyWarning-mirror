@@ -110,7 +110,7 @@ export default function App() {
         .includes(search.toLowerCase()) &&
       (filter === 'all' ||
         (filter === 'warning'
-          ? alertOf(p.prediction, p.stale) === 'AKI 警告'
+          ? alertOf(p.prediction, p.stale) === 'AKI warning'
           : !p.prediction || p.stale)),
   );
   const pages = Math.max(1, Math.ceil(filtered.length / 8));
@@ -166,26 +166,26 @@ export default function App() {
         <button
           className="brand"
           onClick={() => navigate('/')}
-          aria-label="返回患者总览"
+          aria-label="Back to patient overview"
         >
           <Activity size={28} />
           <div>
             <strong>
-              AKI <span>ICU 工作台</span>
+              AKI <span>ICU Workbench</span>
             </strong>
-            <small>连续观测 · 风险预警</small>
+            <small>Continuous monitoring · Risk alerts</small>
           </div>
         </button>
         <div className="header-status">
           <span className={'connection ' + (!connected ? 'offline' : '')}>
             ●{' '}
             {connected
-              ? '本地服务已连接'
+              ? 'Local service connected'
               : health
-                ? '正在恢复实时连接'
-                : '本地服务未连接'}
+                ? 'Restoring live connection'
+                : 'Local service not connected'}
           </span>
-          <small>模型尚未接入</small>
+          <small>Model not yet connected</small>
         </div>
       </header>
       <main>
@@ -198,25 +198,25 @@ export default function App() {
                   ? 'PATIENT DETAIL'
                   : 'PATIENT MONITORING'}
             </p>
-            <h1>{dataset ? '数据集预览' : input ? '信息录入' : detailId ? '患者详情' : '患者观察'}</h1>
+            <h1>{dataset ? 'Dataset preview' : input ? 'Data entry' : detailId ? 'Patient detail' : 'Patient monitoring'}</h1>
             <p className="muted">
-              {dataset ? '按患者匹配本地 CSV，查看入 ICU 前后的测量。' : input
-                ? '登记患者、追加观测，或导入本地模型结果。'
+              {dataset ? 'Match local CSV files by patient and review measurements before and after ICU admission.' : input
+                ? 'Register patients, add observations, or import local model results.'
                 : detailId
-                  ? '连续观测与完整历史，按实际可用时间回放。'
-                  : '每位患者的观测与预测，在同一张卡片中呈现。'}
+                  ? 'Continuous observations and full history, replayed by actual availability time.'
+                  : 'Observations and predictions for each patient, shown together on one card.'}
             </p>
           </div>
           <div className="toolbar">
             {detailId && (
               <Button variant="outline" onClick={() => navigate('/')}>
                 <ArrowLeft size={16} />
-                返回总览
+                Back to overview
               </Button>
             )}
             <Button onClick={() => navigate(input ? '/' : '/input')}>
               {input ? <Users size={16} /> : <Plus size={16} />}{' '}
-              {input ? '患者观察' : '录入信息'}
+              {input ? 'Patient monitoring' : 'Enter data'}
             </Button>
           </div>
         </div>
@@ -225,9 +225,9 @@ export default function App() {
           onValueChange={(v) => navigate(v === 'dataset' ? '/dataset' : v === 'input' ? '/input' : '/')}
         >
           <TabsList>
-            <TabsTrigger value="observe">观察信息</TabsTrigger>
-            <TabsTrigger value="input">输入信息</TabsTrigger>
-            <TabsTrigger value="dataset">数据集预览</TabsTrigger>
+            <TabsTrigger value="observe">Monitoring</TabsTrigger>
+            <TabsTrigger value="input">Data entry</TabsTrigger>
+            <TabsTrigger value="dataset">Dataset preview</TabsTrigger>
           </TabsList>
         </Tabs>
         {error && (
@@ -235,7 +235,7 @@ export default function App() {
             <span>{error}</span>
             <Button
               variant="ghost"
-              aria-label="关闭错误提示"
+              aria-label="Dismiss error"
               onClick={() => setError('')}
             >
               <X size={16} />
@@ -244,18 +244,18 @@ export default function App() {
         )}
         {health && health.file_writes_pending > 0 && (
           <div className="notice error">
-            数据已入库，但有 {health.file_writes_pending}{' '}
-            个批次尚未写入交换文件。系统会自动重试，请检查本地磁盘。
+            Data was saved, but {health.file_writes_pending}{' '}
+            batch(es) have not been written to exchange files yet. The system will retry automatically; check the local disk.
           </div>
         )}
         {health && health.watcher.errors.length > 0 && (
           <div className="notice error" role="status">
-            有 {health.watcher.errors.length} 个文件未能导入：
+            {health.watcher.errors.length} file(s) could not be imported:{' '}
             {health.watcher.errors
               .map((e) => e.message)
               .filter((v, i, a) => a.indexOf(v) === i)
-              .join('；')}
-            。请在输入信息页核对文件契约。
+              .join('; ')}
+            . Check the file contract on the Data entry tab.
           </div>
         )}
         {dataset ? <DatasetPreview /> : input ? (
@@ -276,9 +276,9 @@ export default function App() {
             />
           ) : (
             <section className="panel empty-overview">
-              <h2>{health ? '患者不存在或尚未加载' : '等待本地服务'}</h2>
+              <h2>{health ? 'Patient not found or not yet loaded' : 'Waiting for local service'}</h2>
               <Button variant="outline" onClick={() => navigate('/')}>
-                返回总览
+                Back to overview
               </Button>
             </section>
           )
@@ -287,14 +287,14 @@ export default function App() {
             <div className="overview-heading">
               <h2>
                 <Users size={18} />
-                患者总览 <span className="count">{patients.length}</span>
+                Patient overview <span className="count">{patients.length}</span>
               </h2>
               <div className="toolbar">
                 <div className="search-box">
                   <Search size={15} />
                   <Input
-                    placeholder="搜索姓名、ID 或床位"
-                    aria-label="搜索患者"
+                    placeholder="Search name, ID, or bed"
+                    aria-label="Search patients"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -303,15 +303,15 @@ export default function App() {
                   value={filter}
                   onChange={setFilter}
                   options={[
-                    { value: 'all', label: '全部患者' },
-                    { value: 'warning', label: '有 AKI 警告' },
-                    { value: 'pending', label: '等待结果更新' },
+                    { value: 'all', label: 'All patients' },
+                    { value: 'warning', label: 'With AKI warning' },
+                    { value: 'pending', label: 'Awaiting result update' },
                   ]}
-                  label="提醒筛选"
+                  label="Alert filter"
                 />
                 <Button
                   variant="outline"
-                  aria-label="刷新数据"
+                  aria-label="Refresh data"
                   onClick={() => setRefresh((v) => v + 1)}
                 >
                   <RefreshCw size={16} />
@@ -338,12 +338,12 @@ export default function App() {
                   <Users />
                 </div>
                 <h3>
-                  {patients.length ? '没有符合条件的患者' : '从第一位患者开始'}
+                  {patients.length ? 'No matching patients' : 'Start with your first patient'}
                 </h3>
                 <p>
                   {patients.length
-                    ? '调整搜索条件或提醒筛选。'
-                    : '登记患者后，每张横向卡片都会包含照片、基本信息、观测曲线与预测曲线。'}
+                    ? 'Adjust the search or alert filter.'
+                    : 'After you register a patient, each card shows the photo, basic details, observation chart, and prediction chart.'}
                 </p>
                 <Button
                   variant="outline"
@@ -353,21 +353,21 @@ export default function App() {
                       : navigate('/input')
                   }
                 >
-                  {patients.length ? '清除筛选' : '登记患者'}
+                  {patients.length ? 'Clear filters' : 'Register patient'}
                 </Button>
                 {!patients.length && (
                   <div className="empty-layout-guide">
                     <div>
-                      <strong>患者信息</strong>
-                      <span>照片 · 姓名 · ID · 提醒</span>
+                      <strong>Patient information</strong>
+                      <span>Photo · Name · ID · Alert</span>
                     </div>
                     <div>
-                      <strong>观测曲线</strong>
-                      <span>该患者的近期测量信息</span>
+                      <strong>Observation chart</strong>
+                      <span>Recent measurements for this patient</span>
                     </div>
                     <div>
-                      <strong>预测曲线</strong>
-                      <span>该患者的 AKI 概率与窗口</span>
+                      <strong>Prediction chart</strong>
+                      <span>AKI probability and window for this patient</span>
                     </div>
                   </div>
                 )}
@@ -375,11 +375,11 @@ export default function App() {
             )}
             {filtered.length > 0 && (
               <div className="pagination">
-                <span>共 {filtered.length} 位 · 每页最多 8 位</span>
+                <span>{filtered.length} total · up to 8 per page</span>
                 <div className="toolbar">
                   <Button
                     variant="outline"
-                    aria-label="上一页"
+                    aria-label="Previous page"
                     disabled={currentPage === 0}
                     onClick={() => setPage(currentPage - 1)}
                   >
@@ -390,7 +390,7 @@ export default function App() {
                   </span>
                   <Button
                     variant="outline"
-                    aria-label="下一页"
+                    aria-label="Next page"
                     disabled={currentPage === pages - 1}
                     onClick={() => setPage(currentPage + 1)}
                   >
@@ -402,7 +402,7 @@ export default function App() {
           </>
         )}
         <footer>
-          本地课程项目 · 模型与临床有效性尚未验证 · {dataset ? '数据集时间按原文件显示（未提供时区）' : '时间以本机时区显示'}
+          Local course project · Model and clinical validity not yet verified · {dataset ? 'Dataset times shown as in source files (no timezone provided)' : 'Times shown in the local timezone'}
         </footer>
       </main>
     </div>

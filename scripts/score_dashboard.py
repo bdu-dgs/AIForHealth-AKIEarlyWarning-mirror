@@ -5,8 +5,8 @@ One-shot batch scorer (not a resident model process). For each patient registere
 2. build the model features at every whole ICU hour 1-72 that has already passed, with the shared as-of engine
    `src/aki_ml/features.py` (labs usable 1 h after the draw, windows (t - W, t]); hours failing the notebook 01
    coverage rule (no usable creatinine in the prior 7 days, or no ICU heart rate yet) get no prediction;
-3. score 6/12/24/48 h with LightGBM `no_dc` + Platt calibration; the 24 h prediction carries the locked
-   `demo-v0` threshold from `artifacts/demo_i/policy.json`, the other horizons are display-only;
+3. score 6/12/24/48 h with LightGBM `no_dc` + Platt calibration; 24 h predictions inside the locked monitoring
+   window carry the locked threshold from `artifacts/demo_i/policy.json`, everything else is display-only;
 4. explain each prediction with LightGBM TreeSHAP: the five features with the largest |contribution|, in
    calibrated log-odds units (raw contribution x Platt slope);
 5. fetch the input fingerprint for each data cutoff from the dashboard and import a PredictionBatch.
@@ -207,6 +207,7 @@ def score_patient(base, model, patient, generated_at):
         offset = page["next_offset"]
 
     policy, alert_h = model.policy, model.policy["alert_horizon_h"]
+    win_lo, win_hi = policy["monitoring_hours"][0], policy["monitoring_hours"][-1]
     out = []
     for k, hour in enumerate(hours.astype(int)):
         origin = admit + timedelta(hours=int(hour))
@@ -224,7 +225,7 @@ def score_patient(base, model, patient, generated_at):
                  "origin_time": stamp(origin), "data_cutoff": stamp(origin),
                  "horizon_end": stamp(origin + timedelta(hours=h)), "generated_at": stamp(generated_at),
                  "risk": round(float(risk[k]), 6), "drivers": drivers[k]}
-            if h == alert_h:
+            if h == alert_h and win_lo <= hour <= win_hi:   # alerts only inside the locked monitoring window
                 p["threshold"] = policy["threshold"]
             out.append(p)
     return out

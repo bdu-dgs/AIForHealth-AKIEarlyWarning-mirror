@@ -17,13 +17,13 @@ from dashboard.api.storage import Store, atomic_json
 from dashboard.api.watcher import Watcher
 
 
-PATIENT = {'patient_id': 'synthetic_01', 'encounter_id': 'synthetic_stay', 'name': '合成测试患者',
+PATIENT = {'patient_id': 'synthetic_01', 'encounter_id': 'synthetic_stay', 'name': 'Synthetic test patient',
            'icu_admitted_at': '2020-01-01T00:00:00Z'}
 
 
 def observation(record='o1', value=1.2, measured='2020-01-01T01:00:00Z', available='2020-01-01T01:05:00Z', **kwargs):
     return {'record_id': record, 'patient_id': PATIENT['patient_id'], 'encounter_id': PATIENT['encounter_id'],
-            'metric': 'synthetic_measure', 'label': '合成测量', 'unit': 'test-unit', 'value': value,
+            'metric': 'synthetic_measure', 'label': 'Synthetic measure', 'unit': 'test-unit', 'value': value,
             'measured_at': measured, 'available_at': available, **kwargs}
 
 
@@ -96,7 +96,7 @@ def test_prediction_requires_exact_visible_input_snapshot(store):
     store.ingest(PredictionBatch(predictions=[prediction(store)]))
     assert history(store, kind='prediction')[0]['risk'] == .123
     assert history(store, as_of='2020-01-01T02:00:30Z', kind='prediction') == []
-    with pytest.raises(ValueError, match='快照'):
+    with pytest.raises(ValueError, match='snapshot'):
         store.ingest(PredictionBatch(predictions=[prediction(store, record_id='bad', input_fingerprint='0' * 64)]))
 
 
@@ -105,7 +105,7 @@ def test_future_information_cannot_enter_old_prediction(store):
     old = prediction(store)
     store.ingest(InputBatch(observations=[observation('late', measured='2020-01-01T00:50:00Z', available='2020-01-02T00:00:00Z')]))
     wrong = {**old, 'input_fingerprint': store.patient(PATIENT['patient_id'])['input_fingerprint']}
-    with pytest.raises(ValueError, match='快照'):
+    with pytest.raises(ValueError, match='snapshot'):
         store.ingest(PredictionBatch(predictions=[wrong]))
     store.ingest(PredictionBatch(predictions=[old]))
     assert store.patients()[0]['stale'] is True

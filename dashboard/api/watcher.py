@@ -48,7 +48,7 @@ class Watcher(FileSystemEventHandler):
                 try:
                     stat = path.stat()
                     if stat.st_size > MAX_FILE_BYTES:
-                        raise ValueError('文件超过 16 MB；请拆分批次')
+                        raise ValueError('File exceeds 16 MB; split it into smaller batches')
                     signature = (stat.st_mtime_ns, stat.st_size)
                     # Wait for a stable file. Producers should always rename .tmp -> .json atomically.
                     if time.time() - stat.st_mtime < 0.25:
@@ -61,13 +61,13 @@ class Watcher(FileSystemEventHandler):
                         continue
                     value = ADAPTER.validate_json(raw)
                     if value.kind != folder:
-                        raise ValueError('文件 kind 与输入／输出目录不匹配')
+                        raise ValueError('File kind does not match the input/output folder')
                     self.store.ingest(value, source='file')
                     self.seen[str(path)] = digest
                     self.failed.pop(str(path), None)
                 except (ValueError, OSError, ValidationError) as error:
                     # Never echo raw field values, patient data or filesystem paths into logs/status.
-                    message = 'JSON 结构或字段不符合契约' if isinstance(error, ValidationError) else str(error) if isinstance(error, ValueError) else '文件暂不可读'
+                    message = 'JSON structure or fields do not match the contract' if isinstance(error, ValidationError) else str(error) if isinstance(error, ValueError) else 'File is temporarily unreadable'
                     errors.append({'file': path.name, 'message': message})
         with self.status_lock:
             self.errors = errors[:20]
@@ -79,7 +79,7 @@ class Watcher(FileSystemEventHandler):
                 self.scan()
             except Exception:
                 with self.status_lock:
-                    self.errors = [{'file': '', 'message': '导入服务遇到错误，将自动重试；请检查磁盘空间与本地文件权限'}]
+                    self.errors = [{'file': '', 'message': 'The import service hit an error and will retry automatically; check disk space and local file permissions'}]
             self.wake.wait(1.0)
             self.wake.clear()
             # Short debounce coalesces bursts and catches files still settling.

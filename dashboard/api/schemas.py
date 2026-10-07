@@ -12,7 +12,7 @@ def stamp(value: datetime | str) -> str:
     if isinstance(value, str):
         value = datetime.fromisoformat(value.replace('Z', '+00:00'))
     if value.tzinfo is None:
-        raise ValueError('时间必须包含时区，例如 +08:00 或 Z')
+        raise ValueError('Time must include a timezone, e.g. +08:00 or Z')
     return value.astimezone(timezone.utc).isoformat()
 
 
@@ -106,20 +106,20 @@ class Prediction(Strict):
     @model_validator(mode='after')
     def times(self):
         if not self.data_cutoff <= self.origin_time < self.horizon_end:
-            raise ValueError('必须满足 data_cutoff ≤ origin_time < horizon_end')
+            raise ValueError('Must satisfy data_cutoff <= origin_time < horizon_end')
         if self.generated_at < self.origin_time:
-            raise ValueError('generated_at 不能早于 origin_time')
+            raise ValueError('generated_at cannot be earlier than origin_time')
         if self.data_confidence is not None and not self.confidence_definition:
-            raise ValueError('提供置信度时必须同时说明 confidence_definition')
+            raise ValueError('confidence_definition is required when data_confidence is provided')
         for series in self.trajectories:
             previous = self.origin_time
             for point in series.points:
                 if not previous <= point.time <= self.horizon_end:
-                    raise ValueError('轨迹时间必须有序且位于预测窗口内')
+                    raise ValueError('Trajectory times must be ordered and within the prediction window')
                 if point.lower is not None and point.lower > point.value:
-                    raise ValueError('轨迹下界大于预测值')
+                    raise ValueError('Trajectory lower bound is greater than the predicted value')
                 if point.upper is not None and point.upper < point.value:
-                    raise ValueError('轨迹上界小于预测值')
+                    raise ValueError('Trajectory upper bound is less than the predicted value')
                 previous = point.time
         return self
 

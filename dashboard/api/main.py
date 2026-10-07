@@ -54,13 +54,13 @@ def create_app(data_root=None, watch=True, dataset_root=None):
             origin = request.headers.get('origin')
             same_origin = str(request.base_url).rstrip('/')
             if origin and origin not in (same_origin, 'http://127.0.0.1:5173', 'http://localhost:5173'):
-                return JSONResponse({'detail': '不允许来自其他网站的写入请求'}, status_code=403)
+                return JSONResponse({'detail': 'Write requests from other websites are not allowed'}, status_code=403)
             # Enforce actual bytes, including chunked requests without Content-Length.
             body = bytearray()
             async for chunk in request.stream():
                 body.extend(chunk)
                 if len(body) > 17 * 1024 * 1024:
-                    return JSONResponse({'detail': '请求超过 17 MB；请拆分批次'}, status_code=413)
+                    return JSONResponse({'detail': 'Request exceeds 17 MB; split it into smaller batches'}, status_code=413)
             request._body = bytes(body)
         response = await call_next(request)
         if request.url.path.startswith('/api/'):
@@ -80,7 +80,7 @@ def create_app(data_root=None, watch=True, dataset_root=None):
 
     @app.exception_handler(KeyError)
     async def missing(request, exc):
-        return JSONResponse({'detail': '患者不存在'}, status_code=404)
+        return JSONResponse({'detail': 'Patient not found'}, status_code=404)
 
     @app.get('/api/health')
     def health():
@@ -104,7 +104,7 @@ def create_app(data_root=None, watch=True, dataset_root=None):
         try:
             return load_preview(dataset_root if dataset_root is not None else BASE / 'icu_pre_admission_data')
         except (OSError, UnicodeError, csv.Error):
-            raise HTTPException(422, '数据文件暂时无法读取，请检查文件是否完整并稍后刷新') from None
+            raise HTTPException(422, 'Data files cannot be read right now; check that the files are complete and refresh later') from None
 
     @app.get('/api/patients/{patient_id}')
     def patient(patient_id: str):
@@ -120,18 +120,18 @@ def create_app(data_root=None, watch=True, dataset_root=None):
     async def import_file(file: UploadFile = File()):
         raw = await file.read(16 * 1024 * 1024 + 1)
         if len(raw) > 16 * 1024 * 1024:
-            raise HTTPException(413, '文件超过 16 MB，请拆分')
+            raise HTTPException(413, 'File exceeds 16 MB; split it into smaller files')
         try:
             batches = unpack(raw, file.filename or '')
         except ValidationError:
-            raise ValueError('文件结构不符合数据契约；请检查字段、时间和数值')
+            raise ValueError('File structure does not match the data contract; check fields, times, and values')
         completed = 0; inserted = 0; changed = 0
         # Each batch is transactional; an interrupted ZIP can be retried idempotently.
         for batch in batches:
             try:
                 result = await asyncio.to_thread(app.state.store.ingest, batch)
             except ValueError as error:
-                raise ValueError(f'已成功导入 {completed} 个批次；当前批次失败：{error}。更正后可重新导入整个文件。')
+                raise ValueError(f'Imported {completed} batch(es); the current batch failed: {error}. After correcting it, re-import the whole file')
             completed += 1; inserted += result['inserted']; changed += result['patients_changed']
         return {'inserted': inserted, 'patients_changed': changed, 'batches': completed}
 
@@ -143,7 +143,7 @@ def create_app(data_root=None, watch=True, dataset_root=None):
         known = min(stamp(as_of), moment) if as_of else moment
         start = stamp(start); end = stamp(end) if end else known
         if end < start:
-            raise ValueError('结束时间必须晚于开始时间')
+            raise ValueError('End time must be later than start time')
         return app.state.store.history(patient_id, start, end, known, kind, offset, limit)
 
     @app.get('/api/patients/{patient_id}/quality')
@@ -170,10 +170,10 @@ def create_app(data_root=None, watch=True, dataset_root=None):
     @app.get('/api/patients/{patient_id}/export/{kind}')
     def export(patient_id: str, kind: Literal['input', 'prediction'], part: int = Query(1, ge=1), revision: int | None = None):
         if revision is not None and revision != app.state.store.revision:
-            raise HTTPException(409, '导出期间数据发生变化，请重新生成导出列表')
+            raise HTTPException(409, 'Data changed during export; regenerate the export list')
         parts = volumes(app.state.store.export(patient_id, kind))
         if part > len(parts):
-            raise HTTPException(404, '导出分卷不存在')
+            raise HTTPException(404, 'Export part not found')
         value = parts[part - 1]
         suffix = f'-part-{part}-of-{len(parts)}'
         key = 'observations' if kind == 'input' else 'predictions'
@@ -189,17 +189,17 @@ def create_app(data_root=None, watch=True, dataset_root=None):
         app.state.store.patient(patient_id)
         raw = await photo.read(5 * 1024 * 1024 + 1)
         if len(raw) > 5 * 1024 * 1024:
-            raise HTTPException(413, '照片不能超过 5 MB')
+            raise HTTPException(413, 'Photo cannot exceed 5 MB')
         try:
             with Image.open(io.BytesIO(raw)) as source:
                 if source.format not in ('JPEG', 'PNG', 'WEBP'):
-                    raise ValueError('请使用 JPEG、PNG 或 WebP 照片')
+                    raise ValueError('Use a JPEG, PNG, or WebP photo')
                 source.load()
                 picture = source.convert('RGB'); picture.thumbnail((512, 512))
                 name = uuid.uuid4().hex + '.jpg'
                 picture.save(app.state.store.root / 'photos' / name, 'JPEG', quality=90)
         except (UnidentifiedImageError, Image.DecompressionBombError, OSError):
-            raise ValueError('无法读取照片，请使用有效且尺寸适当的图片')
+            raise ValueError('Cannot read the photo; use a valid image of reasonable size')
         app.state.store.set_photo(patient_id, name)
         return {'photo': name}
 
@@ -207,7 +207,7 @@ def create_app(data_root=None, watch=True, dataset_root=None):
     def photo(patient_id: str):
         item = app.state.store.patient(patient_id)
         if not item['photo']:
-            raise HTTPException(404, '没有照片')
+            raise HTTPException(404, 'No photo')
         return FileResponse(app.state.store.root / 'photos' / item['photo'])
 
     @app.get('/api/events')
@@ -233,9 +233,9 @@ def create_app(data_root=None, watch=True, dataset_root=None):
     @app.get('/{path:path}')
     def spa(path: str):
         if path.startswith('api/'):
-            raise HTTPException(404, '接口不存在')
+            raise HTTPException(404, 'Endpoint not found')
         if not (web / 'index.html').exists():
-            raise HTTPException(503, '前端尚未构建，请运行 Setup-AKI.cmd')
+            raise HTTPException(503, 'Frontend has not been built; run Setup-AKI.cmd')
         if path == 'favicon.svg' and (web / path).exists():
             return FileResponse(web / path)
         return FileResponse(web / 'index.html')

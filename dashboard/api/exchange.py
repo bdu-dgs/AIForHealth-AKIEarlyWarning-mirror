@@ -42,7 +42,7 @@ def pack(value):
             archive.writestr(name, content)
     result = buffer.getvalue()
     if len(files) > 300 or sum(map(len, files)) > 64 * 1024 * 1024 or len(result) > MAX_FILE_BYTES:
-        raise ValueError('数据超过单卷限制，请使用导出分卷接口')
+        raise ValueError('Data exceeds the single-part limit; use the multi-part export endpoint')
     return result
 
 
@@ -50,20 +50,20 @@ def unpack(raw, filename):
     if filename.lower().endswith('.json'):
         return [ADAPTER.validate_json(raw)]
     if not filename.lower().endswith('.zip'):
-        raise ValueError('请使用 JSON 或本网站导出的 ZIP 文件')
+        raise ValueError('Use a JSON file or a ZIP file exported from this site')
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as archive:
             entries = archive.infolist()
             if len(entries) > 301 or sum(x.file_size for x in entries) > 64 * 1024 * 1024:
-                raise ValueError('交换包超过 300 个批次或解压后 64 MB，请拆分')
+                raise ValueError('Exchange package exceeds 300 batches or 64 MB uncompressed; split it into smaller files')
             if any(x.file_size > MAX_FILE_BYTES for x in entries):
-                raise ValueError('交换包单个批次超过 16 MB')
+                raise ValueError('A batch in the exchange package exceeds 16 MB')
             manifest = json.loads(archive.read('manifest.json'))
             names = manifest.get('files')
             if manifest.get('format') != 'aki-batches-v1' or not isinstance(names, list) or not names:
-                raise ValueError('交换包清单格式不正确')
+                raise ValueError('Invalid exchange package manifest')
             if len(set(names)) != len(names):
-                raise ValueError('交换包清单存在重复批次')
+                raise ValueError('Exchange package manifest contains duplicate batches')
             return [ADAPTER.validate_json(archive.read(name)) for name in names]
     except (zipfile.BadZipFile, KeyError, TypeError):
-        raise ValueError('无法读取交换包或清单引用的批次')
+        raise ValueError('Cannot read the exchange package or a batch listed in its manifest')

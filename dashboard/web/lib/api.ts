@@ -97,7 +97,7 @@ export type Health = {
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch('/api' + path, init);
   if (!response.ok) {
-    let message = '本地服务请求失败';
+    let message = 'Local service request failed';
     try {
       const body = (await response.json()) as { detail: unknown };
       message =
@@ -123,27 +123,28 @@ export function localTime(value: string | number | Date) {
     .slice(0, 16);
 }
 export function fmt(value: string | number) {
-  return new Date(value).toLocaleString('zh-CN', {
+  return new Date(value).toLocaleString('en-US', {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    hourCycle: 'h23',
   });
 }
 export function duration(ms: number) {
   if (ms < 3600000)
     return (
-      (ms / 60000).toLocaleString('zh-CN', { maximumFractionDigits: 1 }) +
-      ' 分钟'
+      (ms / 60000).toLocaleString('en-US', { maximumFractionDigits: 1 }) +
+      ' min'
     );
   if (ms < 86400000)
     return (
-      (ms / 3600000).toLocaleString('zh-CN', { maximumFractionDigits: 1 }) +
-      ' 小时'
+      (ms / 3600000).toLocaleString('en-US', { maximumFractionDigits: 1 }) +
+      ' h'
     );
   return (
-    (ms / 86400000).toLocaleString('zh-CN', { maximumFractionDigits: 1 }) +
-    ' 天'
+    (ms / 86400000).toLocaleString('en-US', { maximumFractionDigits: 1 }) +
+    ' d'
   );
 }
 export function groupKey(p: Prediction) {
@@ -162,7 +163,7 @@ export function defaultGroup(predictions: Prediction[]) {
 export function groupLabel(p: Prediction) {
   return (
     p.target +
-    ' · 未来 ' +
+    ' · next ' +
     duration(+new Date(p.horizon_end) - +new Date(p.origin_time)) +
     ' · ' +
     p.model_id +
@@ -175,15 +176,15 @@ export function alertOf(
   stale = false,
   referenceTime = Date.now(),
 ) {
-  if (!p) return '等待模型结果';
-  if (stale) return '数据已更新 · 结果待更新';
-  if (+new Date(p.horizon_end) <= referenceTime) return '预测窗口已结束';
-  if (!p.threshold?.locked) return '阈值未锁定';
+  if (!p) return 'Awaiting model result';
+  if (stale) return 'Data updated · result pending';
+  if (+new Date(p.horizon_end) <= referenceTime) return 'Prediction window ended';
+  if (!p.threshold?.locked) return 'Threshold not locked';
   const hit =
     p.threshold.comparison === '>'
       ? p.risk > p.threshold.value
       : p.risk >= p.threshold.value;
-  return hit ? 'AKI 警告' : '未触发阈值';
+  return hit ? 'AKI warning' : 'Below threshold';
 }
 export async function history<T>(
   id: string,

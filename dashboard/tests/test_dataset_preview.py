@@ -73,7 +73,7 @@ def test_missing_empty_and_duplicate_sources(tmp_path):
     dataset(tmp_path, [])
     assert load_preview(tmp_path)['stats']['selected_points'] == 0
     dataset(tmp_path, stays=[STAY, STAY])
-    with pytest.raises(ValueError, match='重复'):
+    with pytest.raises(ValueError, match='duplicates'):
         load_preview(tmp_path)
 
 

@@ -59,7 +59,7 @@ export function InputPanel({
       setMessage(await action());
       onSaved();
     } catch (e) {
-      onError(e instanceof Error ? e.message : '操作失败');
+      onError(e instanceof Error ? e.message : 'Operation failed');
     } finally {
       setBusy(false);
     }
@@ -71,7 +71,7 @@ export function InputPanel({
   }
   async function importFile(file: File) {
     if (file.size > 16 * 1024 * 1024) {
-      onError('文件超过 16 MB，请拆分批次');
+      onError('File exceeds 16 MB; split it into smaller batches');
       return;
     }
     await perform(async () => {
@@ -82,11 +82,11 @@ export function InputPanel({
         { method: 'POST', body: upload },
       );
       return (
-        '导入完成：新增 ' +
+        'Import complete: ' +
         result.inserted +
-        ' 条记录，更新 ' +
+        ' new record(s), ' +
         result.patients_changed +
-        ' 位患者。重复记录会自动跳过。'
+        ' patient(s) updated. Duplicate records are skipped automatically.'
       );
     });
   }
@@ -101,7 +101,7 @@ export function InputPanel({
         <div className="panel-heading">
           <div>
             <p className="eyebrow">PATIENT REGISTRATION</p>
-            <h2>登记患者</h2>
+            <h2>Register patient</h2>
           </div>
           <Plus size={19} />
         </div>
@@ -132,7 +132,7 @@ export function InputPanel({
                     body: data,
                   });
                 } catch {
-                  photoMessage = '，但照片上传失败，可在下方重新上传';
+                  photoMessage = ', but the photo upload failed; you can upload it again below';
                 }
               }
               setPatientId(form.patient_id);
@@ -145,7 +145,7 @@ export function InputPanel({
                 note: '',
               });
               setPhoto(null);
-              return '患者已登记' + photoMessage;
+              return 'Patient registered' + photoMessage;
             });
           }}
         >
@@ -153,7 +153,7 @@ export function InputPanel({
             {(['patient_id', 'encounter_id', 'name', 'bed'] as const).map(
               (key, i) => (
                 <label key={key}>
-                  {['患者 ID', '本次住院 ID', '患者姓名', '床位（可选）'][i]}
+                  {['Patient ID', 'Encounter ID', 'Patient name', 'Bed (optional)'][i]}
                   <Input
                     required={key !== 'bed'}
                     pattern={key.includes('id') ? '[A-Za-z0-9_-]+' : undefined}
@@ -163,14 +163,14 @@ export function InputPanel({
                       setForm({ ...form, [key]: e.target.value })
                     }
                     placeholder={
-                      key.includes('id') ? '字母、数字、下划线或连字符' : ''
+                      key.includes('id') ? 'Letters, digits, underscores, or hyphens' : ''
                     }
                   />
                 </label>
               ),
             )}
             <label>
-              入 ICU 时间
+              ICU admission time
               <Input
                 type="datetime-local"
                 required
@@ -182,7 +182,7 @@ export function InputPanel({
               />
             </label>
             <label>
-              患者照片（可选）
+              Patient photo (optional)
               <Input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
@@ -190,18 +190,18 @@ export function InputPanel({
               />
             </label>
             <label className="span-two">
-              简短提醒
+              Short note
               <Input
                 maxLength={500}
                 value={form.note}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
-                placeholder="供患者卡片展示的简短说明"
+                placeholder="Brief note shown on the patient card"
               />
             </label>
           </div>
           <Button type="submit" disabled={busy}>
             <Save size={16} />
-            保存患者
+            Save patient
           </Button>
         </form>
       </section>
@@ -209,9 +209,9 @@ export function InputPanel({
         <div className="panel-heading">
           <div>
             <p className="eyebrow">CONTINUOUS OBSERVATIONS</p>
-            <h2>追加观测信息</h2>
+            <h2>Add observations</h2>
           </div>
-          <span className="badge">保留全部历史</span>
+          <span className="badge">Full history kept</span>
         </div>
         <form
           className="form-body"
@@ -231,13 +231,13 @@ export function InputPanel({
               }));
               await post('/import', { kind: 'input', observations, actor });
               setRows([newRow()]);
-              return '观测已追加，本地模型处理请求已更新。';
+              return 'Observations added; the local model processing request was updated.';
             });
           }}
         >
           <div className="field-grid">
             <label>
-              选择患者
+              Select patient
               <Choice
                 value={patientId}
                 onChange={setPatientId}
@@ -245,11 +245,11 @@ export function InputPanel({
                   value: p.patient_id,
                   label: p.name + ' · ' + p.patient_id,
                 }))}
-                label="选择患者"
+                label="Select patient"
               />
             </label>
             <label>
-              录入者（仅在后台记录）
+              Entered by (recorded in the background only)
               <Input
                 value={actor}
                 required
@@ -259,32 +259,32 @@ export function InputPanel({
             </label>
           </div>
           <p className="form-help">
-            变量代码、单位与模型输入约定保持一致。测量时间可以早于录入时间；系统保留补录信息。
+            Keep variable codes and units consistent with the model input conventions. Measurement time can be earlier than entry time; the system keeps late-entry information.
           </p>
           <div className="observation-rows">
             {rows.map((r, i) => (
               <div className="observation-row" key={r.id}>
                 <span className="row-number">{i + 1}</span>
                 <label>
-                  变量代码
+                  Variable code
                   <Input
                     required
                     value={r.metric}
                     onChange={(e) => updateRow(r.id, 'metric', e.target.value)}
-                    placeholder="例如 creatinine"
+                    placeholder="e.g. creatinine"
                   />
                 </label>
                 <label>
-                  显示名称
+                  Display name
                   <Input
                     required
                     value={r.label}
                     onChange={(e) => updateRow(r.id, 'label', e.target.value)}
-                    placeholder="例如 肌酐"
+                    placeholder="e.g. Creatinine"
                   />
                 </label>
                 <label>
-                  数值
+                  Value
                   <Input
                     required
                     type="number"
@@ -294,14 +294,14 @@ export function InputPanel({
                   />
                 </label>
                 <label>
-                  单位
+                  Unit
                   <Input
                     value={r.unit}
                     onChange={(e) => updateRow(r.id, 'unit', e.target.value)}
                   />
                 </label>
                 <label>
-                  测量时间
+                  Measurement time
                   <Input
                     type="datetime-local"
                     required
@@ -317,7 +317,7 @@ export function InputPanel({
                   type="button"
                   variant="ghost"
                   disabled={rows.length === 1 || busy}
-                  aria-label={'移除第' + (i + 1) + '行'}
+                  aria-label={'Remove row ' + (i + 1)}
                   onClick={() => setRows(rows.filter((p) => p.id !== r.id))}
                 >
                   <Trash2 size={16} />
@@ -333,16 +333,16 @@ export function InputPanel({
               disabled={busy}
             >
               <Plus size={16} />
-              增加一条
+              Add row
             </Button>
             <Button type="submit" disabled={busy || !patient}>
               <Save size={16} />
-              保存观测
+              Save observations
             </Button>
           </div>
           {patient && (
             <label className="photo-update">
-              更新这位患者的照片
+              Update this patient's photo
               <Input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
@@ -357,7 +357,7 @@ export function InputPanel({
                       method: 'POST',
                       body: data,
                     });
-                    return '患者照片已更新';
+                    return 'Patient photo updated';
                   });
                   e.target.value = '';
                 }}
@@ -370,18 +370,18 @@ export function InputPanel({
         <div className="panel-heading">
           <div>
             <p className="eyebrow">LOCAL FILE EXCHANGE</p>
-            <h2>文件导入与目录监听</h2>
+            <h2>File import and folder watching</h2>
           </div>
           <FolderInput size={20} />
         </div>
         <div className="form-body">
           <p>
-            导入符合数据契约的 JSON 文件或本站导出的 ZIP
-            分批交换包，或将文件原子写入监听目录。预测文件由独立模型生成。
+            Import a JSON file that follows the data contract or a multi-batch ZIP
+            exchange package exported from this site, or write files atomically into the watched folders. Prediction files are generated by a separate model.
           </p>
           <label className="file-drop">
             <Upload size={24} />
-            <strong>选择输入数据或预测结果文件</strong>
+            <strong>Choose an input data or prediction result file</strong>
             <Input
               type="file"
               accept=".json,.zip,application/json,application/zip"
@@ -392,7 +392,7 @@ export function InputPanel({
                 e.target.value = '';
               }}
             />
-            <small>单文件最大 16 MB · 自动校验与去重 · 不会覆盖冲突记录</small>
+            <small>Max 16 MB per file · Automatic validation and deduplication · Conflicting records are never overwritten</small>
           </label>
           <Button
             variant="outline"
@@ -405,13 +405,13 @@ export function InputPanel({
                 .catch((e) => onError(e.message))
             }
           >
-            显示本地监听目录
+            Show local watched folders
           </Button>
           {settings && (
             <dl className="paths">
-              <dt>输入观测</dt>
+              <dt>Input observations</dt>
               <dd>{settings.input_directory}</dd>
-              <dt>模型输出</dt>
+              <dt>Model output</dt>
               <dd>{settings.prediction_directory}</dd>
             </dl>
           )}

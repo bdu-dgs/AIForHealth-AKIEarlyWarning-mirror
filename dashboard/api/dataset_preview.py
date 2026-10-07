@@ -8,8 +8,8 @@ from pathlib import Path
 
 # MIT-LCP/mimic-code: mimic-iii/concepts_postgres/firstday/vitals_first_day.sql
 METRICS = {
-    'heart_rate': {'label': '心率', 'unit': 'bpm', 'items': {'211', '220045'}},
-    'spo2': {'label': '血氧饱和度', 'unit': '%', 'items': {'646', '220277'}},
+    'heart_rate': {'label': 'Heart rate', 'unit': 'bpm', 'items': {'211', '220045'}},
+    'spo2': {'label': 'Oxygen saturation (SpO2)', 'unit': '%', 'items': {'646', '220277'}},
 }
 ITEMS = {item: metric for metric, config in METRICS.items() for item in config['items']}
 KEY = ('SUBJECT_ID', 'HADM_ID', 'ICUSTAY_ID')
@@ -24,10 +24,10 @@ def read_rows(path, required):
     with path.open(encoding='utf-8-sig', newline='') as stream:
         reader = csv.DictReader(stream)
         if not required.issubset(reader.fieldnames or []):
-            raise ValueError(f'{path.name} 缺少必需的列，请检查文件格式')
+            raise ValueError(f'{path.name} is missing required columns; check the file format')
         for number, row in enumerate(reader, start=1):
             if number > 200_000:
-                raise ValueError('预览最多读取每个文件 200,000 行，请使用较小的数据子集')
+                raise ValueError('Preview reads at most 200,000 rows per file; use a smaller data subset')
             yield {key: (value or '').strip() for key, value in row.items() if key is not None}
 
 
@@ -39,19 +39,19 @@ def load_preview(root):
         return {'status': 'missing', 'missing_files': missing, 'patients': [], 'stats': {}}
     before = [(path.stat().st_size, path.stat().st_mtime_ns) for path in paths]
     if any(size > 64 * 1024 * 1024 for size, _ in before):
-        raise ValueError('只读预览支持每个 CSV 最大 64 MB，请使用较小的数据子集')
+        raise ValueError('Read-only preview supports CSV files up to 64 MB each; use a smaller data subset')
     patients = {}
     times = {}
     for row in read_rows(paths[0], set(KEY) | {'INTIME'}):
         key = tuple(row.get(field, '') for field in KEY)
         if not all(value.isascii() and value.isdigit() for value in key):
-            raise ValueError('入选记录的患者、住院或 ICU ID 无效')
+            raise ValueError('Invalid patient, admission, or ICU stay ID in selected records')
         if key in patients:
-            raise ValueError('入选 ICU 记录存在重复，请先核对后重试')
+            raise ValueError('Selected ICU stays contain duplicates; check the file and try again')
         try:
             times[key] = source_time(row['INTIME'])
         except ValueError:
-            raise ValueError('入选 ICU 记录的 INTIME 格式无效') from None
+            raise ValueError('Invalid INTIME format in selected ICU stays') from None
         patients[key] = {
             'subject_id': key[0], 'hadm_id': key[1], 'icustay_id': key[2],
             'icu_admitted_at': row['INTIME'],
@@ -59,7 +59,7 @@ def load_preview(root):
                         for name, config in METRICS.items()},
         }
         if len(patients) > 2000:
-            raise ValueError('预览最多支持 2,000 条入选 ICU 记录')
+            raise ValueError('Preview supports at most 2,000 selected ICU stays')
     stats = Counter(chart_rows=0, unsupported_metric=0, unmatched=0, invalid=0,
                     selected_points=0, before_icu=0, at_or_after_icu=0)
     for row in read_rows(paths[1], set(KEY) | {'ITEMID', 'CHARTTIME', 'VALUENUM', 'VALUEUOM', 'ERROR'}):
@@ -94,7 +94,7 @@ def load_preview(root):
             metric['points'].sort(key=lambda point: point['hours_from_icu'])
     after = [(path.stat().st_size, path.stat().st_mtime_ns) for path in paths]
     if before != after:
-        raise ValueError('数据文件正在更新，请稍后刷新')
+        raise ValueError('Data files are being updated; refresh again shortly')
     stats['selected_stays'] = len(patients)
     stats['stays_with_data'] = sum(any(metric['points'] for metric in patient['metrics'].values())
                                    for patient in patients.values())

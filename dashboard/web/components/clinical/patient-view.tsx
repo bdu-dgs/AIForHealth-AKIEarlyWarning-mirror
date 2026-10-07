@@ -65,7 +65,7 @@ export function Avatar({
           src={
             '/api/patients/' + patient.patient_id + '/photo?v=' + patient.photo
           }
-          alt={patient.name + '的照片'}
+          alt={'Photo of ' + patient.name}
         />
       ) : (
         <span>{patient.name}</span>
@@ -98,7 +98,7 @@ export function PatientView({
       );
       setExports({ kind, ...plan });
     } catch (e) {
-      onError(e instanceof Error ? e.message : '无法准备导出');
+      onError(e instanceof Error ? e.message : 'Unable to prepare export');
     }
   }
   const [range, setRange] = useState('6');
@@ -296,28 +296,28 @@ export function PatientView({
           <span
             className={
               'status-label ' +
-              (alertOf(current, stale, end) === 'AKI 警告' ? 'warning' : '')
+              (alertOf(current, stale, end) === 'AKI warning' ? 'warning' : '')
             }
           >
             {error
-              ? '读取失败'
+              ? 'Read failed'
               : loading || !data
-                ? '正在读取'
+                ? 'Loading'
                 : alertOf(current, stale, end)}
           </span>
           {patient.note && <p className="patient-note">{patient.note}</p>}
-          {detail && <small>入 ICU：{fmt(patient.icu_admitted_at)}</small>}
+          {detail && <small>ICU admission: {fmt(patient.icu_admitted_at)}</small>}
         </div>
       </div>
       <section className="patient-chart">
         <div className="chart-title">
-          <h3>观测曲线</h3>
+          <h3>Observation chart</h3>
           <div onClick={(e) => e.stopPropagation()}>
             <Choice
               value={metricKey}
               onChange={setMetric}
               options={metrics}
-              label="观测指标"
+              label="Observation metric"
             />
           </div>
         </div>
@@ -337,18 +337,18 @@ export function PatientView({
                 })) ?? [])
               : []
           }
-          empty="当前时段没有可用观测"
+          empty="No observations available in this period"
         />
       </section>
       <section className="patient-chart risk-chart">
         <div className="chart-title">
-          <h3>AKI 预测曲线</h3>
+          <h3>AKI prediction chart</h3>
           <div onClick={(e) => e.stopPropagation()}>
             <Choice
               value={groupId}
               onChange={setGroup}
               options={groups}
-              label="等待模型结果"
+              label="Awaiting model result"
             />
           </div>
         </div>
@@ -357,7 +357,7 @@ export function PatientView({
           start={start}
           end={end}
           risk
-          empty={current ? '当前显示范围内没有预测点' : '模型尚未提供预测结果'}
+          empty={current ? 'No prediction points in the current range' : 'The model has not provided predictions yet'}
         />
       </section>
     </>
@@ -372,15 +372,15 @@ export function PatientView({
         }}
         tabIndex={0}
         role="link"
-        aria-label={'查看' + patient.name + '的完整详情'}
+        aria-label={'View full details for ' + patient.name}
       >
         {content}
         <div className="row-footer">
           <span>
             <Clock size={12} />
-            最近 6 小时 · 测量时间
+            Last 6 h · measurement time
           </span>
-          <span>{error || '点击卡片查看完整历史 →'}</span>
+          <span>{error || 'Click the card to view full history →'}</span>
         </div>
       </article>
     );
@@ -390,9 +390,9 @@ export function PatientView({
       <section className="panel replay-panel">
         <div className="toolbar spread">
           <div>
-            <h2>{replay === null ? '实时观察' : '历史回放'}</h2>
+            <h2>{replay === null ? 'Live view' : 'History replay'}</h2>
             <p className="muted">
-              {fmt(start)} — {fmt(end)} · 仅显示截至该时刻已经可用的数据
+              {fmt(start)} — {fmt(end)} · Only data already available at that moment is shown
             </p>
           </div>
           <div className="toolbar">
@@ -400,12 +400,12 @@ export function PatientView({
               value={range}
               onChange={setRange}
               options={[
-                { value: '1', label: '显示 1 小时' },
-                { value: '6', label: '显示 6 小时' },
-                { value: '24', label: '显示 24 小时' },
-                { value: 'all', label: '显示全部历史' },
+                { value: '1', label: 'Show 1 h' },
+                { value: '6', label: 'Show 6 h' },
+                { value: '24', label: 'Show 24 h' },
+                { value: 'all', label: 'Show full history' },
               ]}
-              label="曲线范围"
+              label="Chart range"
             />
             <Button
               variant="outline"
@@ -416,14 +416,14 @@ export function PatientView({
               }}
             >
               <RotateCcw size={15} />
-              回到实时
+              Back to live
             </Button>
           </div>
         </div>
         <div className="replay-slider">
           <Button
             variant="ghost"
-            aria-label="向前浏览"
+            aria-label="Browse earlier"
             onClick={() =>
               setReplay(
                 Math.max(
@@ -437,7 +437,7 @@ export function PatientView({
             <ChevronLeft />
           </Button>
           <Slider
-            aria-label="历史回放截止时间"
+            aria-label="History replay cutoff time"
             min={admitted}
             max={Math.max(admitted + 1, clock)}
             step={1000}
@@ -449,7 +449,7 @@ export function PatientView({
           />
           <Button
             variant="ghost"
-            aria-label="向后浏览"
+            aria-label="Browse later"
             onClick={() =>
               setReplay(
                 Math.min(
@@ -473,21 +473,21 @@ export function PatientView({
               }}
             >
               {playing ? <Pause size={15} /> : <Play size={15} />}{' '}
-              {playing ? '暂停' : '播放回放'}
+              {playing ? 'Pause' : 'Play replay'}
             </Button>
             <Choice
               value={speed}
               onChange={setSpeed}
               options={[
-                { value: '60', label: '每秒推进 1 分钟' },
-                { value: '300', label: '每秒推进 5 分钟' },
-                { value: '900', label: '每秒推进 15 分钟' },
+                { value: '60', label: '1 min per second' },
+                { value: '300', label: '5 min per second' },
+                { value: '900', label: '15 min per second' },
               ]}
-              label="回放速度"
+              label="Replay speed"
             />
           </div>
           <label className="inline-label">
-            查看时刻
+            View time
             <Input
               type="datetime-local"
               value={localTime(end)}
@@ -508,11 +508,11 @@ export function PatientView({
           </label>
         </div>
         <p className="form-help">
-          向过去滑动时按时间范围加载。缺少原始可用时间的数据，以本机首次接收时间为准；不会补造历史预测。
+          Data loads by time range as you move into the past. Data without an original availability time uses the time this computer first received it; historical predictions are never back-filled.
         </p>
         {loading && (
           <p role="status" className="muted">
-            正在加载所选时段…
+            Loading selected period…
           </p>
         )}
         {error && (
@@ -522,17 +522,17 @@ export function PatientView({
         )}
         {data?.truncated && (
           <p className="error-text">
-            当前范围超过 24,000
-            条记录，画面只包含已加载部分。请缩短显示范围继续浏览；完整记录仍保存在本地。
+            The current range exceeds 24,000
+            records, so only the loaded part is shown. Shorten the display range to keep browsing; the full records remain stored locally.
           </p>
         )}
       </section>
       <div className="detail-grid">
         <section className="panel">
           <div className="panel-heading">
-            <h2>预测结果与贡献因素</h2>
+            <h2>Prediction and contributing factors</h2>
             <span className="badge">
-              {current ? '外部模型结果' : '模型尚未接入'}
+              {current ? 'External model result' : 'Model not yet connected'}
             </span>
           </div>
           <div className="form-body">
@@ -547,35 +547,35 @@ export function PatientView({
                 </div>
                 <p className="muted">{groupLabel(current)}</p>
                 <dl className="result-meta">
-                  <dt>数据截止</dt>
+                  <dt>Data cutoff</dt>
                   <dd>{fmt(current.data_cutoff)}</dd>
-                  <dt>预测起点</dt>
+                  <dt>Prediction origin</dt>
                   <dd>{fmt(current.origin_time)}</dd>
-                  <dt>预测窗口结束</dt>
+                  <dt>Prediction window end</dt>
                   <dd>{fmt(current.horizon_end)}</dd>
-                  <dt>数据置信度</dt>
+                  <dt>Data confidence</dt>
                   <dd>
                     {current.data_confidence === null
-                      ? '未提供'
+                      ? 'Not provided'
                       : (current.data_confidence * 100).toFixed(1) + '%'}
                     {current.confidence_definition && (
                       <small> · {current.confidence_definition}</small>
                     )}
                   </dd>
-                  <dt>预警阈值</dt>
+                  <dt>Alert threshold</dt>
                   <dd>
                     {current.threshold
                       ? current.threshold.comparison +
                         ' ' +
                         (current.threshold.value * 100).toFixed(1) +
                         '% · ' +
-                        (current.threshold.locked ? '已锁定' : '未锁定')
-                      : '尚未选择'}
+                        (current.threshold.locked ? 'Locked' : 'Not locked')
+                      : 'Not yet selected'}
                   </dd>
                 </dl>
                 {current.threshold && (
                   <p className="form-help">
-                    验证批次：{current.threshold.validation_run_id} · 策略：
+                    Validation run: {current.threshold.validation_run_id} · Policy:{' '}
                     {current.threshold.policy_version}
                     <br />
                     {current.threshold.selection_basis}
@@ -597,37 +597,37 @@ export function PatientView({
                           }
                         >
                           {d.contribution > 0 ? '+' : ''}
-                          {d.contribution.toLocaleString('zh-CN', {
+                          {d.contribution.toLocaleString('en-US', {
                             maximumFractionDigits: 4,
                           })}
                         </strong>
                       </div>
                     ))
                   ) : (
-                    <p className="muted">模型未提供贡献因素。</p>
+                    <p className="muted">The model did not provide contributing factors.</p>
                   )}
                 </div>
                 <p className="form-help">
-                  贡献数值按模型原始输出展示，其含义取决于模型解释方法。
+                  Contribution values are shown as the raw model output; their meaning depends on the model's explanation method.
                 </p>
               </>
             ) : (
               <div className="empty-copy">
                 <Activity />
-                <p>等待模型结果文件</p>
-                <small>当前阶段搭建数据与显示功能，不生成模拟风险概率。</small>
+                <p>Awaiting model result file</p>
+                <small>This stage builds the data and display features; no simulated risk probabilities are generated.</small>
               </div>
             )}
           </div>
         </section>
         <section className="panel">
           <div className="panel-heading">
-            <h2>数据新鲜度与密度</h2>
-            <span className="badge">质量规则待确定</span>
+            <h2>Data freshness and density</h2>
+            <span className="badge">Quality rules pending</span>
           </div>
           <div className="form-body">
             <p className="form-help">
-              以下为数据统计，不等于预测正确率。新鲜度相对于当前查看时刻计算。
+              These are data statistics, not prediction accuracy. Freshness is calculated relative to the current view time.
             </p>
             {quality?.metrics.length ? (
               <div className="quality-list">
@@ -636,21 +636,21 @@ export function PatientView({
                     <div>
                       <strong>{q.label}</strong>
                       <small>
-                        {q.unit} · 最近测量 {fmt(q.latest)}
+                        {q.unit} · Latest measurement {fmt(q.latest)}
                       </small>
                     </div>
                     <div>
-                      <strong>{duration(q.age_seconds * 1000)}前</strong>
-                      <small>过去 1 小时 {q.last_hour_count} 条</small>
+                      <strong>{duration(q.age_seconds * 1000)} ago</strong>
+                      <small>{q.last_hour_count} in the last 1 h</small>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="muted">当前时刻没有可用观测。</p>
+              <p className="muted">No observations available at the current time.</p>
             )}
             <p className="form-help">
-              尚未确定各变量的期望采样频率和有效期，因此不输出未经验证的综合置信度分数。
+              Expected sampling frequency and validity periods for each variable are not yet defined, so no unvalidated overall confidence score is shown.
             </p>
           </div>
         </section>
@@ -658,24 +658,24 @@ export function PatientView({
       <div className="export-row">
         <Button variant="outline" onClick={() => void prepareExport('input')}>
           <Download size={15} />
-          导出输入文件
+          Export input file
         </Button>
         <Button
           variant="outline"
           onClick={() => void prepareExport('prediction')}
         >
           <Download size={15} />
-          导出预测文件
+          Export prediction file
         </Button>
         <span className="muted">
-          文件保存在本机；包含患者信息，请自行妥善保管。
+          Files are saved on this computer and contain patient information; store them securely.
         </span>
       </div>
       {exports && (
         <div className="panel form-body">
           <p>
-            共 {exports.parts}{' '}
-            个分卷，请按序保存和导入。数据变化后请重新生成导出列表。
+            {exports.parts}{' '}
+            part(s) in total; save and import them in order. Regenerate the export list if the data changes.
           </p>
           <div className="toolbar">
             {Array.from({ length: exports.parts }, (_, i) => (
@@ -694,7 +694,7 @@ export function PatientView({
                 }
                 download
               >
-                下载第 {i + 1} 卷
+                Download part {i + 1}
               </a>
             ))}
           </div>

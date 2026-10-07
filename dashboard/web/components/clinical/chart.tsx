@@ -52,8 +52,8 @@ export function ClinicalChart({
         <p>{empty}</p>
         <small>
           {risk
-            ? '窗口、阈值与贡献因素均由模型提供'
-            : '新的观测将按照测量时间追加到历史'}
+            ? 'Window, threshold, and contributing factors are all provided by the model'
+            : 'New observations are added to the history by measurement time'}
         </small>
       </div>
     );
@@ -74,7 +74,7 @@ export function ClinicalChart({
   const value = (v: number) =>
     risk
       ? (v * 100).toFixed(1) + '%'
-      : v.toLocaleString('zh-CN', { maximumFractionDigits: 3 }) +
+      : v.toLocaleString('en-US', { maximumFractionDigits: 3 }) +
         (unit ? ' ' + unit : '');
   return (
     <div className="chart-wrap">
@@ -83,8 +83,8 @@ export function ClinicalChart({
         role="img"
         aria-label={
           risk
-            ? 'AKI 概率随预测起点变化，高处红色低处绿色'
-            : '按测量时间排列的观测曲线，点间连线仅辅助阅读'
+            ? 'AKI probability by prediction origin time; red when high, green when low'
+            : 'Observations ordered by measurement time; lines between points are only a reading aid'
         }
       >
         <defs>
@@ -119,7 +119,7 @@ export function ClinicalChart({
             >
               {risk
                 ? Math.round(100 * (1 - v)) + '%'
-                : (hi - (hi - lo) * v).toLocaleString('zh-CN', {
+                : (hi - (hi - lo) * v).toLocaleString('en-US', {
                     maximumFractionDigits: 2,
                   })}
             </text>
@@ -133,9 +133,10 @@ export function ClinicalChart({
             textAnchor="middle"
             className="axis-text"
           >
-            {formatTick ? formatTick(start + (right - start) * v) : new Date(start + (right - start) * v).toLocaleTimeString('zh-CN', {
+            {formatTick ? formatTick(start + (right - start) * v) : new Date(start + (right - start) * v).toLocaleTimeString('en-US', {
               hour: '2-digit',
               minute: '2-digit',
+              hourCycle: 'h23',
             })}
           </text>
         ))}
@@ -206,9 +207,9 @@ export function ClinicalChart({
           <>
             <span className="legend-dot" />
             {risk
-              ? '每点表示一个预测起点的概率；显眼程度参考所提供的数据置信度'
-              : '实测数据 · 连线不代表期间存在测量'}
-            {forecast.length > 0 ? '　┄ 模型预测轨迹' : ''}
+              ? 'Each point is the probability at one prediction origin; emphasis reflects the provided data confidence'
+              : 'Measured data · lines do not imply measurements in between'}
+            {forecast.length > 0 ? '\u00a0\u00a0┄ Model forecast trajectory' : ''}
           </>
         )}
       </div>

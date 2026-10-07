@@ -17,7 +17,7 @@ type Preview = {
   stats: Record<string, number>;
 };
 const hasData = (patient: DatasetPatient) => Object.values(patient.metrics).some((m) => m.points.length);
-const relativeTime = (ms: number) => (ms / 3600000).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' h';
+const relativeTime = (ms: number) => (ms / 3600000).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' h';
 
 function DatasetCard({ patient }: { patient: DatasetPatient }) {
   const [selected, setSelected] = useState(patient.metrics.heart_rate.points.length ? 'heart_rate' : 'spo2');
@@ -34,41 +34,41 @@ function DatasetCard({ patient }: { patient: DatasetPatient }) {
       <div className="patient-identity">
         <div className="avatar"><span>ID<br />{patient.subject_id}</span></div>
         <div className="patient-name">
-          <h2>患者 {patient.subject_id}</h2>
-          <p>住院 ID：{patient.hadm_id}</p>
-          <p>ICU ID：{patient.icustay_id}</p>
-          <p>入 ICU：{patient.icu_admitted_at}</p>
-          <p className="patient-note">源文件未提供姓名和照片</p>
-          <span className="badge">历史数据 · 只读</span>
+          <h2>Patient {patient.subject_id}</h2>
+          <p>Admission ID: {patient.hadm_id}</p>
+          <p>ICU stay ID: {patient.icustay_id}</p>
+          <p>ICU admission: {patient.icu_admitted_at}</p>
+          <p className="patient-note">Source files provide no name or photo</p>
+          <span className="badge">Historical data · Read-only</span>
         </div>
       </div>
       <div className="patient-chart">
         <div className="chart-title">
-          <h3>观测曲线</h3>
-          <Choice label={'患者 ' + patient.subject_id + ' 的观测变量'} value={selected} onChange={(v) => { setSelected(v); setRecordPage(0); }}
-            options={Object.entries(patient.metrics).map(([value, m]) => ({ value, label: m.label + ' · ' + m.points.length + ' 条' }))} />
+          <h3>Observation chart</h3>
+          <Choice label={'Observation variable for patient ' + patient.subject_id} value={selected} onChange={(v) => { setSelected(v); setRecordPage(0); }}
+            options={Object.entries(patient.metrics).map(([value, m]) => ({ value, label: m.label + ' · ' + m.points.length + ' records' }))} />
         </div>
         <ClinicalChart points={points} start={start} end={end} unit={metric.unit}
-          formatTick={relativeTime} empty="该 ICU 记录没有此项测量" />
-        <p className="dataset-axis-note">距入 ICU 的时间：负数为入 ICU 前，0 为入 ICU 时刻</p>
+          formatTick={relativeTime} empty="This ICU stay has no measurements of this type" />
+        <p className="dataset-axis-note">Time from ICU admission: negative is before admission, 0 is the admission time</p>
         {!!metric.points.length && <details className="dataset-records" onToggle={(e) => setRecordsOpen(e.currentTarget.open)}>
-          <summary>查看 {metric.points.length} 条测量记录</summary>
+          <summary>View {metric.points.length} measurement records</summary>
           {recordsOpen && <><div className="dataset-table-scroll"><table>
-            <thead><tr><th>测量时间（原文件）</th><th>{metric.label}（{metric.unit}）</th></tr></thead>
+            <thead><tr><th>Measurement time (source file)</th><th>{metric.label} ({metric.unit})</th></tr></thead>
             <tbody>{metric.points.slice(currentRecordPage * 100, currentRecordPage * 100 + 100).map((point, i) => <tr key={i}><td>{point.measured_at}</td><td>{point.value}</td></tr>)}</tbody>
           </table></div>
           {recordPages > 1 && <div className="toolbar">
-            <Button variant="outline" disabled={currentRecordPage === 0} onClick={() => setRecordPage(currentRecordPage - 1)}>上一页记录</Button>
+            <Button variant="outline" disabled={currentRecordPage === 0} onClick={() => setRecordPage(currentRecordPage - 1)}>Previous records</Button>
             <span>{currentRecordPage + 1} / {recordPages}</span>
-            <Button variant="outline" disabled={currentRecordPage === recordPages - 1} onClick={() => setRecordPage(currentRecordPage + 1)}>下一页记录</Button>
+            <Button variant="outline" disabled={currentRecordPage === recordPages - 1} onClick={() => setRecordPage(currentRecordPage + 1)}>Next records</Button>
           </div>}</>}
         </details>}
       </div>
       <div className="patient-chart risk-chart">
-        <div className="chart-title"><h3>预测曲线</h3><span className="badge">模型尚未接入</span></div>
-        <ClinicalChart points={[]} start={start} end={end} risk empty="尚无 AKI 预测结果" />
+        <div className="chart-title"><h3>Prediction chart</h3><span className="badge">Model not yet connected</span></div>
+        <ClinicalChart points={[]} start={start} end={end} risk empty="No AKI predictions yet" />
       </div>
-      <div className="row-footer"><span>按患者、住院、ICU 记录共同匹配</span><span>保留原始测量时间与数值</span></div>
+      <div className="row-footer"><span>Matched on patient, admission, and ICU stay</span><span>Original measurement times and values preserved</span></div>
     </article>
   );
 }
@@ -88,7 +88,7 @@ export function DatasetPreview() {
         const result = await api<Preview>('/datasets/icu-preview', { signal: control.signal });
         if (!control.signal.aborted) { setData(result); setError(''); }
       } catch (e) {
-        if (!control.signal.aborted) setError(e instanceof Error ? e.message : '读取失败');
+        if (!control.signal.aborted) setError(e instanceof Error ? e.message : 'Read failed');
       } finally {
         if (!control.signal.aborted) timer = setTimeout(read, 10000);
       }
@@ -103,37 +103,37 @@ export function DatasetPreview() {
   return (
     <section>
       <div className="overview-heading">
-        <h2><Users size={18} />本地数据集预览</h2>
+        <h2><Users size={18} />Local dataset preview</h2>
         <div className="toolbar">
-          <Input className="search" aria-label="搜索数据集患者或住院 ID" placeholder="搜索患者、住院或 ICU ID" value={search}
+          <Input className="search" aria-label="Search dataset patient or admission ID" placeholder="Search patient, admission, or ICU stay ID" value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
-          <Choice label="数据集记录筛选" value={filter} onChange={(v) => { setFilter(v); setPage(0); }} options={[
-            { value: 'with-data', label: '有心率或血氧测量' }, { value: 'all', label: '全部入选 ICU 记录' },
+          <Choice label="Dataset record filter" value={filter} onChange={(v) => { setFilter(v); setPage(0); }} options={[
+            { value: 'with-data', label: 'With heart rate or SpO2 data' }, { value: 'all', label: 'All selected ICU stays' },
           ]} />
-          <Button variant="outline" onClick={() => setRefresh((v) => v + 1)}><RefreshCw size={15} />重新读取</Button>
+          <Button variant="outline" onClick={() => setRefresh((v) => v + 1)}><RefreshCw size={15} />Reload</Button>
         </div>
       </div>
       <div className="notice dataset-notice">
-        <div>读取项目内 icu_pre_admission_data，每 10 秒检查一次。日期按原文件显示，未提供时区；不以本机当前时间判断过期。
-          <br />本页展示历史测量，不计算 AKI 风险或数据置信度。</div>
+        <div>Reads icu_pre_admission_data in the project and checks every 10 seconds. Dates are shown as in the source files with no timezone; staleness is not judged against this computer's current time.
+          <br />This page shows historical measurements and does not compute AKI risk or data confidence.</div>
       </div>
-      {error ? <div className="notice error" role="alert">{error}。本次读取失败，请检查文件后重试。</div>
-        : !data ? <div className="panel empty-overview" role="status">正在读取本地文件…</div>
-        : data.status === 'missing' ? <div className="panel empty-overview">请在项目的 icu_pre_admission_data 文件夹放入：{data.missing_files?.join('、')}</div>
+      {error ? <div className="notice error" role="alert">{error}. This read failed; check the files and try again.</div>
+        : !data ? <div className="panel empty-overview" role="status">Reading local files…</div>
+        : data.status === 'missing' ? <div className="panel empty-overview">Place these files in the project's icu_pre_admission_data folder: {data.missing_files?.join(', ')}</div>
         : <>
-          <p className="dataset-summary">{data.stats.selected_stays} 条入选 ICU 记录中，{data.stats.stays_with_data} 条含有这两项测量，共 {data.stats.selected_points} 个观测点。
-            其中 {data.stats.before_icu} 个点位于入 ICU 前，{data.stats.at_or_after_icu} 个点位于入 ICU 时或之后。
-            {!!(data.stats.unmatched + data.stats.invalid) && <> 未显示：{data.stats.unmatched} 条无法匹配，{data.stats.invalid} 条数值、时间、单位或错误标记不符合读取规则。</>}
+          <p className="dataset-summary">Of {data.stats.selected_stays} selected ICU stays, {data.stats.stays_with_data} have these two measurements, with {data.stats.selected_points} observation points in total.
+            Of these, {data.stats.before_icu} points are before ICU admission and {data.stats.at_or_after_icu} are at or after ICU admission.
+            {!!(data.stats.unmatched + data.stats.invalid) && <> Not shown: {data.stats.unmatched} unmatched rows and {data.stats.invalid} rows whose value, time, unit, or error flag fails the read rules.</>}
           </p>
           <div className="patient-rows">
             {filtered.slice(current * 8, current * 8 + 8).map((patient) =>
               <DatasetCard key={[patient.subject_id, patient.hadm_id, patient.icustay_id].join('-')} patient={patient} />)}
           </div>
-          {!filtered.length && <div className="panel empty-overview">没有符合条件的记录。没有这两项测量，不代表该患者没有其他数据。</div>}
-          <div className="pagination"><span>共 {filtered.length} 条 ICU 记录 · 每页最多 8 条</span><div className="toolbar">
-            <Button variant="outline" aria-label="数据集上一页" disabled={current === 0} onClick={() => setPage(current - 1)}><ChevronLeft size={15} /></Button>
+          {!filtered.length && <div className="panel empty-overview">No matching records. Lacking these two measurements does not mean the patient has no other data.</div>}
+          <div className="pagination"><span>{filtered.length} ICU stays total · up to 8 per page</span><div className="toolbar">
+            <Button variant="outline" aria-label="Previous dataset page" disabled={current === 0} onClick={() => setPage(current - 1)}><ChevronLeft size={15} /></Button>
             <span>{current + 1} / {pages}</span>
-            <Button variant="outline" aria-label="数据集下一页" disabled={current === pages - 1} onClick={() => setPage(current + 1)}><ChevronRight size={15} /></Button>
+            <Button variant="outline" aria-label="Next dataset page" disabled={current === pages - 1} onClick={() => setPage(current + 1)}><ChevronRight size={15} /></Button>
           </div></div>
         </>}
     </section>
