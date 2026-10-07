@@ -3,7 +3,8 @@
 One-shot batch scorer (not a resident model process). For each patient registered in the running dashboard:
 1. read its observations through the dashboard export API (highest revision of each record);
 2. build the model features at every whole ICU hour 1-72 that has already passed, with the shared as-of engine
-   `src/aki_ml/features.py` (labs usable 1 h after the draw, windows (t - W, t]);
+   `src/aki_ml/features.py` (labs usable 1 h after the draw, windows (t - W, t]); hours failing the notebook 01
+   coverage rule (no usable creatinine in the prior 7 days, or no ICU heart rate yet) get no prediction;
 3. score 6/12/24/48 h with LightGBM `no_dc` + Platt calibration; the 24 h prediction carries the locked
    `demo-v0` threshold from `artifacts/demo_i/policy.json`, the other horizons are display-only;
 4. explain each prediction with LightGBM TreeSHAP: the five features with the largest |contribution|, in
@@ -168,6 +169,20 @@ def build_inputs(obs, admit, hours, data_cfg):
     return ev, static, surgical
 
 
+def coverage(ev, hours, data_cfg):
+    """Notebook 01 snapshot coverage: >= 1 creatinine usable in the prior 7 days and >= 1 ICU heart rate.
+
+    Hours failing it were never in the training or validation data, so they are not scored.
+    """
+    delay = float(data_cfg["features"]["lab_result_delay_hours"])
+    lookback = 24.0 * data_cfg["coverage"]["prior_creatinine_lookback_days"]
+    cr = ev.loc[ev["concept"] == "creatinine", "t"].to_numpy() + delay
+    hr = ev.loc[(ev["concept"] == "heart_rate") & (ev["t"] > 0), "t"].to_numpy()
+    need_hr = data_cfg["coverage"]["require_prior_heart_rate"]
+    return np.array([((cr >= h - lookback) & (cr <= h)).any() and ((hr <= h).any() or not need_hr) for h in hours],
+                    dtype=bool)
+
+
 def score_patient(base, model, patient, generated_at):
     pid, enc = patient["patient_id"], patient["encounter_id"]
     admit = parse(patient["icu_admitted_at"])
@@ -177,6 +192,10 @@ def score_patient(base, model, patient, generated_at):
     hours = np.arange(1, last_hour + 1, dtype=np.float64)
     obs = patient_observations(base, pid)
     ev, static, surgical = build_inputs(obs, admit, hours, model.data_cfg)
+    covered = coverage(ev, hours, model.data_cfg)
+    hours, surgical = hours[covered], surgical[covered]
+    if not len(hours):
+        return []
     X = compute_features(ev, static, surgical, np.zeros(len(hours), np.int64), hours, model.data_cfg,
                          model.pipe.feature_names)
     scored = model.predict(X)
