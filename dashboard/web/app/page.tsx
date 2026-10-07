@@ -24,6 +24,7 @@ import {
   fmt,
   alertOf,
   setServiceClock,
+  setModelRunning,
   type Clock,
   type Patient,
   type Health,
@@ -93,6 +94,7 @@ export default function App() {
       .then((h) => {
         if (!active) return;
         setServiceClock(h.clock);
+        setModelRunning(h.model_status === 'running');
         setHealth(h);
         setViewRevision(h.revision);
       })
@@ -130,6 +132,7 @@ export default function App() {
         .then((h) => {
           if (active) {
             setServiceClock(h.clock);
+        setModelRunning(h.model_status === 'running');
             setHealth(h);
             setRevision(h.revision);
           }

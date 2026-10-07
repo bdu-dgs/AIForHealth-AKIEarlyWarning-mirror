@@ -23,6 +23,8 @@ import {
   groupKey,
   defaultGroup,
   nowMs,
+  isDemoClock,
+  isModelRunning,
   groupLabel,
   alertOf,
   type Patient,
@@ -102,7 +104,7 @@ export function PatientView({
       onError(e instanceof Error ? e.message : 'Unable to prepare export');
     }
   }
-  const [range, setRange] = useState('6');
+  const [range, setRange] = useState('all');
   const [replay, setReplay] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState('60');
@@ -121,9 +123,16 @@ export function PatientView({
     admitted,
     range === 'all' ? admitted : end - Number(range) * 3600000,
   );
-  const queryKey = [patient.patient_id, revision, start, end].join('|');
-  const data = dataKey === queryKey ? loaded : null;
-  const quality = qualityKey === queryKey ? loadedQuality : null;
+  // Keep showing the last loaded data of this patient while a refresh is in flight (no blank flashes).
+  const mine = (key: string) => key.startsWith(patient.patient_id + '|');
+  const data = mine(dataKey) ? loaded : null;
+  const quality = mine(qualityKey) ? loadedQuality : null;
+  // Demo playback: fixed 0-72 h axis so each "+1 h" visibly extends the curves.
+  const demoAxis = isDemoClock() && range === 'all';
+  const chartEnd = demoAxis ? Math.max(end, admitted + 72 * 3600000) : end;
+  const icuHourTick = demoAxis
+    ? (t: number) => 'ICU h ' + Math.round((t - admitted) / 3600000)
+    : undefined;
   useEffect(() => setClock(nowMs()), [revision]);
   useEffect(() => {
     const timer = setInterval(() => setClock(nowMs()), 30000);
@@ -245,7 +254,11 @@ export function PatientView({
   );
   const metricKey = metrics.some((m) => m.value === metric)
     ? metric
-    : (metrics[0]?.value ?? '');
+    : (['creatinine', 'heart_rate']
+        .map((code) => metrics.find((m) => m.value.startsWith(code + '|')))
+        .find(Boolean)?.value ??
+      metrics[0]?.value ??
+      '');
   const groups = useMemo(
     () =>
       Array.from(
@@ -269,8 +282,15 @@ export function PatientView({
         b.input_revision - a.input_revision,
     );
   const current = data?.current.find((p) => groupKey(p) === groupId) ?? null;
+  const threshold =
+    current?.threshold?.locked
+      ? current.threshold.value
+      : ([...predictions].reverse().find((p) => p.threshold?.locked)?.threshold?.value ?? null);
   const stale =
     !!current && current.input_fingerprint !== data?.inputFingerprint;
+  // While the model worker is recalculating, keep the previous status instead of flashing "result pending".
+  const updating = stale && isModelRunning();
+  const status = alertOf(current, stale && !updating, end);
   const observations = (data?.observations ?? []).filter(
     (p) => p.metric + '|' + p.unit === metricKey,
   );
@@ -297,14 +317,14 @@ export function PatientView({
           <span
             className={
               'status-label ' +
-              (alertOf(current, stale, end) === 'AKI warning' ? 'warning' : '')
+              (status === 'AKI warning' ? 'warning' : '')
             }
           >
             {error
               ? 'Read failed'
-              : loading || !data
+              : !data
                 ? 'Loading'
-                : alertOf(current, stale, end)}
+                : status + (updating ? ' · updating' : '')}
           </span>
           {patient.note && <p className="patient-note">{patient.note}</p>}
           {detail && <small>ICU admission: {fmt(patient.icu_admitted_at)}</small>}
@@ -328,7 +348,8 @@ export function PatientView({
             v: p.value,
           }))}
           start={start}
-          end={end}
+          end={chartEnd}
+          formatTick={icuHourTick}
           unit={observations[0]?.unit}
           forecast={
             detail
@@ -356,7 +377,9 @@ export function PatientView({
         <ClinicalChart
           points={riskPoints}
           start={start}
-          end={end}
+          end={chartEnd}
+          formatTick={icuHourTick}
+          threshold={threshold}
           risk
           empty={current ? 'No prediction points in the current range' : 'The model has not provided predictions yet'}
         />
@@ -379,7 +402,7 @@ export function PatientView({
         <div className="row-footer">
           <span>
             <Clock size={12} />
-            Last 6 h · measurement time
+            Since ICU admission · measurement time
           </span>
           <span>{error || 'Click the card to view full history →'}</span>
         </div>
@@ -544,7 +567,7 @@ export function PatientView({
                     {(current.risk * 100).toFixed(1)}
                     <small>%</small>
                   </strong>
-                  <span>{alertOf(current, stale, end)}</span>
+                  <span>{status + (updating ? ' · updating' : '')}</span>
                 </div>
                 <p className="muted">{groupLabel(current)}</p>
                 <dl className="result-meta">

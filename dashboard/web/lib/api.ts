@@ -118,6 +118,17 @@ export function setServiceClock(clock?: Clock | null) {
 export function nowMs() {
   return demoNow ?? Date.now();
 }
+export function isDemoClock() {
+  return demoNow !== null;
+}
+// Whether the local model worker is alive (a stale result is then about to be replaced).
+let modelRunning = false;
+export function setModelRunning(running: boolean) {
+  modelRunning = running;
+}
+export function isModelRunning() {
+  return modelRunning;
+}
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch('/api' + path, init);
   if (!response.ok) {

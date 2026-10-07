@@ -15,6 +15,7 @@ import json
 import sys
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -25,6 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 HEARTBEAT_SECONDS = 5
+POLL_SECONDS = 0.3
 GIVE_UP_SECONDS = 60          # exit when the website has been unreachable this long (e.g. its window was closed)
 
 
@@ -63,31 +65,46 @@ class Worker:
         return best
 
     def observations(self, pid):
-        plan = call(self.base, f"/api/patients/{pid}/export-plan/input")
-        obs = []
-        for part in range(1, plan["parts"] + 1):
-            obs += call(self.base, f"/api/patients/{pid}/export/input?part={part}&revision={plan['revision']}")["observations"]
-        return self.sc.latest_revisions(obs)
+        """Latest revision of every observation known now (history endpoint; faster than the export)."""
+        obs, offset = [], 0
+        while offset is not None:
+            page = call(self.base, f"/api/patients/{pid}/history?kind=observation&limit=10000&offset={offset}")
+            obs += page["items"]
+            offset = page["next_offset"]
+        return obs
 
     def sync(self):
+        """Score every patient's new revisions, then import all results in one batch (one page refresh)."""
+        records, done, t0 = [], {}, time.monotonic()
+        generated_at = self.sc.parse(call(self.base, "/api/health")["server_time"]).replace(microsecond=0)
+        jobs = []
         for patient in call(self.base, "/api/patients"):
             pid = patient["patient_id"]
             if pid not in self.scored:
                 self.scored[pid] = self.handled_revision(pid)
             if patient["input_revision"] <= self.scored[pid]:
                 continue
+            # Revisions that arrived after generated_at (e.g. a demo step during this sync) wait for the next sync.
             todo = [r for r in call(self.base, f"/api/patients/{pid}/revisions")
-                    if r["input_revision"] > self.scored[pid]]
+                    if r["input_revision"] > self.scored[pid] and self.sc.parse(r["available_at"]) <= generated_at]
             if todo:
-                self.score(patient, todo)
+                jobs.append((patient, todo))
+                done[pid] = max(r["input_revision"] for r in todo)
+        with ThreadPoolExecutor(max_workers=4) as pool:     # patients are independent
+            for out in pool.map(lambda job: self.score(*job, generated_at), jobs):
+                records += out
+        for s in range(0, len(records), 2000):
+            call(self.base, "/api/import", {"schema_version": 1, "kind": "prediction", "predictions": records[s:s + 2000]})
+        self.scored.update(done)
+        if done:
+            print(f"scored {len(done)} patient(s), {len(records)} predictions in {time.monotonic() - t0:.1f} s", flush=True)
 
-    def score(self, patient, revisions):
+    def score(self, patient, revisions, generated_at):
         sc, pid = self.sc, patient["patient_id"]
         admit = sc.parse(patient["icu_admitted_at"])
         origins = [sc.parse(r["available_at"]).replace(microsecond=0) for r in revisions]
         hours = [(o - admit) / timedelta(hours=1) for o in origins]
         obs = self.observations(pid)
-        generated_at = sc.parse(call(self.base, "/api/health")["server_time"]).replace(microsecond=0)
         kept, scored = sc.score_hours(self.model, obs, admit, hours)
         records = []
         for k, hour in enumerate(kept):
@@ -97,10 +114,7 @@ class Worker:
             fp = call(self.base, f"/api/patients/{pid}/snapshot?{q}")["input_fingerprint"]
             key = f"{pid}-{self.model.policy['policy_version']}-r{version}"
             records += sc.prediction_records(self.model, patient, origin, fp, version, generated_at, scored, k, key)
-        for s in range(0, len(records), 2000):
-            call(self.base, "/api/import", {"schema_version": 1, "kind": "prediction", "predictions": records[s:s + 2000]})
-        self.scored[pid] = max(r["input_revision"] for r in revisions)
-        print(f"{pid}: {len(revisions)} input revision(s), {len(kept)} scored", flush=True)
+        return records
 
     def run(self):
         last_revision, reachable = None, time.monotonic()
@@ -129,7 +143,7 @@ class Worker:
                     pass
                 last_revision = None
                 time.sleep(5)
-            time.sleep(1)
+            time.sleep(POLL_SECONDS)
 
 
 def main():

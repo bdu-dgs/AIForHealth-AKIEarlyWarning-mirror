@@ -33,6 +33,7 @@ export function ClinicalChart({
   empty,
   forecast = [],
   formatTick,
+  threshold = null,
 }: {
   points: Point[];
   start: number;
@@ -42,6 +43,7 @@ export function ClinicalChart({
   empty: string;
   forecast?: Point[];
   formatTick?: (time: number) => string;
+  threshold?: number | null;
 }) {
   const id = useId().replaceAll(':', '');
   const [hover, setHover] = useState<Point | null>(null);
@@ -59,8 +61,15 @@ export function ClinicalChart({
     );
   const data = reduce(points);
   const all = [...data, ...forecast];
+  // Risk axis: 0 to a rounded ceiling that keeps the alert threshold and the highest risk in view.
+  const riskTop = Math.min(
+    1,
+    Math.ceil(
+      Math.max(0.1, (threshold ?? 0) * 2, ...all.map((p) => p.v * 1.15)) * 20,
+    ) / 20,
+  );
   const min = risk ? 0 : Math.min(...all.map((p) => p.v));
-  const max = risk ? 1 : Math.max(...all.map((p) => p.v));
+  const max = risk ? riskTop : Math.max(...all.map((p) => p.v));
   const pad = risk
     ? 0
     : Math.max((max - min) * 0.12, Math.abs(max) * 0.02, 0.01);
@@ -88,13 +97,14 @@ export function ClinicalChart({
         }
       >
         <defs>
+          {/* Colour follows absolute risk: red at/above the threshold (or 50%), green near 0. */}
           <linearGradient
             id={id}
             gradientUnits="userSpaceOnUse"
             x1="0"
-            y1="32"
+            y1={y(threshold ?? 0.5)}
             x2="0"
-            y2="218"
+            y2={y(0)}
           >
             <stop offset="0" stopColor="#cf424d" />
             <stop offset=".5" stopColor="#bd8631" />
@@ -118,7 +128,7 @@ export function ClinicalChart({
               className="axis-text"
             >
               {risk
-                ? Math.round(100 * (1 - v)) + '%'
+                ? Math.round(100 * riskTop * (1 - v)) + '%'
                 : (hi - (hi - lo) * v).toLocaleString('en-US', {
                     maximumFractionDigits: 2,
                   })}
@@ -140,6 +150,27 @@ export function ClinicalChart({
             })}
           </text>
         ))}
+        {risk && threshold !== null && threshold <= riskTop && (
+          <g>
+            <line
+              x1="58"
+              x2="740"
+              y1={y(threshold)}
+              y2={y(threshold)}
+              stroke="#cf424d"
+              strokeWidth="1.5"
+              strokeDasharray="6 4"
+            />
+            <text
+              x="736"
+              y={y(threshold) - 6}
+              textAnchor="end"
+              className="axis-text"
+            >
+              {'Alert threshold ' + Math.round(threshold * 100) + '%'}
+            </text>
+          </g>
+        )}
         {risk ? (
           <>
             {data.slice(1).map((p, i) => (
