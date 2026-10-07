@@ -1049,3 +1049,12 @@ footer {
 .demo-clock small {
   margin-top: 0;
 }
+.demo-clock button {
+  background: transparent;
+  border-color: #5f8293;
+  color: #f6fbfe;
+}
+.demo-clock button:hover {
+  background: #1d4255;
+  color: #ffffff;
+}
