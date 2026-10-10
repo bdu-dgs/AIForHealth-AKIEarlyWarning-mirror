@@ -28,6 +28,10 @@ data/
 models/
 artifacts/*
 !artifacts/README.md
+# Locked Demo I alert policy (aggregate numbers only); everything else in demo_i stays local.
+!artifacts/demo_i/
+artifacts/demo_i/*
+!artifacts/demo_i/policy.json
 MIMIC.docx
 
 .pnpm-store/

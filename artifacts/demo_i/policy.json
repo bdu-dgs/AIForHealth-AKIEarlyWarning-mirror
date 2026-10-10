@@ -1,0 +1,111 @@
+{
+  "policy_version": "demo-v1",
+  "created_at": "2026-10-07T21:05:52+00:00",
+  "model": {
+    "run_id": "aki_ml_v1_28e0b1fb83",
+    "family": "lightgbm",
+    "feature_set": "no_dc",
+    "model_dir": "artifacts/models/aki_ml_v1_28e0b1fb83/lightgbm__no_dc",
+    "pipeline_sha256": "605044df37b040285bf6f91676d4e05506f21cb84aba01119e17bf46d2043ff1",
+    "feature_order_sha256": "00852980fc320d9b853442e30fad8c6fc4269668d075c38c232838cc7cfb5f8a"
+  },
+  "alert_horizon_h": 24,
+  "display_horizons_h": [
+    6,
+    12,
+    48
+  ],
+  "monitoring_hours": [
+    1,
+    72
+  ],
+  "alert_policy": {
+    "rule": "risk >= threshold",
+    "sustain_hours": 1,
+    "cooldown_hours": 6.0,
+    "rise_ratio": null,
+    "rise_window_hours": 12
+  },
+  "threshold": {
+    "value": 0.21,
+    "comparison": ">=",
+    "validation_run_id": "aki_ml_v1_28e0b1fb83/train_oof-selected/validation-confirmed",
+    "policy_version": "demo-v1",
+    "monitoring_window": "ICU hours 1-72",
+    "calibration_version": "platt (fit on train OOF, aki_ml_v1_28e0b1fb83)",
+    "locked": true,
+    "selection_basis": "Selected on out-of-fold predictions of training patients (run aki_ml_v1_28e0b1fb83); confirmed once on validation. Window: longest run of ICU-hour segments with AUROC >= 0.75, calibration slope and O/E within [0.8, 1.25]. Policy (sustain 1h, cooldown 6h) and threshold: highest AKI event detection with alert PPV >= 1/3, median lead >= 6 h and <= 1 alert per patient-day. Validation: detection 0.762, PPV 0.338, 0.818 alerts/patient-day, median lead 12.7 h. Demo setting, not a clinical threshold; test set not evaluated."
+  },
+  "selection_metrics_train_oof": {
+    "patient_days": 39115.083333333336,
+    "alerts_per_patient_day": 0.7719272829535068,
+    "false_alerts_per_patient_day": 0.4006638530319719,
+    "unlabelled_alerts_per_patient_day": 0.16817042019169928,
+    "alert_ppv": 0.3363821138211382,
+    "aki_events": 4373.0,
+    "event_detection_rate": 0.7319917676652183,
+    "lead_time_median_h": 13.424444444444445,
+    "lead_time_mean_h": 13.370073327779515,
+    "non_aki_patients_alerted": 0.35897986577181207
+  },
+  "validation_metrics": {
+    "patient_days": 8271.833333333334,
+    "alerts_per_patient_day": 0.8184400878483206,
+    "false_alerts_per_patient_day": 0.4272329793878825,
+    "unlabelled_alerts_per_patient_day": 0.17299671576232595,
+    "alert_ppv": 0.33807829181494664,
+    "aki_events": 965.0,
+    "event_detection_rate": 0.7616580310880829,
+    "lead_time_median_h": 12.68,
+    "lead_time_mean_h": 13.06970559334845,
+    "non_aki_patients_alerted": 0.36612296110414055
+  },
+  "validation_ci95": {
+    "patient_days": [
+      8143.663541666667,
+      8395.875
+    ],
+    "alerts_per_patient_day": [
+      0.7849276019189274,
+      0.8507622940368877
+    ],
+    "false_alerts_per_patient_day": [
+      0.4030140533931343,
+      0.45050362790118825
+    ],
+    "unlabelled_alerts_per_patient_day": [
+      0.15873245038538222,
+      0.18762427271783813
+    ],
+    "alert_ppv": [
+      0.31752155239176794,
+      0.35944546180843534
+    ],
+    "aki_events": [
+      912.0,
+      1015.025
+    ],
+    "event_detection_rate": [
+      0.7353128146077369,
+      0.7879251654115781
+    ],
+    "lead_time_median_h": [
+      11.832677083333332,
+      13.600465277777777
+    ],
+    "lead_time_mean_h": [
+      12.570476755245313,
+      13.592981963989011
+    ],
+    "non_aki_patients_alerted": [
+      0.3515001995385253,
+      0.380691549617124
+    ]
+  },
+  "validation_auroc_24h_window": [
+    0.80888606532316,
+    0.7963086691973762,
+    0.8225335341322733
+  ],
+  "test_set_used": false
+}
