@@ -157,6 +157,15 @@ export function localTime(value: string | number | Date) {
     .toISOString()
     .slice(0, 16);
 }
+/** Short avatar text: the letter of a "Demo X (...)" patient, otherwise initials. */
+export function avatarLabel(name: string) {
+  const demo = /^demo\s+([A-Za-z0-9]{1,3})\b/i.exec(name.trim());
+  if (demo) return demo[1].toUpperCase();
+  const words = name.replace(/\(.*?\)/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+}
 export function fmt(value: string | number) {
   return new Date(value).toLocaleString('en-US', {
     month: '2-digit',

@@ -372,6 +372,13 @@ footer {
 .avatar.large span {
   font-size: 15px;
 }
+.avatar span.initials {
+  font-size: 22px;
+  line-height: 1;
+}
+.avatar.large span.initials {
+  font-size: 28px;
+}
 .patient-name {
   min-width: 0;
 }

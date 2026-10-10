@@ -20,6 +20,7 @@ import {
   fmt,
   duration,
   localTime,
+  avatarLabel,
   groupKey,
   defaultGroup,
   nowMs,
@@ -71,7 +72,9 @@ export function Avatar({
           alt={'Photo of ' + patient.name}
         />
       ) : (
-        <span>{patient.name}</span>
+        <span className="initials" title={patient.name}>
+          {avatarLabel(patient.name)}
+        </span>
       )}
     </div>
   );
