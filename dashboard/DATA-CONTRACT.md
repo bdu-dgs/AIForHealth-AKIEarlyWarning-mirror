@@ -103,7 +103,7 @@ Required prediction fields:
 
 #### drivers
 
-At most 100 items. Each item contains `feature`, `label`, and `contribution`, plus optional `value` and `unit`. Contribution scales are not currently standardized across models.
+At most 100 items. Each item contains `feature`, `label`, and `contribution`, plus optional `value` and `unit`. Contribution scales are not currently standardized across models. The current LightGBM worker reports the five largest TreeSHAP contributions on the calibrated log-odds scale (positive raises the risk).
 
 #### trajectories
 

@@ -62,6 +62,10 @@ A new database is empty; it does not automatically add demo patients or simulate
 
 For a presentation, run `Start-AKI-Demo.cmd`. It opens a fresh demo data folder with four synthetic (fictional) patients registered at ICU admission and a demo clock in the header. Each **+1 h** click moves the clock forward one hour, releases the observations recorded in that hour, and the model updates every patient's risk. Use only synthetic patients when presenting to people without PhysioNet access. To play another InputBatch file: `Start-AKI-Demo.cmd --demo path\to\file.json`.
 
+To show a live upload during the demo, run `python scripts\make_demo_upload.py` in the repository folder at the moment you need it. It writes `demo_upload.json` with a new lab result for Demo D, timed to the current demo clock; upload it on the Data entry tab and the patient's risk updates within seconds.
+
+On the risk chart, the red dashed line is the locked 24 h alert threshold (21%); in demo playback the time axis is fixed to ICU hours 0-72, so each step extends the curves. The observation chart opens on creatinine.
+
 ## Local CSV dataset preview
 
 Create `icu_pre_admission_data` in the project root and place these files inside it:

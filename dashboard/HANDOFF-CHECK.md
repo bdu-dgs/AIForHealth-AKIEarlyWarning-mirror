@@ -19,8 +19,8 @@ These implementation and validation states are defined by the current source and
 ## Handoff constraints that still apply
 
 - Compare prediction stability across different data cutoffs.
-- Select and lock warning thresholds on the validation set, incorporating stability results.
-- Update risk, drivers, and trends as new data arrives.
+- Select and lock warning thresholds on the validation set, incorporating stability results. (October 2026: the `demo-v1` threshold was selected on training folds and confirmed on validation; stability results are still pending.)
+- Update risk, drivers, and trends as new data arrives. (October 2026: implemented by the model worker.)
 - The final goal includes a fully local Windows workflow that requires no cloud server and can run from source obtained from GitHub.
 - The model, composite confidence, packaging, and cross-computer mechanisms still require decisions based on data and user requirements.
 - Do not build a Windows portable package, EXE, or installer without an explicit request.

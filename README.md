@@ -2,7 +2,7 @@
 
 This project develops a reproducible, local-only dynamic acute kidney injury (AKI) early-warning research pipeline and an ICU-facing course-project website. It is a research and decision-support prototype, not a treatment recommendation or validated clinical product.
 
-The sections below describe the planned research pipeline. They are study-design targets rather than completed model results and do not restrict the website to fixed sampling intervals or prediction horizons.
+Notebooks 01 and 02 and the Demo I evaluation are implemented and have been run on local MIMIC-III v1.4; the locked test-set evaluation (notebook 03) has not been done yet. The sections below describe the study design; results so far are under [Current status](#current-status). The design does not restrict the website to fixed sampling intervals or prediction horizons.
 
 ## Documentation
 
@@ -14,6 +14,8 @@ The sections below describe the planned research pipeline. They are study-design
 | [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md) | Normative live JSON field and time contract |
 | [dashboard/VALIDATION.md](dashboard/VALIDATION.md) | Tests actually run and their limits |
 | [dashboard/HANDOFF-CHECK.md](dashboard/HANDOFF-CHECK.md) | Historical comparison between the handoff summary and repository |
+| [artifacts/README.md](artifacts/README.md) | What the local, uncommitted `artifacts/` folder contains |
+| [filter/README.md](filter/README.md) | Separate local CSV/TSV cleaning tool |
 
 ## Core pipeline
 
@@ -94,12 +96,13 @@ The current scope does not include future creatinine or urine-output trajectory 
 | Notebook | Owner responsibility |
 |---|---|
 | `pipeline/01_dataset_construction.ipynb` | Source validation, ID crosswalk, one-stay-per-patient cohort, pre-snapshot patient splits, KDIGO timelines, hourly snapshots, multi-horizon labels, and features |
-| `pipeline/02_ml_pipeline.ipynb` | Preprocessing, patient weighting, three pooled creatinine-only model-family pipelines, calibration, and risk outputs |
-| `pipeline/03_evaluation_and_testing.ipynb` | Leakage tests, validation decisions, locked test evaluation, patient/event metrics, urine-output robustness, SHAP, and dashboard exports |
+| `pipeline/02_ml_pipeline.ipynb` | Preprocessing, patient weighting, pooled LR, RF, LightGBM (primary) and XGBoost pipelines with 6h/12h/24h/48h heads, a LightGBM ablation without discharge-coded diagnoses (`no_dc`), Platt and isotonic calibration, and hourly plus event-driven risk outputs |
+| `pipeline/demo_i_evaluation.ipynb` | Demo I: monitoring window, alert policy, and threshold selected on training out-of-fold predictions and confirmed once on validation; writes the locked policy used by the website |
+| `pipeline/03_evaluation_and_testing.ipynb` | Planned: leakage tests, locked test evaluation, patient/event metrics, subgroup and urine-output robustness, stability, and SHAP summaries |
 
-Every numbered Part in each notebook is followed by an empty code cell for implementation. Notebooks exchange versioned local Parquet artifacts rather than in-memory variables.
+Notebooks exchange versioned local Parquet artifacts rather than in-memory variables. Code shared by notebooks and the website lives in `src/aki_ml/`.
 
-## Planned research artifact contracts
+## Research artifact contracts
 
 | Producer | Local output | Unit of observation |
 |---|---|---|
@@ -111,10 +114,11 @@ Every numbered Part in each notebook is followed by an empty code cell for imple
 | Dataset notebook | `<output_root>/dataset_manifest.json`, `<output_root>/reports/` | Provenance (config hash, commit, file hashes) and aggregate quality reports |
 | ML notebook | `artifacts/models/<run_id>/` | One fitted model-family pipeline |
 | ML notebook | `artifacts/predictions/<run_id>.parquet` | One model, ICU stay, snapshot, and horizon |
-| Evaluation notebook | `artifacts/reports/<run_id>/` | Aggregate metrics and figures |
-| Evaluation notebook | `artifacts/dashboard/` | Local dashboard-ready records |
+| ML notebook | `artifacts/predictions/<run_id>_event_replay.parquet` | One model, validation stay, event time, and horizon |
+| Demo I notebook | `artifacts/demo_i/policy.json` and aggregate tables/figures | Locked alert policy (threshold, monitoring window, model hashes) and validation summaries |
+| Evaluation notebook (planned) | `artifacts/reports/<run_id>/` | Aggregate metrics and figures |
 
-For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/default.yaml` (default `../Cleaned`, outside the repository); filtered source caches go to `artifacts/interim/`. These planned Parquet and experiment artifacts are separate from the website's live JSON exchange contract. The live contract is defined only in [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md).
+For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/default.yaml` (default `../Cleaned`, outside the repository); filtered source caches go to `artifacts/interim/`. Nothing under `artifacts/` is committed; see [artifacts/README.md](artifacts/README.md). These planned Parquet and experiment artifacts are separate from the website's live JSON exchange contract. The live contract is defined only in [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md).
 
 ## Repository layout
 
@@ -125,28 +129,32 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |-- .gitignore
 |-- .env.example
 |-- configs/
-|   `-- default.yaml
+|   |-- default.yaml           # dataset study design (notebook 01)
+|   `-- ml.yaml                # model training settings (notebook 02)
 |-- pipeline/
 |   |-- 01_dataset_construction.ipynb
 |   |-- 02_ml_pipeline.ipynb
-|   `-- 03_evaluation_and_testing.ipynb
+|   |-- 03_evaluation_and_testing.ipynb
+|   `-- demo_i_evaluation.ipynb
+|-- src/aki_ml/                # shared code: feature engine, model containers, alerts, scoring
 |-- dashboard/
 |   |-- app.py                 # preserved original placeholder
+|   |-- launcher.py            # starts the website and the model worker
+|   |-- model_worker.py        # live scoring with the locked model
 |   |-- README.md              # website operation
 |   |-- DEVELOPMENT.md         # developer and backend integration guide
 |   |-- DATA-CONTRACT.md       # live JSON contract
-|   |-- api/                   # FastAPI, SQLite, file ingestion
+|   |-- api/                   # FastAPI, SQLite, file ingestion, demo playback
 |   |-- web/                   # React and TypeScript frontend
 |   `-- tests/                 # synthetic backend tests
-|-- filter/                     # separately added cohort/filter prototype
+|-- scripts/                   # setup, synthetic demo patients, batch scoring, demo upload
+|-- filter/                    # separately added CSV/TSV cleaning tool
 |-- Setup-AKI.cmd
 |-- Start-AKI.cmd
-|-- scripts/
+|-- Start-AKI-Demo.cmd         # demo playback with synthetic patients
 `-- artifacts/
-    `-- README.md
+    `-- README.md              # local outputs, not committed
 ```
-
-Stable shared code should be extracted into a Python package only when multiple notebooks or the dashboard genuinely need the same implementation.
 
 ## Data and privacy
 
@@ -175,8 +183,10 @@ Stable shared code should be extracted into a Python package only when multiple 
 
 ## Current status
 
-`pipeline/01_dataset_construction.ipynb` is implemented: it builds the cohort, KDIGO timelines, frozen patient split, hourly snapshots, multi-horizon labels, and leakage-safe features from local MIMIC-III v1.4 using `configs/default.yaml`. Notebooks 02 and 03 still contain structure and documentation only. No model training, cutoff-stability result, validation-selected threshold, calibration result, or clinical validation is currently available.
-
-The local working tree contains a runnable website with patient registration, append-only observations and revisions, file exchange, historical replay, local SQLite storage, SSE refresh, and a read-only MIMIC CSV subset preview. The website keeps predictions empty until a model is connected through the documented contract. Current test evidence and limitations are recorded in [dashboard/VALIDATION.md](dashboard/VALIDATION.md).
+- **Dataset (notebook 01):** implemented and run on local MIMIC-III v1.4 with `configs/default.yaml`: 32,907 patients (70/15/15 train/validation/test by patient), 1.34 million hourly snapshots for ICU hours 1-72, 258 features, and creatinine-KDIGO labels for 6, 12, 24, and 48 hours.
+- **Models (notebook 02):** implemented and run (run `aki_ml_v1_28e0b1fb83`, `configs/ml.yaml`). Validation AUROC with Platt calibration at 6/12/24/48 h: LightGBM 0.862/0.837/0.806/0.784, XGBoost about the same, random forest 0.842-0.765, logistic regression 0.818-0.755, and a creatinine-only reference 0.719-0.677. The website uses LightGBM without discharge-coded diagnoses (0.865/0.839/0.809/0.782), because those codes are not known during the ICU stay. Calibration slopes are close to 1. Event-driven replay gives AUROC within 0.01 of hourly evaluation.
+- **Demo I (`demo-v1`, `pipeline/demo_i_evaluation.ipynb`):** monitoring window ICU hours 1-72; alert when the 24 h risk is at least 21%. On validation: 76% of AKI events flagged (95% CI 74-79%), a median of 12.7 h before onset; about 1 in 3 alerts is followed by AKI; 0.8 alerts per patient-day.
+- **Website:** runs the locked model live and shows risk, the 24 h warning, and the top five drivers for each prediction; `Start-AKI-Demo.cmd` replays four synthetic patients with a "+1 h" clock. Test evidence and limitations are in [dashboard/VALIDATION.md](dashboard/VALIDATION.md).
+- **Not done yet:** the test set has not been used. Next are notebook 03 (one locked test-set evaluation with patient-level confidence intervals, subgroup and urine-output analyses), prediction-stability checks, and alert rules that reduce false alarms. There is no clinical validation.
 
 Local website changes do not become available from GitHub until they are explicitly committed and pushed. Windows EXE, installer, and portable runtime packaging have not been built.

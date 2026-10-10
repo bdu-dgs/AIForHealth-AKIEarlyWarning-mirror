@@ -2,7 +2,7 @@
 
 This document covers website architecture, backend integration, and change conventions. Installation and routine operation are in [README.md](README.md); normative JSON fields are in [DATA-CONTRACT.md](DATA-CONTRACT.md); test evidence is in [VALIDATION.md](VALIDATION.md).
 
-The website currently uses one local FastAPI process for the React page, HTTP API, SSE updates, and SQLite data layer. An AKI inference implementation is not currently present.
+The website uses one local FastAPI process for the React page, HTTP API, SSE updates, and SQLite data layer, plus a separate model worker process (`model_worker.py`) that scores new input with the locked LightGBM model (see [Model worker](#model-worker)).
 
 ## Documentation maintenance
 
@@ -48,7 +48,9 @@ When updating documentation:
 | `api/model_adapter.py` | Model-process boundary (Protocol); the implemented worker is `model_worker.py` |
 | `api/demo.py` | Demo playback: staged stay, stepped clock, hourly release |
 | `api/dataset_preview.py` | Read-only MIMIC subset preview |
-| `api/main.py` | HTTP, SSE, local request protection, and compiled page |
+| `api/main.py` | HTTP, SSE, local request protection, service clock, model status, and compiled page |
+| `launcher.py` | Starts the website and the model worker; `--demo` for demo playback, `--no-model` to skip the worker |
+| `model_worker.py` | Live scoring of new input revisions with the locked model (`src/aki_ml/scoring.py`) |
 | `web/lib/api.ts` | Shared frontend types, requests, historical pagination, and alert decisions |
 | `web/components/clinical/` | Patient cards, details, entry, preview, and charts |
 | `web/app/page.tsx` | Page routing, overview state, and live updates |
@@ -63,7 +65,11 @@ The page submits `input` or `prediction` batches to `POST /api/import`. `POST /a
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/health` | Service, revision, listener errors, and outbox status |
+| `GET /api/health` | Service, revision, listener errors, outbox status, model status, and service clock |
+| `GET /api/clock` | Service clock (real time, or the demo-playback time) |
+| `POST /api/demo/advance?hours=1` | Demo playback only: move the clock forward and release that hour's data |
+| `POST /api/model/heartbeat` | Model worker status report |
+| `GET /api/patients/{id}/revisions` | Input revisions and their arrival times (model worker trigger points) |
 | `GET /api/settings` | Data and exchange directories and model status |
 | `GET /api/patients` | Overview |
 | `GET /api/patients/{id}/history` | History and replay |
@@ -210,13 +216,14 @@ When relevant, also check transaction rollback, idempotent revisions, file event
 
 ## Development order
 
-1. Confirm approved modeling data, variable dictionary, cohort, and outcome definitions.
-2. Build an independent MIMIC offline extraction and training-data workflow.
-3. Compare prediction stability across data cutoffs.
-4. Select and lock thresholds on the validation set and link stability results.
-5. Implement a model worker that follows the existing contract.
-6. Define and validate composite confidence from actual data density.
-7. Measure sustained load, model latency, failure recovery, and physician workflow.
-8. Evaluate a Windows package only after an explicit request.
+Done (October 2026): modeling data, cohort, and outcome definitions (notebook 01); offline MIMIC extraction and training (notebook 02); a locked threshold and alert policy selected on training folds and confirmed on validation (`demo-v1`); and a model worker that follows the existing contract.
+
+Remaining:
+
+1. Evaluate the locked system once on the test set (notebook 03).
+2. Compare prediction stability across data cutoffs and link it to the alert policy.
+3. Define and validate composite confidence from actual data density.
+4. Measure sustained load, model latency, failure recovery, and physician workflow.
+5. Evaluate a Windows package only after an explicit request.
 
 When GitHub and local work conflict, list the exact files and differences, preserve local work, and then choose the merge strategy. Do not let an old summary overwrite current source, and do not describe plans or placeholder interfaces as implemented functionality.

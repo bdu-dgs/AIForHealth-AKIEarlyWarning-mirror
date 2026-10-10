@@ -14,6 +14,10 @@ This document records checks actually executed, the environment, results, and ap
 | 2026-09-12 | Frontend tests and production build | 3 passed; build passed | Node tests, TypeScript, and Vite production assets |
 | 2026-09-12 | Local HTTP and browser | Passed | Health, CSV API, dataset route, horizontal cards, switching, details, pagination, and search |
 | 2026-09-12 | Git ignore and dependency rebuild | Passed | Dataset ignored; renamed dependencies rebuilt from files in the current directory |
+| 2026-10-07 | Backend automation | 28 passed | Earlier checks plus locked-threshold overview preference, demo playback (frozen clock, hour-by-hour release), and model heartbeat status |
+| 2026-10-07 | Frontend tests and production build | 4 passed; build passed | Alert strings in English, default locked-threshold series, TypeScript, and Vite production assets |
+| 2026-10-07 | English-only interface | Passed | No Chinese characters in tracked dashboard sources or the built `dist/` output |
+| 2026-10-08 | Live model end to end (demo playback, synthetic patients) | Passed | See "Live model and demo playback checks" below |
 
 The two backend warnings on 2026-09-12 were future-compatibility deprecation notices from Starlette TestClient for httpx and AnyIO BlockingPortal aliases; the tests themselves passed.
 
@@ -42,11 +46,22 @@ On 2026-09-12, only aggregate checks were performed on the user-provided subset 
 
 This verifies file reading and matching only. It is not validation of the MIMIC cohort, variables, labels, or model results.
 
+## Live model and demo playback checks
+
+On 2026-10-07 and 2026-10-08, using only the four synthetic demo patients and the locked `demo-v1` model:
+
+- The model worker scored every demo hour from ICU hour 3 (first usable creatinine) to 72: 4 predictions per patient-hour, none skipped, including 40 "+1 h" steps sent 0.3 s apart.
+- Risks from live, event-driven scoring matched the batch hourly scorer (`scripts/score_dashboard.py`) at the same hours, for example 0.361 for Demo B at hour 30 in both.
+- After a "+1 h" step, new observations were visible in about 0.2 s and all four risks updated in about 1.2-3 s (longer later in the stay).
+- Uploading a demo lab file (`scripts/make_demo_upload.py`) through the import endpoint raised Demo D's 24 h risk from about 4-8% to about 28-31% within seconds, with the creatinine rise as top driver.
+- No worker or launcher processes remained after the service stopped.
+
+These checks cover synthetic data on one laptop. They are not evidence of clinical accuracy; model performance is reported in the root README and the notebooks.
+
 ## Not implemented or not yet validated
 
-- AKI model training, inference, calibration, and explanation worker.
+- Locked test-set evaluation of the model and alert policy (notebook 03).
 - Stability experiments across different data cutoffs.
-- Validation-set threshold selection and locking.
 - Composite data-confidence formula.
 - Actual hospital-system integration, remote multi-user access, and authentication.
 - Sustained multi-hour load, GPU inference, and end-to-end latency.
