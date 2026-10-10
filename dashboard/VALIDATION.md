@@ -18,6 +18,7 @@ This document records checks actually executed, the environment, results, and ap
 | 2026-10-07 | Frontend tests and production build | 4 passed; build passed | Alert strings in English, default locked-threshold series, TypeScript, and Vite production assets |
 | 2026-10-07 | English-only interface | Passed | No Chinese characters in tracked dashboard sources or the built `dist/` output |
 | 2026-10-08 | Live model end to end (demo playback, synthetic patients) | Passed | See "Live model and demo playback checks" below |
+| 2026-10-10 | English-only browser controls | Passed; frontend tests 6 passed, build passed | File pickers, date-time fields, and form-validation messages no longer use browser-native widgets that follow the OS language; Data entry page checked in Chrome with `--lang=zh-CN` |
 
 The two backend warnings on 2026-09-12 were future-compatibility deprecation notices from Starlette TestClient for httpx and AnyIO BlockingPortal aliases; the tests themselves passed.
 

@@ -20,28 +20,28 @@ csv.field_size_limit(2 * 1024 * 1024)
 
 def parse_csv(raw, encoding, delimiter):
     if encoding not in ('utf-8-sig', 'gb18030', 'utf-16') or delimiter not in (',', '\t', ';', '|'):
-        raise ValueError('不支持的编码或分隔符。')
+        raise ValueError('Unsupported encoding or delimiter.')
     try:
         reader = csv.reader(io.StringIO(raw.decode(encoding), newline=''), delimiter=delimiter, strict=True)
         header = next(reader, None)
         if not header or any(not h.strip() for h in header) or len(set(header)) != len(header):
-            raise ValueError('列名不能为空或重复，请先修正表头。')
+            raise ValueError('Column names must be nonempty and unique. Please fix the header.')
         if len(header) > 1000:
-            raise ValueError('最多支持 1000 列。')
+            raise ValueError('A maximum of 1,000 columns is supported.')
         rows = []
         for line, row in enumerate(reader, 2):
             if not row:
                 continue
             if len(row) != len(header):
-                raise ValueError(f'第 {line} 条记录的列数与表头不同，请检查分隔符。')
+                raise ValueError(f'Record {line} has a different number of columns than the header. Check the delimiter.')
             rows.append(row)
             if len(rows) > MAX_ROWS:
-                raise ValueError('简易版最多支持 200,000 行，请先分割文件。')
+                raise ValueError('This version supports up to 200,000 rows. Split the file first.')
         return {'columns': header, 'rows': rows}
     except UnicodeError:
-        raise ValueError('文件编码不匹配，请切换编码后重新上传。') from None
+        raise ValueError('The file encoding does not match. Choose another encoding and reload.') from None
     except csv.Error:
-        raise ValueError('CSV 格式有误，或单个字段超过 2 MB。') from None
+        raise ValueError('Invalid CSV format, or a field exceeds 2 MB.') from None
 
 def number(value):
     try:
@@ -54,13 +54,13 @@ def clean(source, config):
     cols = source['columns']
     selected = config.get('columns', cols)
     if not isinstance(selected, list) or not selected or len(set(selected)) != len(selected) or any(c not in cols for c in selected):
-        raise ValueError('请至少选择一列有效的输出列。')
+        raise ValueError('Select at least one valid output column.')
     mode = config.get('match', 'all')
     if mode not in ('all', 'any'):
-        raise ValueError('筛选组合方式无效。')
+        raise ValueError('Invalid filter combination mode.')
     missing = set(config.get('missing_tokens', ['', 'NA', 'N/A', 'NULL', 'null', 'NaN']))
     if any(not isinstance(v, str) for v in missing):
-        raise ValueError('空值标记必须是文本。')
+        raise ValueError('Missing-value markers must be text.')
     missing.add('')
     trim = bool(config.get('trim', False))
     rules = config.get('rules', [])
@@ -69,9 +69,9 @@ def clean(source, config):
     for rule in rules:
         col, op, value = rule.get('column'), rule.get('op'), rule.get('value', '')
         if col not in cols or op not in ops or not isinstance(value, str):
-            raise ValueError('筛选条件无效。')
+            raise ValueError('Invalid filter condition.')
         if op in ('gt', 'ge', 'lt', 'le') and number(value) is None:
-            raise ValueError('数值比较需要填写有效数字。')
+            raise ValueError('Enter a valid number for a numeric comparison.')
         prepared.append((cols.index(col), op, value))
     def matches(row, rule):
         i, op, value = rule
@@ -91,7 +91,7 @@ def clean(source, config):
     dedupe = config.get('dedupe', [])
     fills = config.get('fills', {})
     if any(c not in cols for c in drop + dedupe) or any(c not in cols or not isinstance(v, str) for c, v in fills.items()):
-        raise ValueError('空值处理或去重列无效。')
+        raise ValueError('Invalid missing-value or deduplication columns.')
     drop_i, dup_i, out_i = ([cols.index(c) for c in names] for names in (drop, dedupe, selected))
     fill_i = {cols.index(c): v for c, v in fills.items()}
     stats = {'input_rows': len(source['rows']), 'filtered_rows': 0, 'missing_removed': 0, 'duplicates_removed': 0, 'filled_cells': 0}
@@ -156,25 +156,25 @@ class Handler(BaseHTTPRequestHandler):
         return not auth or secrets.compare_digest(self.headers.get('X-Local-Token', ''), TOKEN)
 
     def do_GET(self):
-        if not self.allowed(): return self.send(403, {'error': '仅允许本地访问。'})
+        if not self.allowed(): return self.send(403, {'error': 'Only local access is allowed.'})
         path = urlsplit(self.path).path
-        files = {'/i18n.js': ('i18n.js', 'text/javascript; charset=utf-8'), '/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8')}
+        files = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8')}
         if path in files:
             name, mime = files[path]
             return self.send(200, (ROOT / name).read_bytes(), mime)
         if path == '/api/session': return self.send(200, {'token': TOKEN})
-        if not self.allowed(True): return self.send(403, {'error': '本地会话验证失败，请刷新。'})
+        if not self.allowed(True): return self.send(403, {'error': 'Local session verification failed. Reload the page.'})
         with LOCK:
             if path == '/api/download' and STATE['result'] is not None:
                 return self.send(200, export_csv(STATE['result']), 'text/csv; charset=utf-8', 'cleaned.csv')
-        return self.send(404, {'error': '尚无结果。'})
+        return self.send(404, {'error': 'No results available yet.'})
 
     def do_POST(self):
-        if not self.allowed(True): return self.send(403, {'error': '本地会话验证失败，请刷新。'})
+        if not self.allowed(True): return self.send(403, {'error': 'Local session verification failed. Reload the page.'})
         try:
             size = int(self.headers.get('Content-Length', '-1'))
             if size < 0 or size > LIMIT:
-                return self.send(413, {'error': '文件最多 50 MB。'})
+                return self.send(413, {'error': 'The maximum file size is 50 MB.'})
             body = self.rfile.read(size)
             path = urlsplit(self.path).path
             with LOCK:
@@ -183,23 +183,23 @@ class Handler(BaseHTTPRequestHandler):
                     STATE.update(source=data, result=None)
                     return self.send(200, preview(data))
                 if path == '/api/process':
-                    if STATE['source'] is None: raise ValueError('请先上传文件。')
+                    if STATE['source'] is None: raise ValueError('Load a file first.')
                     config = json.loads(body)
-                    if not isinstance(config, dict): raise ValueError('处理配置格式无效。')
+                    if not isinstance(config, dict): raise ValueError('Invalid processing configuration format.')
                     result = clean(STATE['source'], config)
                     STATE['result'] = result
                     return self.send(200, preview(result))
                 if path == '/api/clear':
                     STATE.update(source=None, result=None)
                     return self.send(200, {'ok': True})
-            self.send(404, {'error': '未知请求。'})
+            self.send(404, {'error': 'Unknown request.'})
         except (ValueError, TypeError, KeyError, AttributeError):
             import sys
             exc = sys.exception()
-            message = str(exc) if isinstance(exc, ValueError) and not isinstance(exc, json.JSONDecodeError) else '配置格式无效。'
+            message = str(exc) if isinstance(exc, ValueError) and not isinstance(exc, json.JSONDecodeError) else 'Invalid configuration format.'
             self.send(400, {'error': message})
         except MemoryError:
-            self.send(400, {'error': '内存不足，请减小文件。'})
+            self.send(400, {'error': 'Not enough memory. Use a smaller file.'})
 
 def main():
     server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)

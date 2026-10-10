@@ -10,7 +10,7 @@ import {
   Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DateTimeInput } from './form-controls';
 import { Slider } from '@/components/ui/slider';
 import { Choice } from './choice';
 import { ClinicalChart } from './chart';
@@ -512,21 +512,13 @@ export function PatientView({
           </div>
           <label className="inline-label">
             View time
-            <Input
-              type="datetime-local"
+            <DateTimeInput
               value={localTime(end)}
               min={localTime(admitted)}
               max={localTime(clock)}
-              onChange={(e) => {
-                if (e.target.value) {
-                  setPlaying(false);
-                  setReplay(
-                    Math.min(
-                      clock,
-                      Math.max(admitted, +new Date(e.target.value)),
-                    ),
-                  );
-                }
+              onChange={(v) => {
+                setPlaying(false);
+                setReplay(Math.min(clock, Math.max(admitted, +new Date(v))));
               }}
             />
           </label>

@@ -639,7 +639,7 @@ footer {
   max-width: 450px;
   color: #6b8491;
 }
-.photo-update input {
+.photo-update .file-picker {
   margin-top: 8px;
 }
 .file-drop {
@@ -654,8 +654,29 @@ footer {
   border-radius: 9px;
   margin: 20px 0;
 }
-.file-drop input {
-  max-width: 350px;
+.file-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.file-picker .muted {
+  overflow-wrap: anywhere;
+}
+.date-time-input {
+  position: relative;
+  display: block;
+}
+.date-time-input input {
+  padding-right: 28px;
+}
+.date-time-input svg {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8a9da8;
+  pointer-events: none;
 }
 .file-drop svg {
   color: #6c939d;

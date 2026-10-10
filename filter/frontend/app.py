@@ -10,7 +10,7 @@ import streamlit as st
 st.set_page_config(page_title='AKI Prediction Data Processing System',layout='wide')
 st.title('AKI Prediction Data Processing System')
 st.caption('MIMIC-III v1.4 · Local research workspace · 8h / 12h / 24h → next 48h')
-st.info('完全本地处理。代码目录位于 OneDrive；真实数据、缓存和输出必须使用独立的非同步本地目录。界面仅显示汇总信息。')
+st.info('Fully local processing. The code folder is in OneDrive; real data, caches, and outputs must use separate local folders that are not synced. The interface shows summary information only.')
 PAGES=['Data Setup','Data Inspection','Cohort Builder','Variable Selection','AKI Label Builder','Feature Engineering','Missing Data','Leakage Check','Dataset Builder','Train / Validation / Test Split','Pipeline Summary']
 page=st.sidebar.radio('Navigation',PAGES)
 
@@ -29,7 +29,7 @@ def api(path,data=None):
                 return None
             return r.json()
     except Exception:
-        st.error('本地后端不可用，请使用 start.bat 或 python run.py 启动。')
+        st.error('Local backend unavailable. Start it with start.bat or python run.py.')
         return None
 
 def report():
@@ -44,8 +44,8 @@ if page=='Data Setup':
     st.subheader('Separate code from patient data')
     for key,title in [('raw_dir','Raw Data Directory — read only'),('workspace_dir','Processing Workspace Directory'),('output_dir','Output Directory')]:
         c[key]=st.text_input(title,value=c[key])
-    c['local_storage_confirmed']=st.checkbox('我确认三个目录均为本地目录，未被任何云盘、备份或同步工具同步。',value=c['local_storage_confirmed'])
-    st.warning('含 OneDrive / Dropbox / Google Drive / iCloud 的数据路径会被阻止；确认框不能绕过此限制。符号链接和目录嵌套也会检查。')
+    c['local_storage_confirmed']=st.checkbox('I confirm all three folders are local and not synced by any cloud drive, backup, or sync tool.',value=c['local_storage_confirmed'])
+    st.warning('Data paths containing OneDrive / Dropbox / Google Drive / iCloud are blocked; this checkbox cannot bypass that. Symbolic links and nested folders are also checked.')
     c['chunk_size']=st.number_input('Rows per chunk',100,500000,c['chunk_size'],1000)
     if st.button('Validate paths and scan tables',type='primary'):
         data=api('/setup',c)
@@ -64,13 +64,13 @@ elif page=='Cohort Builder':
     options=['unselected','icu_72h','hospital_72h']
     c['followup']=st.selectbox('Follow-up definition',options,index=options.index(c['followup']))
     c['exclusions']=st.selectbox('Exclusion evidence',['unselected','reviewed_file'],index=['unselected','reviewed_file'].index(c['exclusions']))
-    st.warning('需要在 Raw Data Directory 中准备 ELIGIBILITY_REVIEW.csv 或 .parquet。没有审核依据时运行将停止。此版本不声称仅凭七张表自动可靠识别 ESRD 或透析。')
+    st.warning('Prepare ELIGIBILITY_REVIEW.csv or .parquet in the Raw Data Directory. Runs stop when no review evidence is present. This version does not claim to identify ESRD or dialysis reliably from the seven tables alone.')
     st.code('SUBJECT_ID,HADM_ID,ICUSTAY_ID,ESRD,PRE_EXISTING_AKI,DIALYSIS_START,REVIEW_COMPLETE')
-    st.write('ESRD、PRE_EXISTING_AKI 为 0/1；REVIEW_COMPLETE=1 表示已审核病史与透析证据。DIALYSIS_START 为首次已知透析时间；只有经审核确认没有透析时才可留空。共同 cohort 排除 24h 及之前透析。')
+    st.write('ESRD and PRE_EXISTING_AKI are 0/1; REVIEW_COMPLETE=1 means medical history and dialysis evidence were reviewed. DIALYSIS_START is the first known dialysis time; leave it empty only when review confirmed no dialysis. The common cohort excludes dialysis at or before 24h.')
     r=report()
     if r: st.dataframe(r['cohort'],hide_index=True)
 elif page=='Variable Selection':
-    st.write('从本地字典搜索。名称相同的多个 ITEMID 合并为一个变量，单位必须一致。')
+    st.write('Search the local dictionaries. Multiple ITEMIDs with the same name are merged into one variable; their units must match.')
     st.caption('Suggested: Heart Rate, Respiratory Rate, SpO2, Temperature, SBP, DBP, MAP, GCS; Creatinine, BUN, Sodium, Potassium, Bicarbonate, Chloride, Glucose, WBC, Hemoglobin, Platelets.')
     if st.button('Load local dictionaries'):
         d=api('/variables',c)
@@ -100,23 +100,23 @@ elif page=='AKI Label Builder':
     c['negative_max_gap_hours']=st.number_input('Maximum unmeasured gap in negative outcome window (hours)',1.,48.,c['negative_max_gap_hours'])
     opts=['charttime_proxy','require_storetime']
     c['availability']=st.selectbox('Measurement availability policy',opts,index=opts.index(c['availability']))
-    st.warning('LABEVENTS 通常没有结果可获得时间。CHARTTIME proxy 不等于临床实时可用性；严格 STORETIME 模式会在缺少该字段时阻止处理。负标签覆盖阈值也需要方法学确认。')
-    c['methods_confirmed']=st.checkbox('我已确认 baseline、随访、排除证据、阴性标签覆盖规则和时间可获得性假设。',value=c['methods_confirmed'])
+    st.warning('LABEVENTS usually has no result-available time. The CHARTTIME proxy is not the same as real-time clinical availability; strict STORETIME mode blocks processing when that field is missing. Negative-label coverage thresholds also need methodological confirmation.')
+    c['methods_confirmed']=st.checkbox('I have confirmed the baseline, follow-up, exclusion evidence, negative-label coverage rules, and time-availability assumptions.',value=c['methods_confirmed'])
 elif page=='Feature Engineering':
     st.table([{'Prediction':f'{h}h','Feature period':f'[INTIME, INTIME+{h}h]','Outcome period':f'(INTIME+{h}h, INTIME+{h+48}h]'} for h in (8,12,24)])
-    st.write('每个变量输出 latest, mean, min, max, range, count, std (sample), slope (unit/hour)。不足两个不同时间点时 slope 缺失。预测时刻的测量属于特征；结局从其后开始，避免边界重叠。')
-    st.write('STORETIME 存在时使用 max(CHARTTIME, STORETIME) 判断可获得性；晚录入测量不会进入更早特征。Temperature/GCS 等多 ITEMID 请只合并单位及临床含义相同的测量。')
+    st.write('Each variable outputs latest, mean, min, max, range, count, std (sample), and slope (unit/hour). Slope is missing with fewer than two distinct time points. Measurements at the prediction time belong to the features; the outcome starts after it, so the boundaries never overlap.')
+    st.write('When STORETIME exists, availability uses max(CHARTTIME, STORETIME); late-entered measurements never enter earlier features. For multi-ITEMID variables such as Temperature/GCS, merge only measurements with the same unit and clinical meaning.')
 elif page=='Missing Data':
     options=['median','mean','most_frequent','unknown','drop_feature']
     c['missing']=st.selectbox('Preprocessing strategy',options,index=options.index(c['missing']))
     c['missing_indicator']=st.checkbox('Add missing indicators',value=c['missing_indicator'])
-    st.write('仅用 train 学习填补统计；原始 dataset 保留缺失，另存 preprocessed 文件。不删除患者。train 中全缺失的数值特征保留缺失并报告。unknown 会把数值列转成类别字符串。')
+    st.write('Imputation statistics are learned on train only; the raw dataset keeps missing values and a separate preprocessed file is saved. No patients are dropped. Numeric features fully missing in train stay missing and are reported. unknown converts numeric columns into categorical strings.')
     r=report()
     if r:
         for h,rows in r['missing'].items():
             st.write(h+'h'); st.dataframe(rows)
 elif page=='Leakage Check':
-    st.write('自动检查未来 CHARTTIME / AVAILABLETIME、结局信息字段、患者跨 split。DISCHTIME 仅用于随访筛选，绝不进入特征。')
+    st.write('Automatically checks for future CHARTTIME / AVAILABLETIME, outcome-information fields, and patients crossing splits. DISCHTIME is used only for follow-up screening and never enters the features.')
     r=report()
     if r: st.json(r['leakage']); st.warning('\n'.join(r['warnings']))
 elif page=='Train / Validation / Test Split':
@@ -124,11 +124,11 @@ elif page=='Train / Validation / Test Split':
     c['validation']=st.number_input('Validation fraction',.01,.98,c['validation'],.01)
     st.write(f"Test fraction: {1-c['train']-c['validation']:.2f}")
     c['seed']=st.number_input('Random seed',0,2147483647,c['seed'])
-    st.write('按 SUBJECT_ID 分配，三套数据使用同一份 assignment。小样本按比例向下取整，可能出现空 validation/test，请查看实际数量。')
+    st.write('Assignment is by SUBJECT_ID, and all three datasets share the same assignment. Small samples are split by rounding down, so validation/test may be empty; check the actual counts.')
     r=report()
     if r: st.json(r['split_sizes'])
 elif page=='Dataset Builder':
-    st.write('运行所有已配置步骤。输出写到 Output Directory 的唯一 run 子目录；原始文件永不覆盖。不可判定的标签写入 label_status.parquet；最终共同 cohort 只保留三窗口都可判定的患者。')
+    st.write('Runs all configured steps. Outputs go to a unique run subfolder of the Output Directory; raw files are never overwritten. Undeterminable labels are written to label_status.parquet; the final common cohort keeps only patients determinable in all three windows.')
     c['csv_export']=st.checkbox('Also export CSV',value=c['csv_export'])
     if st.button('Run complete local pipeline',type='primary'): api('/pipeline',c)
     st.button('Refresh progress')
@@ -139,5 +139,5 @@ elif page=='Pipeline Summary':
     r=report()
     if r:
         st.json(r)
-        st.info('pipeline_report.md 和 pipeline_config.json 已保存在本地 output/run_<id>。配置中的实际目录已脱敏。更改界面配置后需重新运行，报告始终对应上次完成的运行。')
+        st.info('pipeline_report.md and pipeline_config.json are saved locally in output/run_<id>. Actual folder paths in the config are redacted. Re-run after changing the interface configuration; the report always reflects the last completed run.')
     else: st.write('Complete a pipeline run to generate the Methods / Experiments summary.')

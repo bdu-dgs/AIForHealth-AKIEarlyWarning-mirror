@@ -3,6 +3,7 @@ import { Plus, Upload, Save, Trash2, FolderInput } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Choice } from './choice';
+import { DateTimeInput, FilePicker } from './form-controls';
 import { api, post, nowMs, localTime, type Patient } from '@/lib/api';
 type Row = {
   id: string;
@@ -157,6 +158,7 @@ export function InputPanel({
                   <Input
                     required={key !== 'bed'}
                     pattern={key.includes('id') ? '[A-Za-z0-9_-]+' : undefined}
+                    data-pattern-message="Use only letters, digits, underscores, or hyphens."
                     maxLength={key === 'bed' ? 40 : 80}
                     value={form[key]}
                     onChange={(e) =>
@@ -171,22 +173,20 @@ export function InputPanel({
             )}
             <label>
               ICU admission time
-              <Input
-                type="datetime-local"
+              <DateTimeInput
                 required
                 value={form.icu_admitted_at}
                 max={localTime(nowMs())}
-                onChange={(e) =>
-                  setForm({ ...form, icu_admitted_at: e.target.value })
-                }
+                onChange={(v) => setForm({ ...form, icu_admitted_at: v })}
               />
             </label>
             <label>
               Patient photo (optional)
-              <Input
-                type="file"
+              <FilePicker
                 accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+                label="Choose photo"
+                fileName={photo?.name ?? ''}
+                onFile={setPhoto}
               />
             </label>
             <label className="span-two">
@@ -302,15 +302,14 @@ export function InputPanel({
                 </label>
                 <label>
                   Measurement time
-                  <Input
-                    type="datetime-local"
+                  <DateTimeInput
                     required
                     value={r.time}
                     max={localTime(nowMs())}
                     min={
                       patient ? localTime(patient.icu_admitted_at) : undefined
                     }
-                    onChange={(e) => updateRow(r.id, 'time', e.target.value)}
+                    onChange={(v) => updateRow(r.id, 'time', v)}
                   />
                 </label>
                 <Button
@@ -343,12 +342,11 @@ export function InputPanel({
           {patient && (
             <label className="photo-update">
               Update this patient's photo
-              <Input
-                type="file"
+              <FilePicker
                 accept="image/png,image/jpeg,image/webp"
+                label="Choose photo"
                 disabled={busy}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
+                onFile={(file) => {
                   if (!file) return;
                   void perform(async () => {
                     const data = new FormData();
@@ -359,7 +357,6 @@ export function InputPanel({
                     });
                     return 'Patient photo updated';
                   });
-                  e.target.value = '';
                 }}
               />
             </label>
@@ -382,14 +379,11 @@ export function InputPanel({
           <label className="file-drop">
             <Upload size={24} />
             <strong>Choose an input data or prediction result file</strong>
-            <Input
-              type="file"
+            <FilePicker
               accept=".json,.zip,application/json,application/zip"
               disabled={busy}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
+              onFile={(f) => {
                 if (f) void importFile(f);
-                e.target.value = '';
               }}
             />
             <small>Max 16 MB per file · Automatic validation and deduplication · Conflicting records are never overwritten</small>

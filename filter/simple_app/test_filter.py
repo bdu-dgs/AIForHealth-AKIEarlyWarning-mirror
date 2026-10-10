@@ -30,7 +30,7 @@ class CleaningTests(unittest.TestCase):
             server.clean(self.source, {'rules': [{'column': 'AGE', 'op': 'gt', 'value': 'oops'}]})
 
     def test_csv_roundtrip(self):
-        raw = 'ID,NOTE\r\n001,"a,b\n中文"\r\n'.encode('utf-8-sig')
+        raw = 'ID,NOTE\r\n001,"a,b\ncafé"\r\n'.encode('utf-8-sig')
         source = server.parse_csv(raw, 'utf-8-sig', ',')
         self.assertEqual(server.parse_csv(server.export_csv(source), 'utf-8-sig', ','), source)
 
