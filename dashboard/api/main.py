@@ -284,7 +284,8 @@ def create_app(data_root=None, watch=True, dataset_root=None, demo_batch=None, d
             raise HTTPException(503, 'Frontend has not been built; run Setup-AKI.cmd')
         if path == 'favicon.svg' and (web / path).exists():
             return FileResponse(web / path)
-        return FileResponse(web / 'index.html')
+        # Always revalidate the page so a rebuilt frontend is never served from cache.
+        return FileResponse(web / 'index.html', headers={'Cache-Control': 'no-cache'})
 
     return app
 
