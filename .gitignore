@@ -32,6 +32,8 @@ artifacts/*
 !artifacts/demo_i/
 artifacts/demo_i/*
 !artifacts/demo_i/policy.json
+# Collaborator hand-back outputs (aggregate tables and figures only).
+!artifacts/handoff/
 MIMIC.docx
 
 .pnpm-store/

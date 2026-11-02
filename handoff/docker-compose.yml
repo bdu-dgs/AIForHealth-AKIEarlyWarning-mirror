@@ -1,0 +1,10 @@
+# Run from this folder:  docker compose up --build   then open http://127.0.0.1:8888
+# Mounts the hand-off root (the folder holding AIForHealth-AKIEarlyWarning/ and Cleaned/) at /work.
+services:
+  aki:
+    build: .
+    image: aki-handoff:v1
+    ports:
+      - "127.0.0.1:8888:8888"     # this computer only; Jupyter runs without a token
+    volumes:
+      - ../..:/work
