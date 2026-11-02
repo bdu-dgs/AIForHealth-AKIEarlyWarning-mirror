@@ -1,0 +1,2 @@
+# Docker and pip files are read inside Linux containers: always LF.
+* text eol=lf
