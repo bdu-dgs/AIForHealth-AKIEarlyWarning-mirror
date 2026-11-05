@@ -52,7 +52,8 @@ class Worker:
     def beat(self, force=False):
         if force or time.monotonic() - self.last_beat >= HEARTBEAT_SECONDS:
             call(self.base, "/api/model/heartbeat", {
-                "status": self.status, "model_id": self.sc.MODEL_ID, "model_version": self.model.version,
+                "status": self.status, "model_id": self.sc.model_identity(self.model)[0], "model_version": self.model.version,
+                "intended_use": self.model.policy.get("intended_use", "research"),
                 "policy_version": self.model.policy["policy_version"], "detail": self.detail[:500]}, timeout=10)
             self.last_beat = time.monotonic()
 
@@ -61,7 +62,11 @@ class Worker:
         best, offset = 0, 0
         while offset is not None:
             page = call(self.base, f"/api/patients/{pid}/history?kind=prediction&limit=10000&offset={offset}")
-            best = max([best] + [p["input_revision"] for p in page["items"] if p["model_id"] == self.sc.MODEL_ID])
+            best = max([best] + [p["input_revision"] for p in page["items"]
+                                if (p["model_id"], p["model_version"], p["target"]) ==
+                                (self.sc.model_identity(self.model)[0], self.model.version, self.sc.model_identity(self.model)[1])
+                                and (p.get("policy_version") or (p.get("threshold") or {}).get("policy_version")) ==
+                                self.model.policy["policy_version"]])
             offset = page["next_offset"]
         return best
 
@@ -79,7 +84,10 @@ class Worker:
     def sync(self):
         """Score visible revisions; return False while an advertised revision is deferred past the captured time."""
         records, done, t0 = [], {}, time.monotonic()
-        generated_at = self.sc.parse(call(self.base, "/api/health")["server_time"])
+        health = call(self.base, "/api/health")
+        if self.model.policy.get("intended_use") == "synthetic_demo" and health.get("clock", {}).get("mode") != "demo":
+            raise ValueError("The synthetic placeholder runs only in an isolated demo session")
+        generated_at = self.sc.parse(health["server_time"])
         jobs, pending = [], False
         for patient in call(self.base, "/api/patients"):
             pid = patient["patient_id"]
@@ -159,10 +167,18 @@ def main():
     ap = argparse.ArgumentParser(description="AKI live model worker")
     ap.add_argument("--api", default="http://127.0.0.1:8765")
     ap.add_argument("--policy", default=None, help="policy.json (default artifacts/demo_i/policy.json)")
+    ap.add_argument("--demo-model", action="store_true", help="synthetic LR + ridge baseline; demo service only")
+    ap.add_argument("--trajectory-model", help="local trajectory artifact directory to attach to the risk model")
     args = ap.parse_args()
+    if args.demo_model and (args.policy or args.trajectory_model):
+        ap.error("--demo-model and --policy are mutually exclusive")
     try:
-        from aki_ml.scoring import DEFAULT_POLICY, LockedModel
-        model = LockedModel(args.policy or DEFAULT_POLICY)
+        from aki_ml.scoring import DEFAULT_POLICY, load_model
+        if args.demo_model:
+            from aki_ml.baselines import synthetic_demo_model
+            model = synthetic_demo_model()
+        else:
+            model = load_model(args.policy or DEFAULT_POLICY, args.trajectory_model)
     except Exception as error:
         print(f"Model worker not started: {type(error).__name__}: {error}", flush=True)
         return 1

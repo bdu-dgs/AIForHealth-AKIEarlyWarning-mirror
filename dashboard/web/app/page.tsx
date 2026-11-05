@@ -119,7 +119,7 @@ export default function App() {
   const demo = health?.clock.mode === 'demo' ? health.clock : null;
   const modelText =
     health?.model_status === 'running'
-      ? 'Model running · ' + health.model?.policy_version
+      ? (health.model?.intended_use === 'synthetic_demo' ? 'Synthetic demo model · ' : 'Model running · ') + health.model?.policy_version
       : health?.model_status === 'error'
         ? 'Model error · ' + (health.model?.detail ?? '')
         : health?.model_status === 'offline'
@@ -163,7 +163,7 @@ export default function App() {
         .includes(search.toLowerCase()) &&
       (filter === 'all' ||
         (filter === 'warning'
-          ? alertOf(p.prediction, p.stale) === 'AKI warning'
+          ? ['AKI warning', 'Demo warning'].includes(alertOf(p.prediction, p.stale))
           : !p.prediction || p.stale)),
   );
   const pages = Math.max(1, Math.ceil(filtered.length / 8));
@@ -260,6 +260,12 @@ export default function App() {
         </div>
       </header>
       <main>
+        {health?.model?.intended_use === 'synthetic_demo' && (
+          <p className="panel form-help" role="status">
+            Synthetic baseline demonstration: risk, thresholds, contributors and forecasts are for software testing.
+            They have not been validated on patient data.
+          </p>
+        )}
         <div className="page-heading">
           <div>
             <p className="eyebrow">

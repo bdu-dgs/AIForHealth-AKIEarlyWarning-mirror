@@ -21,8 +21,28 @@ This document records checks actually executed, the environment, results, and ap
 | 2026-10-10 | English-only browser controls | Passed; frontend tests 6 passed, build passed | File pickers, date-time fields, and form-validation messages no longer use browser-native widgets that follow the OS language; Data entry page checked in Chrome with `--lang=zh-CN` |
 | 2026-11-04 | Backend and scoring regressions | 36 passed, 2 dependency warnings | Previous 28 checks plus 8 synthetic time-boundary regressions; no model weights loaded |
 | 2026-11-04 | Frontend tests and production build | 7 passed; TypeScript and build passed | Existing UI contracts remain compatible with the runtime fixes |
+| 2026-11-05 | Development extension backend tests | 54 passed, 2 dependency warnings | Combined targets, observed trajectories, cutoff evaluation, model versions, legacy reimport and isolated synthetic integration |
+| 2026-11-05 | Frontend tests and production build | 8 passed; TypeScript and build passed | Synthetic-model labels, compatible risk contracts and forecast display |
 
 The two backend warnings on 2026-09-12 were future-compatibility deprecation notices from Starlette TestClient for httpx and AnyIO BlockingPortal aliases; the tests themselves passed.
+
+## Development extensions — 2026-11-05
+
+The checks below used `7471432` plus local extension changes before their publication. They did not modify the remote repository. Environment: Windows, Python 3.13.5, NumPy 2.1.3, pandas 2.2.3, scikit-learn 1.6.1 and Node.js 24.21.0.
+
+- Backend: **54 tests passed**, with the two existing dependency deprecation warnings.
+- Frontend: **8 tests passed**; TypeScript and Vite production build passed.
+- Notebook 03/04/05 code cells executed in order in clean namespaces using synthetic defaults; no outputs or execution counters were written into the notebooks. This was code-cell execution, not a Jupyter UI/kernel acceptance check.
+- All **10** project Markdown documents passed relative-link and code-fence checks; patch whitespace checks passed.
+- The explicit synthetic CLI completed primary-classification, combined-classification and trajectory runs with separate local artifacts. The original LightGBM artifact was not loaded.
+
+New regressions cover earlier urine-onset risk-set removal, unknown versus negative labels, censor boundaries, observed trajectory matching/ties, no fabricated truth, truncated exports, fixed-origin cutoff features, patient-split checks, validation-only thresholds, unchanged fitted parameters after held-out outcome changes, artifact hash verification and independent trajectory composition.
+
+Integration checks cover model/policy restart isolation, unique prediction IDs across versions, legacy prediction reimport without rewriting stored history, the synthetic-worker demo-service guard, risk/trajectory schema validation, continuous demo updates and restart idempotency. The real notebook-01 file interface and the chunked future-target exporter were exercised with synthetic Parquet files; export tests exclude test patients and verify measurements beyond hour 72.
+
+An isolated service on port 8766 used its own ignored data directory, leaving the existing 8765 service and its data alone. Browser checks confirmed labelled synthetic risk, forecast lines on horizontal cards, model/contributor detail, new-input updates, and historical replay hiding results that had not yet been produced. Screenshot and logs are local verification artifacts, not clinical evidence.
+
+Boundaries: no MIMIC training/evaluation, locked test evaluation, clinical threshold, valid prediction interval, composite confidence, full cooldown/alert-burden policy or sustained-load result was established. Real cleaned artifacts and the original fitted weights remain unavailable here. Original notebooks 01/02 and Demo I's policy were not modified. Windows packaging was not built.
 
 ## Capacity-related test evidence
 
@@ -64,7 +84,7 @@ These checks cover synthetic data on one laptop. They are not evidence of clinic
 ## Not implemented or not yet validated
 
 - Locked test-set evaluation of the model and alert policy (notebook 03).
-- Stability experiments across different data cutoffs.
+- Real-data stability studies of the original model across cutoffs; the synthetic baseline checks recorded above are implemented.
 - Composite data-confidence formula.
 - Actual hospital-system integration, remote multi-user access, and authentication.
 - Sustained multi-hour load, GPU inference, and end-to-end latency.

@@ -1,6 +1,6 @@
 # Local AKI ICU Workbench
 
-This document explains how to use the course project's website. It supports patient entry, historical observations, file exchange, dataset preview, and live scoring with the locked LightGBM model when its matching local artifacts are present. Clinical effectiveness has not been established; this is a course project, not a clinical tool.
+This document explains how to use the course project's website. It supports patient entry, historical observations, file exchange, dataset preview, live scoring with the locked LightGBM model when its matching local artifacts are present, and an explicit synthetic-model demonstration. Clinical effectiveness has not been established; this is a course project, not a clinical tool.
 
 ## Documentation map
 
@@ -62,7 +62,7 @@ A new database is empty; it does not automatically add demo patients or simulate
 
 ## Live model and demo playback
 
-`Start-AKI.cmd` also attempts to start the model worker. With its local artifacts installed, new accepted observations (entered on the Data entry tab, imported as JSON, or dropped in the inbox folder) trigger scoring. The header shows whether the model is running. Required files and the matching run are listed in [the artifact inventory](../artifacts/README.md); only the aggregate policy is in Git, so setup alone cannot enable predictions. If weights are missing, the website still supports entry and history, leaves risk empty, and reports the model as not configured; inspect the terminal for the worker's startup error. Update latency depends on queueing, feature calculation, inference, and explanation rather than a guaranteed number of seconds.
+`Start-AKI.cmd` also attempts to start the model worker. With its local artifacts installed, new accepted observations (entered on the Data entry tab, imported as JSON, or dropped in the inbox folder) trigger scoring. The header shows whether the model is running. Required files and the matching run are listed in [the artifact inventory](../artifacts/README.md); only the aggregate policy is in Git, so setup alone cannot enable that trained model. If weights are missing, the website still supports entry and history, leaves risk empty, and reports the model as not configured; inspect the terminal for the worker's startup error. Update latency depends on queueing, feature calculation, inference, and explanation rather than a guaranteed number of seconds.
 
 After changing Python scoring code, stop the existing service with Ctrl+C in its server terminal and run `Start-AKI.cmd` again; running the launcher against an already running service only opens that existing process. Updates do not automatically rewrite stored predictions. Use a separate data directory for acceptance tests and a versioned repair plan if older predictions must be recomputed. Timing and history semantics are defined in [DATA-CONTRACT.md](DATA-CONTRACT.md).
 
@@ -70,7 +70,21 @@ For a presentation, run `Start-AKI-Demo.cmd`. It opens a fresh demo data folder 
 
 To show a live upload during the demo, run `python scripts\make_demo_upload.py` in the repository folder at the moment you need it. It writes `demo_upload.json` with a new lab result for Demo D, timed to the current demo clock; upload it on the Data entry tab and the patient's risk updates within seconds.
 
-On the risk chart, the red dashed line is the locked 24 h alert threshold (21%); in demo playback the time axis is fixed to ICU hours 0-72, so each step extends the curves. The observation chart opens on creatinine.
+On the risk chart, the red dashed line comes from the selected model policy (21% for the original Demo I policy). Demo playback spans at least ICU hours 0-72; arbitrary model horizons remain supported. The observation chart opens on creatinine when available.
+
+### Demonstration without fitted MIMIC model weights
+
+Use the explicit synthetic baseline option:
+
+```powershell
+.\Start-AKI.cmd --demo --demo-model --port 8766
+```
+
+The browser opens the printed address. This starts a separate demo data directory, creates four fictional patients, and fits a small LR/ridge model on deterministic synthetic fixtures. Advance **+1 h** to release data; the built-in scenarios first have usable creatinine at ICU hour 3.
+
+The page labels output **Synthetic model** and **Demo warning**. Probabilities, thresholds, contributions and forecasts demonstrate software behavior, not clinical results. Scripted patient story labels do not guarantee a matching toy-model warning. Offline comparisons are available through [the research runner](../pipeline/RESEARCH.md).
+
+This option requires built-in `--demo`, cannot be combined with a custom demo file, `--policy`, `--trajectory-model` or `--no-model`, and never activates automatically when weights are missing. Normal startup and `Start-AKI-Demo.cmd` keep their original model behavior. Stop an existing server before expecting Python changes to take effect, or use a different port.
 
 ## Local CSV dataset preview
 

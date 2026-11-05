@@ -53,6 +53,8 @@ class LockedModel:
         self.pipe = joblib.load(model_dir / "pipeline.joblib")
         assert (self.pipe.family, self.pipe.feature_set) == (m["family"], m["feature_set"])
         self.version = m["run_id"]
+        self.model_id = m.get("model_id", MODEL_ID)
+        self.target = self.policy.get("target", TARGET)
         self.data_cfg = yaml.safe_load((REPO_ROOT / "configs" / "default.yaml").read_text(encoding="utf-8"))
         dictionary = (REPO_ROOT / self.data_cfg["paths"]["output_root"]).resolve() / "datasets" / "feature_dictionary.csv"
         fd = pd.read_csv(dictionary).set_index("feature") if dictionary.exists() else pd.DataFrame()
@@ -153,7 +155,8 @@ def coverage(ev, hours, data_cfg):
 def score_hours(model, obs, admit, hours):
     """Scorable hours and output, preserving query order and duplicate hours: (hours, {h: (risk, drivers)})."""
     hours = np.asarray(hours, np.float64)
-    hours = hours[(hours >= 1) & (hours <= MAX_HOUR)]
+    window = model.policy.get("monitoring_hours", [1, MAX_HOUR])
+    hours = hours[(hours >= window[0]) & (hours <= window[-1])]
     if not len(hours):
         return hours, {}
     ev, static, surgical = build_inputs(obs, admit, hours, model.data_cfg)
@@ -182,16 +185,48 @@ def prediction_records(model, patient, origin, fingerprint, input_revision, gene
     hour = (origin - parse(patient["icu_admitted_at"])) / timedelta(hours=1)
     out = []
     for h, (risk, drivers) in scored.items():
-        rid = f"{key}-{h}h"
+        rid = f"{key}-{model_key(model)}-{h}h"
         if len(rid) > 80:
             rid = "aki-" + hashlib.sha256(rid.encode()).hexdigest()[:40]
         p = {"record_id": rid, "revision": 1, "patient_id": patient["patient_id"],
              "encounter_id": patient["encounter_id"], "input_revision": int(input_revision),
-             "input_fingerprint": fingerprint, "model_id": MODEL_ID, "model_version": model.version,
-             "target": TARGET, "origin_time": stamp(origin), "data_cutoff": stamp(origin),
+             "input_fingerprint": fingerprint, "model_id": model_identity(model)[0], "model_version": model.version,
+             "target": model_identity(model)[1], "origin_time": stamp(origin), "data_cutoff": stamp(origin),
+             "intended_use": policy.get("intended_use", "research"), "policy_version": policy["policy_version"],
              "horizon_end": stamp(origin + timedelta(hours=h)), "generated_at": stamp(generated_at),
              "risk": round(float(risk[k]), 6), "drivers": drivers[k]}
-        if h == policy["alert_horizon_h"] and lo <= hour <= hi:
+        if policy.get("threshold") and h == policy["alert_horizon_h"] and lo <= hour <= hi:
             p["threshold"] = policy["threshold"]
+        p["stability_assessment_id"] = policy.get("stability_assessment_id")
+        series = getattr(scored, "trajectory", None)
+        if series:
+            points = [{"time": stamp(origin + timedelta(hours=float(lead))), "value": float(values[k])}
+                      for lead, values in sorted(series["values"].items()) if 0 < lead <= h and np.isfinite(values[k])]
+            if points:
+                p["trajectories"] = [{**{name: value for name, value in series.items() if name != "values"},
+                                      "points": points}]
         out.append(p)
     return out
+
+
+def model_identity(model):
+    """Legacy policies retain their original identity; new policies specify it explicitly."""
+    return (model.policy.get("model", {}).get("model_id", MODEL_ID), model.policy.get("target", TARGET))
+
+
+def model_key(model):
+    identity = [*model_identity(model), model.version, model.policy["policy_version"]]
+    return hashlib.sha256(json.dumps(identity).encode()).hexdigest()[:16]
+
+
+def load_model(policy_path=DEFAULT_POLICY, trajectory_directory=None):
+    policy = json.loads(Path(policy_path).read_text(encoding="utf-8"))
+    if policy.get("adapter") == "baseline_lr_v1":
+        from .baselines import BaselineModel
+        model = BaselineModel.from_policy(policy_path)
+    else:
+        model = LockedModel(policy_path)
+    if trajectory_directory:
+        from .baselines import WithTrajectory
+        model = WithTrajectory(model, trajectory_directory)
+    return model

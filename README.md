@@ -9,6 +9,7 @@ Notebooks 01 and 02 and the Demo I evaluation are implemented and have been run 
 | Document | Scope |
 |---|---|
 | This README | Research objective, candidate study design, notebook ownership, privacy, and repository-wide status |
+| [pipeline/RESEARCH.md](pipeline/RESEARCH.md) | Offline extension definitions, modules, baseline runs, target extraction and artifact interfaces |
 | [dashboard/README.md](dashboard/README.md) | Website installation, startup, daily use, and local CSV preview |
 | [dashboard/DEVELOPMENT.md](dashboard/DEVELOPMENT.md) | Website architecture, backend/model integration, and development workflow |
 | [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md) | Normative live JSON field and time contract |
@@ -16,6 +17,49 @@ Notebooks 01 and 02 and the Demo I evaluation are implemented and have been run 
 | [dashboard/HANDOFF-CHECK.md](dashboard/HANDOFF-CHECK.md) | Historical comparison between the handoff summary and repository |
 | [artifacts/README.md](artifacts/README.md) | Local artifacts, required model files, and the committed aggregate alert policy |
 | [filter/README.md](filter/README.md) | Separate local CSV/TSV cleaning tool |
+
+## Website at a glance
+
+### User workflow
+
+```mermaid
+flowchart TD
+    Start["Start the website"] --> Overview["Patient overview<br/>Identity, observations and available risk"]
+    Overview -->|Enter information| Entry["Data entry<br/>Register, append measurements or import files"]
+    Entry -->|Save| Overview
+    Overview -->|Open patient card| Detail["Patient detail<br/>History, contributing factors and forecasts"]
+    Detail --> Replay["Historical replay<br/>Records visible at the selected time"]
+    Replay -->|Back to live| Detail
+    Overview --> Preview["Dataset preview<br/>Read-only local CSV"]
+```
+
+New inputs update observations; eligible predictions are recalculated by the configured model. Historical replay queries saved records without running inference. See [website operation](dashboard/README.md) for startup modes and daily use.
+
+### Code and data flow
+
+```mermaid
+flowchart TD
+    UI["dashboard/web/<br/>Pages, cards, data entry and charts"]
+    API["dashboard/api/main.py<br/>HTTP and SSE"]
+    Store["schemas.py + storage.py<br/>Validation, revisions and input fingerprints"]
+    DB[("Local SQLite<br/>and file mirrors")]
+
+    UI <-->|Queries and update notifications| API
+    API --> Store
+    Files["Imported files"] --> Watcher["watcher.py + exchange.py"]
+    Watcher --> Store
+    Store <--> DB
+
+    Worker["dashboard/model_worker.py<br/>Separate model process"]
+    Worker <-->|Read history and submit predictions| API
+    Worker --> Engine["src/aki_ml/<br/>Features, scoring and model adapters"]
+
+    Research["pipeline/ + configs/<br/>Offline research"] --> Artifacts["artifacts/<br/>Models and policies"]
+    Artifacts -. Explicit loading .-> Engine
+    Research -. Shared feature and model code .-> Engine
+```
+
+Runtime components run on the local computer. SSE sends revision notifications, after which the browser queries updated data. The file watcher imports into storage; the model worker reads and submits through HTTP. Detailed boundaries are in [DEVELOPMENT.md](dashboard/DEVELOPMENT.md), field rules in [DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md), and offline experiments in [pipeline/RESEARCH.md](pipeline/RESEARCH.md).
 
 ## Core pipeline
 
@@ -43,7 +87,7 @@ Local MIMIC-III tables
 - Prediction targets: AKI within 6, 12, 24, and 48 hours; the operational horizon is selected on validation data.
 - Reporting checkpoints: 6, 12, 24, and 48 hours after ICU admission, without training separate checkpoint-specific models.
 - Primary label: creatinine-based KDIGO only. Retain urine-output KDIGO 2012 as a separate alternative endpoint for robustness testing, using prespecified weight, rolling-window, missing-output, and renal-replacement-therapy rules.
-- AKI timing: use creatinine-based onset for the primary task and retain urine-output onset separately; do not combine the two definitions or train a combined-label model in the current notebook set.
+- AKI timing: notebooks 01-03 keep creatinine-based onset as the primary task and urine-output onset as a separate endpoint. Notebook 04 implements an independent combined observed-onset development experiment; it does not replace the primary study.
 - Model families: Logistic Regression, Random Forest, and boosted trees (LightGBM as the prespecified primary implementation, XGBoost as a comparator), compared independently. Model settings live in `configs/ml.yaml`.
 - Deployment simulation: replay timestamped raw EHR events, recompute the current feature state and risk whenever a relevant event arrives, and keep fitted weights fixed during prediction.
 
@@ -87,9 +131,9 @@ Snapshot-level evaluation includes AUROC, AUPRC, sensitivity, specificity, F1, B
 
 Subgroup and robustness analyses include age, sex, ICU type, CareVue versus MetaVision, baseline-creatinine definitions, creatinine-only versus creatinine plus urine-output KDIGO 2012, feature-window choices, missingness handling, and urine-output measurement/weight sensitivity.
 
-## Deferred extensions
+## Independent development extensions
 
-The current scope does not include future creatinine or urine-output trajectory prediction, or training on a combined creatinine-plus-urine-output label. If the creatinine-only model and urine-output robustness analysis justify it, a separate future notebook may define and train a combined-label model.
+Notebooks 04 and 05 now provide modular combined-label classification and future-creatinine trajectory baselines. Notebook 03 has a shared executable development-evaluation path. These use explicit synthetic fixtures by default; real-data results and final test evaluation remain pending. Definitions and run commands are maintained in [pipeline/RESEARCH.md](pipeline/RESEARCH.md).
 
 ## Notebook ownership
 
@@ -98,7 +142,9 @@ The current scope does not include future creatinine or urine-output trajectory 
 | `pipeline/01_dataset_construction.ipynb` | Source validation, ID crosswalk, one-stay-per-patient cohort, pre-snapshot patient splits, KDIGO timelines, hourly snapshots, multi-horizon labels, and features |
 | `pipeline/02_ml_pipeline.ipynb` | Preprocessing, patient weighting, pooled LR, RF, LightGBM (primary) and XGBoost pipelines with 6h/12h/24h/48h heads, a LightGBM ablation without discharge-coded diagnoses (`no_dc`), Platt and isotonic calibration, and hourly plus event-driven risk outputs |
 | `pipeline/demo_i_evaluation.ipynb` | Demo I: monitoring window, alert policy, and threshold selected on training out-of-fold predictions and confirmed once on validation; writes the locked policy used by the website |
-| `pipeline/03_evaluation_and_testing.ipynb` | Planned: leakage tests, locked test evaluation, patient/event metrics, subgroup and urine-output robustness, stability, and SHAP summaries |
+| `pipeline/03_evaluation_and_testing.ipynb` | Executable small-baseline validation/threshold/cutoff path; full locked-test, subgroup, robustness and interpretation study remains pending |
+| `pipeline/04_combined_aki.ipynb` | Independent combined observed-onset labels, grouped LR baseline, validation threshold and cutoff comparisons |
+| `pipeline/05_trajectory_prediction.ipynb` | Actual future-creatinine targets, density audit, persistence/ridge baselines and cutoff comparisons |
 
 Notebooks exchange versioned local Parquet artifacts rather than in-memory variables. Code shared by notebooks and the website lives in `src/aki_ml/`.
 
@@ -116,11 +162,16 @@ Notebooks exchange versioned local Parquet artifacts rather than in-memory varia
 | ML notebook | `artifacts/predictions/<run_id>.parquet` | One model, ICU stay, snapshot, and horizon |
 | ML notebook | `artifacts/predictions/<run_id>_event_replay.parquet` | One model, validation stay, event time, and horizon |
 | Demo I notebook | `artifacts/demo_i/policy.json` and aggregate tables/figures | Locked alert policy (threshold, monitoring window, model hashes) and validation summaries |
-| Evaluation notebook (planned) | `artifacts/reports/<run_id>/` | Aggregate metrics and figures |
+| Original final evaluation (planned) | `artifacts/reports/<run_id>/` | Aggregate metrics and figures |
+| Development notebooks 03/04/05 | `artifacts/extensions/<run_id>-<timestamp>/` | Independent model, manifest, aggregate validation/stability report and optional classification policy |
 
 For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/default.yaml` (default `../Cleaned`, outside the repository); filtered source caches go to `artifacts/interim/`. Only `artifacts/demo_i/policy.json` (the locked alert policy) is committed from `artifacts/`; see [artifacts/README.md](artifacts/README.md). These planned Parquet and experiment artifacts are separate from the website's live JSON exchange contract. The live contract is defined only in [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md).
 
 ## Repository layout
+
+<details>
+
+<summary>Expand repository files</summary>
 
 ```text
 .
@@ -130,17 +181,22 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |-- .env.example
 |-- configs/
 |   |-- default.yaml           # dataset study design (notebook 01)
-|   `-- ml.yaml                # model training settings (notebook 02)
+|   |-- ml.yaml                # model training settings (notebook 02)
+|   |-- combined_aki.yaml      # independent union-label baseline
+|   `-- trajectory.yaml        # observed-value trajectory baseline
 |-- pipeline/
 |   |-- 01_dataset_construction.ipynb
 |   |-- 02_ml_pipeline.ipynb
 |   |-- 03_evaluation_and_testing.ipynb
-|   `-- demo_i_evaluation.ipynb
+|   |-- demo_i_evaluation.ipynb
+|   |-- 04_combined_aki.ipynb
+|   |-- 05_trajectory_prediction.ipynb
+|   `-- RESEARCH.md            # offline extension definitions and workflow
 |-- src/aki_ml/                # shared code: feature engine, model containers, alerts, scoring
 |-- dashboard/
 |   |-- app.py                 # preserved original placeholder
 |   |-- launcher.py            # starts the website and the model worker
-|   |-- model_worker.py        # live scoring with the locked model
+|   |-- model_worker.py        # live scoring with the selected model adapter
 |   |-- README.md              # website operation
 |   |-- DEVELOPMENT.md         # developer and backend integration guide
 |   |-- DATA-CONTRACT.md       # live JSON contract
@@ -155,6 +211,8 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 `-- artifacts/
     `-- README.md              # artifact inventory; policy.json is the committed exception
 ```
+
+</details>
 
 ## Data and privacy
 
@@ -187,8 +245,9 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 - **Models (notebook 02):** implemented and run (run `aki_ml_v1_28e0b1fb83`, `configs/ml.yaml`). Validation AUROC with Platt calibration at 6/12/24/48 h: LightGBM 0.862/0.837/0.806/0.784, XGBoost about the same, random forest 0.842-0.765, logistic regression 0.818-0.755, and a creatinine-only reference 0.719-0.677. The website uses LightGBM without discharge-coded diagnoses (0.865/0.839/0.809/0.782), because those codes are not known during the ICU stay. Calibration slopes are close to 1. Event-driven replay gives AUROC within 0.01 of hourly evaluation.
 - **Demo I (`demo-v1`, `pipeline/demo_i_evaluation.ipynb`):** monitoring window ICU hours 1-72; alert when the 24 h risk is at least 21%. On validation: 76% of AKI events flagged (95% CI 74-79%), a median of 12.7 h before onset; about 1 in 3 alerts is followed by AKI; 0.8 alerts per patient-day.
 - **Website:** can run the locked model live when the matching local model artifacts are installed, showing risk, the 24 h warning, and the top five drivers; cloning the source and installing dependencies does not provide the model weights. `Start-AKI-Demo.cmd` replays four synthetic patients with a "+1 h" clock. Scoring retains subsecond input times, retries deferred revisions, and selects static inputs separately at each data cutoff. Test evidence and limitations are in [dashboard/VALIDATION.md](dashboard/VALIDATION.md).
-- **Not done yet:** the test set has not been used. Next are notebook 03 (one locked test-set evaluation with patient-level confidence intervals, subgroup and urine-output analyses), prediction-stability checks, and alert rules that reduce false alarms. There is no clinical validation.
+- **Development extensions:** combined-label LR and creatinine persistence/ridge baselines, validation-selected thresholds linked to cutoff stability, independent artifact versions, and explicit synthetic website demonstration are implemented. Synthetic checks do not establish real-data performance.
+- **Not done yet:** the test set has not been used. Next are notebook 03 (one locked test-set evaluation with patient-level confidence intervals, subgroup and urine-output analyses), real-data prediction-stability studies, and alert rules that reduce false alarms. There is no clinical validation.
 
 Local website changes do not become available from GitHub until they are explicitly committed and pushed. Windows EXE, installer, and portable runtime packaging have not been built.
 
-The numerical research results above are the recorded results of the named run, not a result of each new checkout's tests. Runtime regression tests do not reproduce training or validate those metrics. Demo I currently selects its policy on training out-of-fold predictions and confirms it on validation; the original validation-set selection requirement and incorporation of cutoff stability still need an explicit study decision before the final evaluation.
+The numerical research results above are the recorded results of the named run, not a result of each new checkout's tests. Runtime regression tests do not reproduce training or validate those metrics. Demo I currently selects its policy on training out-of-fold predictions and confirms it on validation; new development baselines implement validation-set threshold selection linked to cutoff stability. Selecting the full original-study policy still needs a locked research protocol before final evaluation.
