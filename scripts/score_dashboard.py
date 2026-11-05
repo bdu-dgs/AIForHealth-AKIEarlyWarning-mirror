@@ -1,7 +1,8 @@
 """Retrospective hourly scoring of dashboard patients with the locked model (batch alternative to the live worker).
 
 For each patient registered in the running dashboard, score every whole ICU hour 1-72 that has already passed on
-the dashboard clock (hours failing the coverage rule are skipped), using all observations the dashboard holds, and
+the dashboard clock (hours failing the coverage rule are skipped), using observations visible at the captured
+generation time and measured by each query cutoff, and
 import the predictions. Scoring logic is shared with the live model worker (`src/aki_ml/scoring.py`). Predictions
 already in the dashboard (same record_id) are skipped. Talks only to the dashboard on 127.0.0.1.
 
@@ -21,7 +22,7 @@ import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
-from aki_ml.scoring import (DEFAULT_POLICY, MAX_HOUR, LockedModel, latest_revisions, parse,  # noqa: E402
+from aki_ml.scoring import (DEFAULT_POLICY, MAX_HOUR, LockedModel, parse,  # noqa: E402
                             prediction_records, score_hours, stamp)
 
 BATCH_SIZE = 2000                  # predictions per import request (contract limit 10,000)
@@ -40,12 +41,15 @@ def api(base, path, payload=None):
         raise RuntimeError(f"{path}: HTTP {e.code} {e.read().decode('utf-8', 'replace')[:500]}") from None
 
 
-def patient_observations(base, pid):
-    plan = api(base, f"/api/patients/{pid}/export-plan/input")
-    obs = []
-    for part in range(1, plan["parts"] + 1):
-        obs += api(base, f"/api/patients/{pid}/export/input?part={part}&revision={plan['revision']}")["observations"]
-    return latest_revisions(obs)
+def patient_observations(base, pid, as_of):
+    obs, offset = [], 0
+    while offset is not None:
+        query = urllib.parse.urlencode({"kind": "observation", "limit": 10000,
+                                        "offset": offset, "as_of": stamp(as_of)})
+        page = api(base, f"/api/patients/{pid}/history?{query}")
+        obs += page["items"]
+        offset = page["next_offset"]
+    return obs
 
 
 def existing_ids(base, pid):
@@ -61,7 +65,7 @@ def score_patient(base, model, patient, generated_at):
     pid = patient["patient_id"]
     admit = parse(patient["icu_admitted_at"])
     last_hour = min(MAX_HOUR, int((generated_at - admit) / timedelta(hours=1)))
-    hours, scored = score_hours(model, patient_observations(base, pid), admit, np.arange(1, last_hour + 1))
+    hours, scored = score_hours(model, patient_observations(base, pid, generated_at), admit, np.arange(1, last_hour + 1))
     if not scored:
         return []
     existing = existing_ids(base, pid)
@@ -91,7 +95,7 @@ def main():
         print(f"input import: {api(base, '/api/import', json.loads(Path(args.input_file).read_text(encoding='utf-8')))}")
     model = LockedModel(args.policy)
     # generated_at must not be later than the dashboard clock used for the fingerprint check.
-    generated_at = parse(api(base, "/api/health")["server_time"]).replace(microsecond=0)
+    generated_at = parse(api(base, "/api/health")["server_time"])
     patients = [p for p in api(base, "/api/patients") if not args.patient or p["patient_id"] in args.patient]
     predictions = []
     for patient in patients:

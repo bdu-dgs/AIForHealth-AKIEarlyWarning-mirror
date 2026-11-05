@@ -1,6 +1,6 @@
 # Local AKI ICU Workbench
 
-This document explains how to use the course project's website. The current local workspace supports patient entry, historical observations, file exchange, dataset preview, and a live AKI model (LightGBM, locked `demo-v1` threshold) that scores each new input as it arrives. Clinical effectiveness has not been established; this is a course project, not a clinical tool.
+This document explains how to use the course project's website. It supports patient entry, historical observations, file exchange, dataset preview, and live scoring with the locked LightGBM model when its matching local artifacts are present. Clinical effectiveness has not been established; this is a course project, not a clinical tool.
 
 ## Documentation map
 
@@ -19,7 +19,7 @@ Environment: Windows x64 or ARM64 and Python 3.11 or later. Setup reuses Node.js
 After obtaining the website version from GitHub:
 
 ```powershell
-git clone https://github.com/kk-235/AIForHealth-AKIEarlyWarning.git
+git clone https://github.com/kejin-cs/AIForHealth-AKIEarlyWarning.git
 cd AIForHealth-AKIEarlyWarning
 .\Setup-AKI.cmd
 .\Start-AKI.cmd
@@ -27,7 +27,11 @@ cd AIForHealth-AKIEarlyWarning
 
 If the local website code has not been committed or pushed, a GitHub clone still contains only the remote version and does not automatically include local changes.
 
-`Setup-AKI.cmd` first checks Node.js, then creates the project Python environment, installs pinned dependencies, and builds the frontend. Automatic Node.js installation downloads only from nodejs.org, verifies the archive against the official SHA256 list, and extracts it to `%LOCALAPPDATA%\Programs\NodeJS\node-v24.21.0-win-<architecture>`. It updates the current process and user PATH without requiring administrator access or changing antivirus settings. Existing terminals may need to be reopened. Download or checksum failures stop setup with an error; rerun after resolving the network or file issue. Python must still be installed separately. `Start-AKI.cmd` starts the local service and opens `http://127.0.0.1:8765`. The terminal immediately prints the full URL (clickable in terminals that support links). After the health check succeeds, the Windows default browser opens. Running the script again opens an existing AKI service on the same port instead of reporting a port conflict, unless an explicit --data-dir was supplied. Use `Start-AKI.cmd --no-browser` to suppress automatic browser opening. Keep the server terminal open; press Ctrl+C to stop. After closing the terminal or restarting the computer, run the startup script again.
+`Setup-AKI.cmd` first checks Node.js, then creates the project Python environment, installs pinned dependencies, and builds the frontend.
+
+Automatic Node.js installation downloads only from nodejs.org, verifies the archive against the official SHA256 list, and extracts it to `%LOCALAPPDATA%\Programs\NodeJS\node-v24.21.0-win-<architecture>`. It updates the current process and user PATH without requiring administrator access or changing antivirus settings. Existing terminals may need to be reopened. Download or checksum failures stop setup with an error; rerun after resolving the network or file issue. Python must still be installed separately.
+
+`Start-AKI.cmd` starts the local service and opens `http://127.0.0.1:8765`. The terminal immediately prints the full URL (clickable in terminals that support links). After the health check succeeds, the Windows default browser opens. Running the script again opens an existing AKI service on the same port instead of reporting a port conflict, unless an explicit --data-dir was supplied. Use `Start-AKI.cmd --no-browser` to suppress automatic browser opening. Keep the server terminal open; press Ctrl+C to stop. After closing the terminal or restarting the computer, run the startup script again.
 
 If Python is not on `PATH`:
 
@@ -58,7 +62,9 @@ A new database is empty; it does not automatically add demo patients or simulate
 
 ## Live model and demo playback
 
-`Start-AKI.cmd` also starts the model worker. Whenever new observations are accepted (entered on the Data entry tab, imported as JSON, or dropped in the inbox folder), the model scores the patient at that moment and the risk, the 24h AKI warning status, and the top drivers appear within seconds. The header shows whether the model is running. The model needs its local files in `artifacts/` (not in git), so it runs only on the computer that holds them.
+`Start-AKI.cmd` also attempts to start the model worker. With its local artifacts installed, new accepted observations (entered on the Data entry tab, imported as JSON, or dropped in the inbox folder) trigger scoring. The header shows whether the model is running. Required files and the matching run are listed in [the artifact inventory](../artifacts/README.md); only the aggregate policy is in Git, so setup alone cannot enable predictions. If weights are missing, the website still supports entry and history, leaves risk empty, and reports the model as not configured; inspect the terminal for the worker's startup error. Update latency depends on queueing, feature calculation, inference, and explanation rather than a guaranteed number of seconds.
+
+After changing Python scoring code, stop the existing service with Ctrl+C in its server terminal and run `Start-AKI.cmd` again; running the launcher against an already running service only opens that existing process. Updates do not automatically rewrite stored predictions. Use a separate data directory for acceptance tests and a versioned repair plan if older predictions must be recomputed. Timing and history semantics are defined in [DATA-CONTRACT.md](DATA-CONTRACT.md).
 
 For a presentation, run `Start-AKI-Demo.cmd`. It opens a fresh demo data folder with four synthetic (fictional) patients registered at ICU admission and a demo clock in the header. Each **+1 h** click moves the clock forward one hour, releases the observations recorded in that hour, and the model updates every patient's risk. Use only synthetic patients when presenting to people without PhysioNet access. To play another InputBatch file: `Start-AKI-Demo.cmd --demo path\to\file.json`.
 

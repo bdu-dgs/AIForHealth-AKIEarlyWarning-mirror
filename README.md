@@ -14,7 +14,7 @@ Notebooks 01 and 02 and the Demo I evaluation are implemented and have been run 
 | [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md) | Normative live JSON field and time contract |
 | [dashboard/VALIDATION.md](dashboard/VALIDATION.md) | Tests actually run and their limits |
 | [dashboard/HANDOFF-CHECK.md](dashboard/HANDOFF-CHECK.md) | Historical comparison between the handoff summary and repository |
-| [artifacts/README.md](artifacts/README.md) | What the local, uncommitted `artifacts/` folder contains |
+| [artifacts/README.md](artifacts/README.md) | Local artifacts, required model files, and the committed aggregate alert policy |
 | [filter/README.md](filter/README.md) | Separate local CSV/TSV cleaning tool |
 
 ## Core pipeline
@@ -153,7 +153,7 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |-- Start-AKI.cmd
 |-- Start-AKI-Demo.cmd         # demo playback with synthetic patients
 `-- artifacts/
-    `-- README.md              # local outputs, not committed
+    `-- README.md              # artifact inventory; policy.json is the committed exception
 ```
 
 ## Data and privacy
@@ -183,10 +183,12 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 
 ## Current status
 
-- **Dataset (notebook 01):** implemented and run on local MIMIC-III v1.4 with `configs/default.yaml`: 32,907 patients (70/15/15 train/validation/test by patient), 1.34 million hourly snapshots for ICU hours 1-72, 258 features, and creatinine-KDIGO labels for 6, 12, 24, and 48 hours.
+- **Dataset (notebook 01):** implemented and run on local MIMIC-III v1.4 with `configs/default.yaml`: 32,907 patients (70/15/15 train/validation/test by patient), 1.34 million hourly snapshots for ICU hours 1-72, 258 features, and creatinine-KDIGO labels for 6, 12, 24, and 48 hours. It now uses the shared feature engine in `src/aki_ml/features.py` for feature generation and the same partition reader for event-stream export.
 - **Models (notebook 02):** implemented and run (run `aki_ml_v1_28e0b1fb83`, `configs/ml.yaml`). Validation AUROC with Platt calibration at 6/12/24/48 h: LightGBM 0.862/0.837/0.806/0.784, XGBoost about the same, random forest 0.842-0.765, logistic regression 0.818-0.755, and a creatinine-only reference 0.719-0.677. The website uses LightGBM without discharge-coded diagnoses (0.865/0.839/0.809/0.782), because those codes are not known during the ICU stay. Calibration slopes are close to 1. Event-driven replay gives AUROC within 0.01 of hourly evaluation.
 - **Demo I (`demo-v1`, `pipeline/demo_i_evaluation.ipynb`):** monitoring window ICU hours 1-72; alert when the 24 h risk is at least 21%. On validation: 76% of AKI events flagged (95% CI 74-79%), a median of 12.7 h before onset; about 1 in 3 alerts is followed by AKI; 0.8 alerts per patient-day.
-- **Website:** runs the locked model live and shows risk, the 24 h warning, and the top five drivers for each prediction; `Start-AKI-Demo.cmd` replays four synthetic patients with a "+1 h" clock. Test evidence and limitations are in [dashboard/VALIDATION.md](dashboard/VALIDATION.md).
+- **Website:** can run the locked model live when the matching local model artifacts are installed, showing risk, the 24 h warning, and the top five drivers; cloning the source and installing dependencies does not provide the model weights. `Start-AKI-Demo.cmd` replays four synthetic patients with a "+1 h" clock. Scoring retains subsecond input times, retries deferred revisions, and selects static inputs separately at each data cutoff. Test evidence and limitations are in [dashboard/VALIDATION.md](dashboard/VALIDATION.md).
 - **Not done yet:** the test set has not been used. Next are notebook 03 (one locked test-set evaluation with patient-level confidence intervals, subgroup and urine-output analyses), prediction-stability checks, and alert rules that reduce false alarms. There is no clinical validation.
 
 Local website changes do not become available from GitHub until they are explicitly committed and pushed. Windows EXE, installer, and portable runtime packaging have not been built.
+
+The numerical research results above are the recorded results of the named run, not a result of each new checkout's tests. Runtime regression tests do not reproduce training or validate those metrics. Demo I currently selects its policy on training out-of-fold predictions and confirms it on validation; the original validation-set selection requirement and incorporation of cutoff stability still need an explicit study decision before the final evaluation.

@@ -123,11 +123,25 @@ threshold and monitoring window) with the shared scoring code in `src/aki_ml/sco
 packages in `requirements-model.txt` (installed by setup). It is event-driven: every accepted input batch creates a
 patient input revision (`GET /api/patients/{id}/revisions` lists them with their arrival time), and the worker
 scores each new revision at its arrival time (origin = data cutoff) from all observations measured up to then.
+One service-clock time is captured for each sync and used consistently as the knowledge boundary for history
+pagination, scoring inputs, and fingerprints. The field semantics and the distinction between retrospective
+recomputation and prospective replay are defined in [DATA-CONTRACT.md](DATA-CONTRACT.md).
 Revisions are not merged, so every arrival gets a result; times outside ICU hours 1-72 or before the first usable
 creatinine get none. The 24h prediction carries the locked threshold inside the monitoring window; 6/12/48h are
 display-only. The worker reports itself with `POST /api/model/heartbeat` every few seconds; `GET /api/health`
 shows `model_status` (`running`, `error`, `offline`, `not_configured`). For retrospective hourly scoring of data
 that is already stored, use `scripts/score_dashboard.py`.
+
+The worker keeps fractional seconds and retries a sync when a patient's advertised revision is not yet visible
+at the captured time; it does not cache that global revision as complete. Equal-time input revisions retain
+separate prediction IDs. Shared scoring selects static values per query cutoff and groups equal static states
+for vectorized calls to the unchanged training feature engine. `build_inputs` now returns a static frame aligned
+with its query-hour array; callers should use `score_hours` rather than assume a one-row static frame.
+
+No schema, SQLite migration, fitted weights, feature ordering, calibration, or threshold is changed by these
+runtime fixes. Existing stored predictions are not rewritten. Acceptance uses isolated synthetic data; repair
+of pre-fix results must be an explicit append/revision or new-record workflow. Model scoring tests require
+`requirements-dev.txt`, which also installs the model runtime dependencies, but no model weights.
 
 ### Demo playback
 
@@ -146,7 +160,7 @@ When input changes, the backend also updates:
 <data-root>/requests/{patient_id}.json
 ```
 
-The request means “pending processing” and includes patient and encounter IDs, input version, the latest fingerprint, and locations for history and input export. A model worker should:
+The request means “pending processing” and includes patient and encounter IDs, input version, the latest fingerprint, and locations for history and input export. These files support alternative external workers; the bundled worker polls the HTTP revision API and preserves every revision. An external worker choosing to coalesce requests can:
 
 1. Watch or poll `requests`.
 2. Merge tasks by patient and retain only the newest input version.
@@ -204,6 +218,8 @@ Backend:
 .\.venv\Scripts\python.exe -m pytest dashboard/tests -q
 ```
 
+Install developer dependencies first with `.\.venv\Scripts\python.exe -m pip install -r dashboard/requirements-dev.txt`.
+
 Frontend:
 
 ```powershell
@@ -225,5 +241,9 @@ Remaining:
 3. Define and validate composite confidence from actual data density.
 4. Measure sustained load, model latency, failure recovery, and physician workflow.
 5. Evaluate a Windows package only after an explicit request.
+
+The current `/api/settings` research flags are placeholders: `validation_threshold=not_selected` does not
+describe the committed Demo I policy. Use the policy and research documents for that experiment's status until
+the settings endpoint is connected to research artifacts. Cutoff stability remains unevaluated.
 
 When GitHub and local work conflict, list the exact files and differences, preserve local work, and then choose the merge strategy. Do not let an old summary overwrite current source, and do not describe plans or placeholder interfaces as implemented functionality.

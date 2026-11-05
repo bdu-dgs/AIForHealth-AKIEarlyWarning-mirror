@@ -8,6 +8,7 @@ This document defines normative fields, constraints, and compatibility rules for
 - Schemas are strict: unknown fields are rejected, strings are trimmed, and NaN or infinite values are rejected.
 - IDs are 1–80 characters and may contain only letters, digits, underscores, and hyphens.
 - Times must be timezone-aware ISO 8601 values, such as `2026-09-10T10:30:00+08:00` or `Z`; storage normalizes them to UTC.
+- Preserve the supplied fractional seconds. Do not round or truncate times to whole seconds to select revisions or construct prediction origins; two input revisions may have identical timestamps and still remain distinct revisions.
 - A JSON batch contains at most 10,000 observations or predictions. An input batch also contains at most 1,000 patients.
 - The same `record_id + revision` must always represent the same content; increment `revision` for corrections.
 - If `available_at` is absent, the backend uses the local first-received time and records `availability_basis=local_received`.
@@ -144,6 +145,10 @@ The backend owns normalization. Use:
 ```text
 GET /api/patients/{id}/snapshot?as_of=<time available at generation>&cutoff=<data cutoff>
 ```
+
+The two boundaries are independent: choose the highest observation revision with `available_at <= as_of` first, then exclude measurements after `cutoff`. A correction that moves a measurement beyond the cutoff must not make its superseded version reappear. Static admission inputs and later static corrections obey the same measurement boundary as other variables.
+
+The bundled live and batch scorers capture `generated_at` from the service clock before reading inputs, retain its precision, and use it as `as_of` on every history page and fingerprint request. Each prediction's `data_cutoff` determines which measured values may enter that query. A retrospective prediction with an earlier origin and a later `generated_at` is a recomputation with the knowledge available at generation, not proof of what was known at the earlier origin. To evaluate prospective performance, select the historical knowledge boundary explicitly; do not backdate `generated_at` or reinterpret a recomputation as an original warning.
 
 Prediction import recomputes and verifies the fingerprint. After input changes, old predictions may remain in history but are marked stale in current results.
 

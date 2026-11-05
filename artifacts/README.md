@@ -13,3 +13,5 @@ Everything in this folder except this README and `demo_i/policy.json` is ignored
 | `demo_i/site_data/`, `demo_i/shots/`, `demo_i/patients_now.json` | demo runs and screenshots | Local website data, screenshots and time-shifted synthetic patients | No (synthetic) |
 
 The current run is `aki_ml_v1_28e0b1fb83`. The website's model worker and `scripts/score_dashboard.py` load `demo_i/policy.json` and the model in `models/aki_ml_v1_28e0b1fb83/lightgbm__no_dc/`, so the live model runs only on a computer that holds this folder. To rebuild it, rerun notebook 01 (writes `../Cleaned` and `interim/`), notebook 02 (`models/`, `predictions/`) and `demo_i_evaluation.ipynb` (`demo_i/`).
+
+For an existing matching run, restore its authorized local `lightgbm__no_dc` model directory at that path. The worker verifies `pipeline.joblib` against `pipeline_sha256` in the policy before loading it. `Setup-AKI.cmd` installs libraries but does not download or train weights. Restoring only `policy.json` is insufficient. Keep the fitted artifact and its provenance files together; do not replace the policy hash to make an unrelated model load.

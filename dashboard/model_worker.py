@@ -6,6 +6,7 @@ which is the demo clock during playback). For every revision not yet scored, the
 `artifacts/demo_i/policy.json` and the shared scoring code in `src/aki_ml/scoring.py`. Times outside ICU hours
 1-72 or before the first usable creatinine get no prediction. Revisions are never skipped, so stepping the demo
 clock several hours at once still gives one prediction per hour.
+Observation history and fingerprints share the captured generation time as their knowledge boundary.
 
 Started by the launcher; runs only against the local service on 127.0.0.1:
     python -m dashboard.model_worker --api http://127.0.0.1:8765
@@ -64,20 +65,22 @@ class Worker:
             offset = page["next_offset"]
         return best
 
-    def observations(self, pid):
-        """Latest revision of every observation known now (history endpoint; faster than the export)."""
+    def observations(self, pid, as_of):
+        """Latest observation revisions visible at this sync's captured knowledge time."""
         obs, offset = [], 0
         while offset is not None:
-            page = call(self.base, f"/api/patients/{pid}/history?kind=observation&limit=10000&offset={offset}")
+            query = urllib.parse.urlencode({"kind": "observation", "limit": 10000,
+                                            "offset": offset, "as_of": self.sc.stamp(as_of)})
+            page = call(self.base, f"/api/patients/{pid}/history?{query}")
             obs += page["items"]
             offset = page["next_offset"]
         return obs
 
     def sync(self):
-        """Score every patient's new revisions, then import all results in one batch (one page refresh)."""
+        """Score visible revisions; return False while an advertised revision is deferred past the captured time."""
         records, done, t0 = [], {}, time.monotonic()
-        generated_at = self.sc.parse(call(self.base, "/api/health")["server_time"]).replace(microsecond=0)
-        jobs = []
+        generated_at = self.sc.parse(call(self.base, "/api/health")["server_time"])
+        jobs, pending = [], False
         for patient in call(self.base, "/api/patients"):
             pid = patient["patient_id"]
             if pid not in self.scored:
@@ -87,6 +90,8 @@ class Worker:
             # Revisions that arrived after generated_at (e.g. a demo step during this sync) wait for the next sync.
             todo = [r for r in call(self.base, f"/api/patients/{pid}/revisions")
                     if r["input_revision"] > self.scored[pid] and self.sc.parse(r["available_at"]) <= generated_at]
+            if not todo or max(r["input_revision"] for r in todo) < patient["input_revision"]:
+                pending = True
             if todo:
                 jobs.append((patient, todo))
                 done[pid] = max(r["input_revision"] for r in todo)
@@ -98,17 +103,20 @@ class Worker:
         self.scored.update(done)
         if done:
             print(f"scored {len(done)} patient(s), {len(records)} predictions in {time.monotonic() - t0:.1f} s", flush=True)
+        return not pending
 
     def score(self, patient, revisions, generated_at):
         sc, pid = self.sc, patient["patient_id"]
         admit = sc.parse(patient["icu_admitted_at"])
-        origins = [sc.parse(r["available_at"]).replace(microsecond=0) for r in revisions]
+        origins = [sc.parse(r["available_at"]) for r in revisions]
         hours = [(o - admit) / timedelta(hours=1) for o in origins]
-        obs = self.observations(pid)
+        obs = self.observations(pid, generated_at)
         kept, scored = sc.score_hours(self.model, obs, admit, hours)
         records = []
+        # score_hours preserves query order, including equal-time revisions.
+        positions = iter(enumerate(hours))
         for k, hour in enumerate(kept):
-            i = hours.index(hour)
+            i = next(i for i, candidate in positions if candidate == hour)
             origin, version = origins[i], revisions[i]["input_revision"]
             q = urllib.parse.urlencode({"as_of": sc.stamp(generated_at), "cutoff": sc.stamp(origin)})
             fp = call(self.base, f"/api/patients/{pid}/snapshot?{q}")["input_fingerprint"]
@@ -125,8 +133,9 @@ class Worker:
                 if revision != last_revision:
                     self.status = "scoring"
                     self.beat(force=True)
-                    self.sync()
-                    last_revision, self.status, self.detail = revision, "ready", ""
+                    complete = self.sync()
+                    last_revision = revision if complete else None
+                    self.status, self.detail = "ready", ""
                 self.beat()
             except (urllib.error.URLError, ConnectionError, TimeoutError):
                 if time.monotonic() - reachable > GIVE_UP_SECONDS:
