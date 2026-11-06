@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from .features import compute_features, static_feature_names
+from .features import (compute_features, static_feature_names, feature_engine_version,
+                       LEGACY_FEATURE_ENGINE)
 from .models import logit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -51,6 +52,11 @@ class LockedModel:
         if not self.policy["threshold"]["locked"]:
             raise RuntimeError("policy threshold is not locked")
         self.pipe = joblib.load(model_dir / "pipeline.joblib")
+        trained_engine = feature_engine_version(getattr(self.pipe, "metadata", {}).get("feature_engine_version"))
+        declared_engine = feature_engine_version(m.get("feature_engine_version"))
+        if declared_engine != trained_engine:
+            raise RuntimeError("Policy and fitted model declare different feature engines; revalidate a new version")
+        self.feature_engine_version = trained_engine
         assert (self.pipe.family, self.pipe.feature_set) == (m["family"], m["feature_set"])
         self.version = m["run_id"]
         self.model_id = m.get("model_id", MODEL_ID)
@@ -166,12 +172,13 @@ def score_hours(model, obs, admit, hours):
         return hours, {}
     static = static.loc[ok].reset_index(drop=True)
     X = np.empty((len(hours), len(model.pipe.feature_names)), dtype=np.float32)
-    # Keep the shared training engine unchanged. Queries with the same static state
-    # still use one vectorized feature call (the usual admission-only case).
+    # Old fitted artifacts retain v1. A v2 model/policy must both declare the new contract.
+    version = feature_engine_version(getattr(model, "feature_engine_version", None))
+    # Queries with the same high-precision static state keep one vectorized call.
     for indices in static.groupby(list(static.columns), dropna=False, sort=False).indices.values():
         state = static.iloc[[indices[0]]].set_axis([0])
         X[indices] = compute_features(ev, state, surgical[indices], np.zeros(len(indices), np.int64),
-                                      hours[indices], model.data_cfg, model.pipe.feature_names)
+                                      hours[indices], model.data_cfg, model.pipe.feature_names, engine_version=version)
     return hours, model.predict(X)
 
 
@@ -216,6 +223,9 @@ def model_identity(model):
 
 def model_key(model):
     identity = [*model_identity(model), model.version, model.policy["policy_version"]]
+    version = feature_engine_version(getattr(model, "feature_engine_version", None))
+    if version != LEGACY_FEATURE_ENGINE:
+        identity.append(version)
     return hashlib.sha256(json.dumps(identity).encode()).hexdigest()[:16]
 
 

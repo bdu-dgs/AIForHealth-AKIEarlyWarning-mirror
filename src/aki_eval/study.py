@@ -16,6 +16,7 @@ from .policies import (AlertRule,alert_events,bootstrap_comparison,choose,metric
                        policy_grid,stability_grid)
 from .protocol import canonical,digest,lock_choice,safe_json,sha256,write_json
 from .replay import ReplayData,audit_replay,sample_patients
+from .reporting import diagnostic_representatives
 
 
 class KeJinStudy:
@@ -196,6 +197,7 @@ class KeJinStudy:
         choice_path=self.out/"choice.json"
         if choice_path.exists():
             chosen=json.loads(choice_path.read_text(encoding="utf-8"))["chosen"]
+            self._ensure_selection_reports()
             return self._choice_table(chosen)
         data=self.data;frames=data.load();cfg=self.config
         self.log("B.2: evaluating prespecified policy/threshold grid on validation selection only.")
@@ -209,18 +211,84 @@ class KeJinStudy:
         ranked.sort_values(["accepted","false_alerts_per_patient_day"],ascending=[False,True]).groupby(
             "candidate",sort=False).head(1).to_csv(self.out/"policy_candidates_validation_selection.csv",index=False)
         lock_choice(self.out,chosen,data.prespec["prespec_sha256"])
-        # These required handoff files are diagnostics AFTER locking the choice, not selection evidence.
-        self.log("B.2 diagnostic: computing train-OOF comparison after locking the validation choice.")
-        diagnostic=policy_grid(frames["train_oof"],data.rules,data.thresholds)
-        diagnostic["analysis_role"]="train_oof_diagnostic_not_selection"
-        diagnostic.to_csv(self.out/"policy_grid_train_oof.csv",index=False)
-        diagnostic.sort_values(["false_alerts_per_patient_day","threshold"],ascending=[True,False]).groupby(
-            "candidate",sort=False).head(1).to_csv(self.out/"policy_candidates_train_oof.csv",index=False)
-        self._plot_grid(ranked,baseline,"policy_tradeoff_validation_selection.png","Validation selection")
-        self._plot_grid(diagnostic,metrics(frames["train_oof"],data.policy["threshold"]["value"],data.baseline),
-                        "policy_tradeoff_train_oof.png","Training OOF diagnostic (not selection)")
+        self._ensure_selection_reports()
         self.log("B.2: choice sealed; no confirmation result used for selection.")
         return self._choice_table(chosen)
+
+    def _ensure_selection_reports(self):
+        """Recover only derived diagnostics/figures. Never choose again or use confirmation."""
+        data = self.data
+        selection_path = self.out/"policy_grid_validation_selection.csv"
+        if not selection_path.is_file():
+            raise RuntimeError("Sealed selection grid is missing; preserve the choice and restore its original artifact")
+        ranked = pd.read_csv(selection_path)
+        required = {"candidate", "threshold", "false_alerts_per_patient_day", "event_detection_rate"}
+        expected = {(r.name, float(t)) for r in data.rules for t in data.thresholds}
+        if (not required.union({"accepted"}) <= set(ranked) or len(ranked) != len(expected) or
+                set(zip(ranked["candidate"], ranked["threshold"])) != expected):
+            raise RuntimeError("Sealed selection grid is incomplete; do not reselect after confirmation")
+        path = self.out/"policy_grid_train_oof.csv"
+        diagnostic = None
+        if path.exists():
+            try:
+                loaded = pd.read_csv(path)
+                expected = {(r.name, float(t)) for r in data.rules for t in data.thresholds}
+                actual = set(zip(loaded["candidate"], loaded["threshold"]))
+                if len(loaded) == len(expected) and actual == expected and required <= set(loaded):
+                    diagnostic = loaded
+            except (pd.errors.EmptyDataError, pd.errors.ParserError, KeyError):
+                pass
+        rebuilt = diagnostic is None
+        if rebuilt:
+            self.log("Recovering training-OOF diagnostic grid; locked choice/confirmation are unchanged.")
+            diagnostic = policy_grid(data.load()["train_oof"], data.rules, data.thresholds)
+            diagnostic["analysis_role"] = "train_oof_diagnostic_not_selection"
+            self._atomic_csv(diagnostic, path)
+        summary_path = self.out/"policy_candidates_train_oof.csv"
+        if rebuilt or not self._complete_table(summary_path, {"candidate", "status"}, len(data.rules)):
+            baseline = metrics(data.load()["train_oof"], data.policy["threshold"]["value"], data.baseline)
+            self._atomic_csv(diagnostic_representatives(diagnostic, baseline, self.config["selection_rule"]), summary_path)
+        selection_summary = self.out/"policy_candidates_validation_selection.csv"
+        if not self._complete_table(selection_summary, required, len(data.rules)):
+            summary = ranked.sort_values(["accepted", "false_alerts_per_patient_day"], ascending=[False, True]).groupby(
+                "candidate", sort=False).head(1)
+            self._atomic_csv(summary, selection_summary)
+        for grid, role, filename, title in [
+                (ranked, "selection", "policy_tradeoff_validation_selection.png", "Validation selection"),
+                (diagnostic, "train_oof", "policy_tradeoff_train_oof.png", "Training OOF diagnostic (not selection)")]:
+            picture = self.out/filename
+            if not self._complete_png(picture):
+                baseline = metrics(data.load()[role], data.policy["threshold"]["value"], data.baseline)
+                self._plot_grid(grid, baseline, filename, title)
+
+    @staticmethod
+    def _complete_table(path, columns, count):
+        try:
+            table = pd.read_csv(path)
+            return columns <= set(table) and len(table) == count and not table["candidate"].duplicated().any()
+        except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError):
+            return False
+
+    @staticmethod
+    def _atomic_csv(table, path):
+        import os
+        import tempfile
+        handle, temporary = tempfile.mkstemp(dir=path.parent, suffix=".csv.tmp")
+        os.close(handle)
+        try:
+            table.to_csv(temporary, index=False)
+            os.replace(temporary, path)
+        finally:
+            if Path(temporary).exists():
+                Path(temporary).unlink()
+
+    @staticmethod
+    def _complete_png(path):
+        if not path.is_file() or path.stat().st_size < 20:
+            return False
+        with path.open("rb") as source:
+            header = source.read(8); source.seek(-12, 2); tail = source.read()
+        return header == b"\x89PNG\r\n\x1a\n" and tail[4:8] == b"IEND"
 
     @staticmethod
     def _choice_table(chosen):
@@ -248,7 +316,17 @@ class KeJinStudy:
                            facecolors="none",edgecolors="black",label="Locked candidate",zorder=6)
         ax.set(xlabel="False alerts per scorable monitored patient-day",ylabel="Target events detected (fraction)",title=title)
         ax.grid(alpha=.2);ax.legend(fontsize=8,ncol=2)
-        fig.tight_layout();fig.savefig(self.out/filename,dpi=160);plt.close(fig)
+        import os
+        import tempfile
+        handle, temporary = tempfile.mkstemp(dir=self.out, suffix=".png")
+        os.close(handle)
+        try:
+            fig.tight_layout(); fig.savefig(temporary, dpi=160)
+            os.replace(temporary, self.out/filename)
+        finally:
+            plt.close(fig)
+            if Path(temporary).exists():
+                Path(temporary).unlink()
 
     def confirm(self):
         self.select()
@@ -257,6 +335,8 @@ class KeJinStudy:
             value=json.loads(cached.read_text(encoding="utf-8"))
             if value["choice_sha256"] != digest(json.loads((self.out/"choice.json").read_text(encoding="utf-8"))):
                 raise RuntimeError("Confirmation belongs to a different locked choice")
+            if not (self.out/"policy_v1_candidate.json").exists():
+                self._export_candidate(self._chosen(), value)
             return pd.read_csv(self.out/"policy_confirmation_validation.csv")
         chosen=self._chosen();data=self.data
         if chosen is None:

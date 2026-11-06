@@ -8,30 +8,10 @@ CENSORED=r'^\s*(?:<|>|LESS\s*TH[AE]N|GREATE\w*\s*TH[AE]N)\s*=?\s*(\d[\d,]*\.?\d*
 CEILING=r'^\s*(\d+\.?\d*)\s+IS\s+HIGHEST\s+MEASURED'
 
 def reconstruct(raw_path,snapshots):
-    first=snapshots.drop_duplicates('patient_id').set_index('subject_id')
-    subjects=set(first.index);parts=[];read=0
-    for chunk in pd.read_csv(raw_path,compression='gzip',usecols=['SUBJECT_ID','ITEMID','CHARTTIME','VALUE','VALUENUM'],
-        dtype={'SUBJECT_ID':'int32','ITEMID':'int32','CHARTTIME':'string','VALUE':'string','VALUENUM':'float32'},chunksize=1_000_000):
-        read+=len(chunk);keep=chunk['ITEMID'].eq(50912)&chunk['SUBJECT_ID'].isin(subjects)
-        c=chunk.loc[keep].copy()
-        if len(c):
-            text=c['VALUE'].str.upper();parsed=pd.to_numeric(text.str.extract(CENSORED,expand=False).str.replace(',',''),errors='coerce')
-            parsed=parsed.fillna(pd.to_numeric(text.str.extract(CEILING,expand=False),errors='coerce'))
-            values=c['VALUENUM'].astype(float).fillna(parsed);valid=values.between(.1,40)
-            c=c[valid];values=values[valid].astype(np.float32).astype(float).round(2)
-            time_=pd.to_datetime(c['CHARTTIME'],errors='coerce')
-            origin=c['SUBJECT_ID'].map(first['icu_intime'])
-            hours=(time_-origin)/pd.Timedelta(hours=1)
-            inside=hours.between(-365*24,0)
-            parts.append(pd.DataFrame({'subject_id':c['SUBJECT_ID'][inside].to_numpy(),
-                'hours':hours[inside].to_numpy(float),'value':values[inside].to_numpy(float)}))
-        if read%8_000_000==0:print('Raw lab rows scanned:',read,flush=True)
-    if not parts:raise RuntimeError('No matching local baseline records')
-    past=pd.concat(parts,ignore_index=True).groupby(['subject_id','hours'],as_index=False)['value'].mean()
-    pre=past[past['hours'].between(-168,0)].groupby('subject_id')['value'].min()
-    history=past[(past['hours']>=-365*24)&(past['hours']<-168)].groupby('subject_id')['value'].median()
-    baseline=pre.reindex(first.index).fillna(history.reindex(first.index))
-    return baseline,pre,history,read
+    import yaml
+    from aki_ml.admission_inputs import reconstruct_baselines
+    config=yaml.safe_load((diag.ROOT/"configs/default.yaml").read_text(encoding="utf-8"))
+    return reconstruct_baselines(raw_path,snapshots,config,progress=lambda count: print("Raw lab rows scanned:",count,flush=True))
 
 
 def main():

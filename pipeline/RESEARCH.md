@@ -114,3 +114,7 @@ Ke Jin’s independent evaluation is implemented in [src/aki_eval](../src/aki_ev
 Replace the estimator/training module while preserving target definitions, split inheritance, feature order and provenance. Evaluate each version on validation before policy lock. Standalone trajectories remain regression outputs; they do not invent AKI risk to satisfy a website schema. Website composition is in [DEVELOPMENT.md](../dashboard/DEVELOPMENT.md).
 
 Before a scientific performance claim: audit actual density and availability, finalize target/censor rules, compare/calibrate candidates, lock the complete protocol and evaluate untouched test patients. Implemented software and synthetic checks are separate evidence.
+
+## Feature repair and historical runs
+
+[FEATURE-REPAIR-V2.md](../handoff/FEATURE-REPAIR-V2.md) defines the implemented v2 feature/admission-input contract. Original notebook 01/02 artifacts and the Ke Jin v2 experiment remain historical v1-input results. New repaired snapshots/predictions are explicitly versioned, local sensitivity artifacts using the same weights; they do not retrain a model or establish a new confirmation. `ReplayData.load(..., engine_version=STABLE_FEATURE_ENGINE, admission_inputs=...)` is the corrected offline path. Current evaluation source hashes include the new arithmetic, input and reporting modules, so new runs cannot silently replace the original source/input identity.

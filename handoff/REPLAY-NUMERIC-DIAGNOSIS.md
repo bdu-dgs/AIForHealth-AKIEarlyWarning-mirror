@@ -1,6 +1,6 @@
 # Post-confirmation replay diagnosis and follow-up plan
 
-This document owns the numerical diagnosis and the proposed response to the failed candidate. The original protocol and recorded experiment remain in [KEJIN-EVALUATION.md](KEJIN-EVALUATION.md); executed checks are indexed in [dashboard/VALIDATION.md](../dashboard/VALIDATION.md).
+This document preserves the pre-repair numerical diagnosis and follow-up plan at checkpoint `54cf16c`. Current implementation and validation are in [FEATURE-REPAIR-V2.md](FEATURE-REPAIR-V2.md). The original protocol and recorded experiment remain in [KEJIN-EVALUATION.md](KEJIN-EVALUATION.md); executed checks are indexed in [dashboard/VALIDATION.md](../dashboard/VALIDATION.md).
 
 ## Decision
 
@@ -76,7 +76,7 @@ The original gates are <=10%, <=10%, and >=85%, respectively. The candidate stil
 
 There are eight configurations satisfying the original saved-snapshot point criteria. The sealed candidate already has the best false-alert objective among all eight, even before stability exclusion. Since it remains stability-feasible, correcting cutoff arithmetic cannot change that original selection. This is a logical audit using the original point metrics, not a new search on confirmation data. Choosing policies on newly recomputed point predictions would be a separate experiment.
 
-## Follow-up plan after non-confirmation
+## Follow-up plan recorded before the repairs
 
 1. **Preserve the negative result now.** Keep the original choice, confirmation, acceptance table and provenance unchanged. Keep the candidate unlocked and inactive; retain the current website policy. Do not lower the PPV floor, change the threshold, extend cooldown, or select an alternative using the observed confirmation outcomes.
 2. **Create one versioned feature contract shared by construction and live scoring.** Use native per-patient timestamps and deterministic duplicate/tie rules. Keep required admission-static inputs at their declared precision rather than reconstructing them from rounded model-feature columns. Reuse the verified local raw labs to reconstruct and save the admission baseline at original precision; preserve the 772 genuinely missing baselines without imputation. Audit the source/availability timing of other static inputs separately.
@@ -87,7 +87,7 @@ There are eight configurations satisfying the original saved-snapshot point crit
 
 The immediate next implementation scope is steps 2-4: feature/input consistency and replay-cache repair, with regression checks. Model retraining, a new policy search, final-test access and activation are subsequent decisions, not work completed by this diagnosis.
 
-A subsequent working-tree review reproduced an additional interrupted-run recovery issue in [KeJinStudy.select](../src/aki_eval/study.py): after `choice.json` is sealed, a process can stop before OOF diagnostic tables/figures are written. The cached-choice path currently returns without rebuilding missing reports; the CLI's report finalizer can then fail on the missing OOF grid. This does not affect the recorded completed run. Harden report recovery and add an interrupted-run regression without unlocking the choice or repeating confirmation. This repair is pending, alongside the feature and cache fixes.
+A subsequent working-tree review reproduced an additional interrupted-run recovery issue in [KeJinStudy.select](../src/aki_eval/study.py): after `choice.json` is sealed, a process can stop before OOF diagnostic tables/figures are written. The cached-choice path currently returns without rebuilding missing reports; the CLI's report finalizer can then fail on the missing OOF grid. This does not affect the recorded completed run. Harden report recovery and add an interrupted-run regression without unlocking the choice or repeating confirmation. This was pending at the diagnosis checkpoint; the implementation and interrupted-run regressions are now recorded in [FEATURE-REPAIR-V2.md](FEATURE-REPAIR-V2.md).
 
 
 ## Reproduction and evidence

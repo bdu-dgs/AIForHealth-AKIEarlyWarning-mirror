@@ -186,3 +186,19 @@ Environment: Windows x64, Python 3.13.5, NumPy 2.1.3, pandas 2.2.3, and Node.js 
 - Cleaned a duplicated diagnosis paragraph and one encoding-corrupted check label in the evaluation guide, and clarified the root README's remaining-work status.
 - A new synthetic interrupted-run reproduction showed that the cached-choice branch can leave missing OOF reports unrecovered. The completed real run already has those files; no original choice/confirmation was changed. The recovery defect is pending and documented with the other repairs.
 - This review did not stage, commit or push files, and did not modify the production feature engine or default policy.
+
+## Four-defect repair validation — 2026-11-05
+
+Implementation/version semantics are owned by [FEATURE-REPAIR-V2.md](../handoff/FEATURE-REPAIR-V2.md).
+
+- Final combined suite: **127 passed**, 16 backend/plotting dependency deprecation warnings. The old diagnostic function-clone compatibility failure was fixed before this passing run. New cases cover v2 window/batch/future invariance, nonzero small changes, native time bounds, float64 admission inputs and corrupt artifacts, live engine-contract mismatch, live v2 input precision, stale risk histories, and missing/partial report recovery.
+- Full real-data repair run: 4,950 validation patients, 198,524 origins, 246 deployed features and four fixed model heads. Original labels, origins and target windows were retained in new versioned private artifacts. No model fitting, calibrator refit, threshold search, new confirmation or test-set use occurred.
+- The 100-patient / 3,770-origin real-data context checks passed exact feature and 24h-risk equality for remapped cohorts, query chunks, zero-lag clipping and future/unrelated additions. Single-patient and live v2 paths also have synthetic regression coverage.
+- Export roundtrip preserved all 56 non-feature parent columns and exact four-head predictions on 1,024 serialized rows. Full-precision admission inputs preserved 4,178 available and 772 missing baselines. v2 ratio replay now requires a verified float64 input artifact instead of recovering the denominator from a float32 feature.
+- The fixed candidate's confirmation-role sensitivity PPV was 33.2620%, detection 73.5593%, false-alert rate 0.244096/scorable patient-day and median lead 12.0756h. PPV still misses the original 1/3 floor; the original confirmation was not replaced.
+- Candidate cutoff checks on the original 800/400 samples remained inside the old stability limits: maximum point-warning flip 4.0601% / 3.9542%, patient alert-presence flip 6.00% / 6.75%, minimum paired coverage about 94.96% / 95.00%.
+- Four-horizon AUROC/Brier/calibration diagnostics were exported without fitting a new calibrator. At 24h, AUROC 0.808886 -> 0.808948, Brier 0.090142 -> 0.090140 and 10-bin ECE 0.005508 -> 0.005602.
+- Three in-process 100-patient cycles (features, four risk heads and contributions) took about 0.461-0.475s. No HTTP/sustained-load or denser-minute-stream benchmark is claimed.
+- Missing/truncated OOF grids, summaries and PNGs were regenerated in synthetic interrupted-run cases while choice/confirmation/export hashes stayed unchanged. A missing sealed selection grid raises a restoration error rather than rerunning selection.
+- All **137 protected original files** matched their pre-repair hashes. The default locked model loaded successfully and retained `legacy_prefix_v1`. The new `patient_window_v2` route requires matching fitted-model/policy declarations and was not activated as a replacement.
+- Local results: `artifacts/feature-repair/repair-v2-20261106-01/`. Its `private/` data are sensitive derived artifacts; only aggregate evidence is described here. No existing service/database was changed, and no commit or push was performed in this repair turn.

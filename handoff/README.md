@@ -44,7 +44,7 @@ The imported Compose configuration was adapted to mount only this repository and
 
 ## Actual checks and limits
 
-See [dashboard/VALIDATION.md](../dashboard/VALIDATION.md) for the aggregate evidence. Model weights, component definitions, the committed Demo I policy, existing runtime source, and daily data were preserved. The packaging helper `scripts/make_handoff.py` was imported but not run; rebuilding a full handoff still requires the original source artifacts.
+See [dashboard/VALIDATION.md](../dashboard/VALIDATION.md) for the aggregate evidence. During the import, model weights, component definitions, the committed Demo I policy, existing runtime source, and daily data were preserved. The packaging helper `scripts/make_handoff.py` was imported but not run; rebuilding a full handoff still requires the original source artifacts.
 
 For a loaded LightGBM Booster, pass `num_threads` to `predict` when limiting test resources. Resetting its parameters triggered a native access violation in the first check; the successful checks used prediction-call options instead and did not save changed model files.
 
@@ -52,6 +52,6 @@ For a loaded LightGBM Booster, pass `num_threads` to `predict` when limiting tes
 
 [REPLAY-NUMERIC-DIAGNOSIS.md](REPLAY-NUMERIC-DIAGNOSIS.md) owns the completed post-confirmation investigation and proposed repairs. It preserves the negative candidate result and original policy, and separates numerical/input consistency defects from the later policy-development decision.
 
-## Later numerical diagnosis
+## Feature consistency repair
 
-[REPLAY-NUMERIC-DIAGNOSIS.md](REPLAY-NUMERIC-DIAGNOSIS.md) owns the completed post-confirmation investigation and proposed repairs. It preserves the negative candidate result and original policy, and separates numerical/input consistency defects from the later policy-development decision.
+[FEATURE-REPAIR-V2.md](FEATURE-REPAIR-V2.md) owns the implemented four fixes, explicit v1/v2 contracts and new validation evidence. Original model weights and research outputs remain preserved; corrected patient-level inputs/features/predictions are in a separate ignored directory. The original default model still uses its declared legacy contract.

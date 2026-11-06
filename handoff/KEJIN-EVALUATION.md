@@ -123,3 +123,7 @@ Zero-lag controls on the larger stability samples still show numeric representat
 ## Post-confirmation diagnosis
 
 The [numerical diagnosis and follow-up plan](REPLAY-NUMERIC-DIAGNOSIS.md) reports the complete-population controls, independently reconstructed admission-baseline precision, same-window arithmetic dependence and fixed-candidate cutoff recheck. The original candidate selection and PPV non-confirmation survive these controls. Individual risks/events can change, so feature reproducibility still requires repair before activation. A separate rapid-rise history-cache defect is recorded there; it does not affect the selected cooldown-only rule. No original result was retuned or replaced.
+
+## Subsequent software repair
+
+The original results above belong to the frozen source at checkpoint `54cf16c`. The [v2 repair contract and evidence](FEATURE-REPAIR-V2.md) document corrected window arithmetic/admission inputs, fresh risk history and resumable reports. Old model artifacts retain their legacy engine; the corrected path was validated separately with fixed weights. The original choice, confirmation and output directory were not rewritten. The current source and source hashes are intentionally different from the historical prespecification.

@@ -20,7 +20,7 @@ PRED_COLUMNS = ["run_id","family","feature_set","horizon_h","prediction_set","pa
 
 def _source_files(root):
     paths = sorted((root/"src/aki_eval").glob("*.py"))
-    paths += [root/"src/aki_ml"/name for name in ["models.py","features.py","alerts.py"]]
+    paths += [root/"src/aki_ml"/name for name in ["models.py","features.py","feature_windows.py","admission_inputs.py","alerts.py"]]
     return {p.relative_to(root).as_posix():p for p in paths}
 
 

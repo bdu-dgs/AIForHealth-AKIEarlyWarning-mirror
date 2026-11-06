@@ -13,6 +13,16 @@ Two inputs are not in the event stream and are supplied by the caller:
 import numpy as np
 import pandas as pd
 
+LEGACY_FEATURE_ENGINE = "legacy_prefix_v1"
+STABLE_FEATURE_ENGINE = "patient_window_v2"
+
+
+def feature_engine_version(value=None):
+    version = LEGACY_FEATURE_ENGINE if value is None else value
+    if version not in (LEGACY_FEATURE_ENGINE, STABLE_FEATURE_ENGINE):
+        raise ValueError("Unknown feature engine version")
+    return version
+
 KEY_SCALE, T_OFFSET = 1e5, 2e4        # key = stay * KEY_SCALE + (t + T_OFFSET); history >= -2e4 h allowed
 
 VITALS = ["heart_rate", "sbp", "dbp", "mbp", "resp_rate", "temp_c", "spo2"]
@@ -134,19 +144,28 @@ def availability_times(ev, data_cfg):
     return pd.DataFrame({"stay_idx": ev["stay_idx"].to_numpy(), "t": t})
 
 
-def compute_features(ev, static, surgical_service, q_stay, q_t, data_cfg, feature_names):
+def compute_features(ev, static, surgical_service, q_stay, q_t, data_cfg, feature_names, *,
+                     engine_version=LEGACY_FEATURE_ENGINE):
     """Feature matrix (float32, `feature_names` order) at query times q_t (hours since ICU) for stays q_stay.
 
     ev: prepare_events output for (at least) the queried stays; static: DataFrame indexed by stay_idx holding
     static_feature_names(); surgical_service: array aligned with the queries.
     """
+    version = feature_engine_version(engine_version)
+    if version == STABLE_FEATURE_ENGINE:
+        from .feature_windows import WindowIndex
+        Index = WindowIndex
+        if "creatinine_ratio_to_baseline" in feature_names and static["baseline_cr_admission"].dtype != np.dtype("float64"):
+            raise ValueError("v2 features require a float64 admission baseline input")
+    else:
+        Index = EventIndex
     src, feat, cr_rules = data_cfg["sources"], data_cfg["features"], data_cfg["labels"]["creatinine_kdigo"]
     qs, qt = np.asarray(q_stay, np.int64), np.asarray(q_t, np.float64)
     F = {"hours_since_icu": qt}
 
     def ei_of(frame, t_min=None):
         e = frame if t_min is None else frame[frame["t"] > t_min]
-        return EventIndex(e["stay_idx"], e["t"], e["value"])
+        return Index(e["stay_idx"], e["t"], e["value"])
 
     def window_stats(ei, concept, stats, prefix=None):
         prefix = prefix or concept
@@ -173,7 +192,7 @@ def compute_features(ev, static, surgical_service, q_stay, q_t, data_cfg, featur
         return pd.concat(parts).sort_index(kind="stable") if parts else empty
 
     def any_in(frame, window=None):
-        lo, hi = EventIndex(frame["stay_idx"], frame["t"], np.ones(len(frame))).bounds(qs, qt, window=window)
+        lo, hi = Index(frame["stay_idx"], frame["t"], np.ones(len(frame))).bounds(qs, qt, window=window)
         return hi > lo
 
     for v in VITALS:
@@ -194,12 +213,12 @@ def compute_features(ev, static, surgical_service, q_stay, q_t, data_cfg, featur
     for name, vals, mask in [("gcs_total", total, total.notna()), ("gcs_eye", gw["gcs_eye"], gw["gcs_eye"].notna()),
                              ("gcs_motor", gw["gcs_motor"], gw["gcs_motor"].notna()),
                              ("gcs_verbal", gw["gcs_verbal"], gw["gcs_verbal"].notna() & ~ett)]:
-        ei = EventIndex(gw.loc[mask, "stay_idx"], gw.loc[mask, "t"], vals[mask])
+        ei = Index(gw.loc[mask, "stay_idx"], gw.loc[mask, "t"], vals[mask])
         window_stats(ei, name, [("last", None), ("min", 24)] if name == "gcs_total" else [("last", None)])
     F["gcs_verbal_intubated_24h"] = any_in(gw[ett], 24)
 
     wt = concepts(["weight_admit_kg", "weight_daily_kg", "weight_order_kg"])
-    weight = EventIndex(wt["stay_idx"], wt["t"], wt["value"]).last(qs, qt)[0]
+    weight = Index(wt["stay_idx"], wt["t"], wt["value"]).last(qs, qt)[0]
     height = ei_of(concept("height_cm")).last(qs, qt)[0]
     F["weight_kg"], F["height_cm"] = weight, height
     F["bmi"] = weight / (height / 100) ** 2
@@ -207,7 +226,7 @@ def compute_features(ev, static, surgical_service, q_stay, q_t, data_cfg, featur
     u = concept("urine_output")
     u = u[u["t"] > 0].sort_values("value").drop_duplicates(["stay_idx", "t", "itemid"], keep="last")
     u = u.groupby(["stay_idx", "t"], as_index=False)["value"].sum()
-    uei = EventIndex(u["stay_idx"], u["t"], u["value"])
+    uei = Index(u["stay_idx"], u["t"], u["value"])
     uo_sum = {}
     for w in feat["urine_windows_hours"]:
         lo, hi = uei.bounds(qs, qt, window=w)
@@ -249,7 +268,7 @@ def compute_features(ev, static, surgical_service, q_stay, q_t, data_cfg, featur
     cr = concept("creatinine")
     cr = cr.assign(value=cr["value"].astype("float64").round(2)).groupby(["stay_idx", "t"], as_index=False)["value"].mean()
     cr = cr[cr["t"] >= -24 * feat["lab_lookback_days"]]
-    cei = EventIndex(cr["stay_idx"], cr["t"] + delay, cr["value"])
+    cei = Index(cr["stay_idx"], cr["t"] + delay, cr["value"])
     window_stats(cei, "creatinine", CREATININE_STATS)
     lo, hi = cei.bounds(qs, qt, window=24 * cr_rules["rel_window_days"])
     cr_min7 = cei.min(lo, hi)

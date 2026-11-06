@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
-from aki_ml.features import EventIndex, compute_features, prepare_events, static_feature_names
+from aki_ml.features import (EventIndex, compute_features, prepare_events, static_feature_names,
+                             LEGACY_FEATURE_ENGINE, STABLE_FEATURE_ENGINE, feature_engine_version)
 
 
 @dataclass
@@ -16,9 +17,10 @@ class ReplayData:
     stay_lookup: dict
     config: dict
     feature_names: list
+    engine_version: str = LEGACY_FEATURE_ENGINE
 
     @classmethod
-    def load(cls, path, snapshots, config, feature_names):
+    def load(cls, path, snapshots, config, feature_names, *, engine_version=LEGACY_FEATURE_ENGINE, admission_inputs=None):
         # Original absolute timestamps preserve precision; float32 ICU-hour exports do not.
         stays = snapshots[["stay_id", "icu_intime"]].drop_duplicates("stay_id").reset_index(drop=True)
         lookup = pd.Series(np.arange(len(stays)), index=stays["stay_id"])
@@ -28,8 +30,15 @@ class ReplayData:
         if (snapshots.groupby("stay_id", observed=True)[columns].nunique(dropna=False) > 1).any().any():
             raise ValueError("Declared admission-static inputs vary within a stay")
         static = snapshots.groupby("stay_id", observed=True, sort=False)[columns].first().reindex(stays["stay_id"])
+        version = feature_engine_version(engine_version)
+        if admission_inputs is not None:
+            from aki_ml.admission_inputs import read_admission_inputs
+            supplied = read_admission_inputs(admission_inputs, snapshots, config).set_index("stay_id")
+            static = supplied.reindex(stays["stay_id"])[columns]
+        elif version == STABLE_FEATURE_ENGINE and "creatinine_ratio_to_baseline" in feature_names:
+            raise ValueError("v2 replay requires float64 admission inputs; rounded snapshot baselines are insufficient")
         static.index = np.arange(len(stays))
-        return cls(events, static, snapshots.copy(), lookup.to_dict(), config, list(feature_names))
+        return cls(events, static, snapshots.copy(), lookup.to_dict(), config, list(feature_names), version)
 
     def query_stays(self, queries):
         q = queries["stay_id"].map(self.stay_lookup)
@@ -54,8 +63,13 @@ class ReplayData:
         delay = float(self.config["features"]["lab_result_delay_hours"])
         cr = events[events["concept"] == "creatinine"]
         hr = events[(events["concept"] == "heart_rate") & (events["t"] > 0)]
-        cr_index = EventIndex(cr["stay_idx"], cr["t"] + delay, cr["value"])
-        hr_index = EventIndex(hr["stay_idx"], hr["t"], hr["value"])
+        if self.engine_version == STABLE_FEATURE_ENGINE:
+            from aki_ml.feature_windows import WindowIndex
+            Index = WindowIndex
+        else:
+            Index = EventIndex
+        cr_index = Index(cr["stay_idx"], cr["t"] + delay, cr["value"])
+        hr_index = Index(hr["stay_idx"], hr["t"], hr["value"])
         lo, hi = cr_index.bounds(qs, qt, window=24*self.config["coverage"]["prior_creatinine_lookback_days"], closed_left=True)
         ok = hi > lo
         if self.config["coverage"]["require_prior_heart_rate"]:
@@ -78,7 +92,7 @@ class ReplayData:
         result = np.empty((len(queries), len(self.feature_names)), np.float32)
         covered = np.zeros(len(queries), bool)
         if clip is None and lag_hours == 0:
-            result[:] = compute_features(ev, self.static, service, qs, qt, self.config, self.feature_names)
+            result[:] = compute_features(ev, self.static, service, qs, qt, self.config, self.feature_names, engine_version=self.engine_version)
             covered[:] = self._covered(ev, qs, qt)
             return result, covered
         # The study has an hourly grid: grouping by origin avoids one engine call per row.
@@ -88,7 +102,7 @@ class ReplayData:
                 part = ev[~((ev["concept"] == "urine_output") & (ev["t"] > hour))]
             else:
                 part = ev[ev["t"] <= hour-lag_hours]
-            result[idx] = compute_features(part, self.static, service[idx], qs[idx], qt[idx], self.config, self.feature_names)
+            result[idx] = compute_features(part, self.static, service[idx], qs[idx], qt[idx], self.config, self.feature_names, engine_version=self.engine_version)
             covered[idx] = self._covered(part, qs[idx], qt[idx])
         return result, covered & service_known
 

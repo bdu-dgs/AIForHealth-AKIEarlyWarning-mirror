@@ -77,10 +77,12 @@ class WindowLocalIndex(engine.EventIndex):
 
 
 def local_compute():
-    return types.FunctionType(engine.compute_features.__code__,
+    function = types.FunctionType(engine.compute_features.__code__,
         {**engine.compute_features.__globals__,'EventIndex':WindowLocalIndex},
         name='diagnostic_window_local_features',argdefs=engine.compute_features.__defaults__,
         closure=engine.compute_features.__closure__)
+    function.__kwdefaults__ = dict(engine.compute_features.__kwdefaults__ or {})
+    return function
 
 
 def feature_comparison(reference,variant,names,label):
@@ -111,7 +113,7 @@ def risk_comparison(a,b,label):
     return out
 
 
-def load_context(run):
+def load_context(run, *, source_root=None):
     record=json.loads((run/'prespec.json').read_text(encoding='utf-8'))
     spec=record['specification'];cfg=spec['config'];policy_path=ROOT/'artifacts/demo_i/policy.json'
     policy=json.loads(policy_path.read_text(encoding='utf-8'))
@@ -125,7 +127,7 @@ def load_context(run):
     for name,path in paths.items():
         if sha256(path)!=spec['input_sha256'][name]:raise RuntimeError('Frozen input changed: '+name)
     for name,value in spec['source_sha256'].items():
-        if sha256(ROOT/name)!=value:raise RuntimeError('Frozen analysis source changed: '+name)
+        if sha256(Path(source_root or ROOT)/name)!=value:raise RuntimeError('Frozen analysis source changed: '+name)
     for name in ['numpy','pandas','pyarrow','scikit-learn','lightgbm','scipy','joblib']:
         from importlib.metadata import version
         trained=json.loads((ROOT/'artifacts/models'/cfg['model_run_id']/'run_manifest.json').read_text())['software'][name]

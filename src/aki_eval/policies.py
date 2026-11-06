@@ -59,7 +59,8 @@ def prepare(frame, horizon=24):
     risk = output["risk"].to_numpy(float)
     if not np.isfinite(hours).all() or np.isinf(risk).any() or ((risk[np.isfinite(risk)] < 0) | (risk[np.isfinite(risk)] > 1)).any():
         raise ValueError("Invalid times or probabilities")
-    output["prior_min_12"] = prior_minimum(output["patient_id"].to_numpy(), hours, risk, 12)
+    # A caller may replace risk for a cutoff scenario; derived history must not be cached in mutable frames.
+    output = output.drop(columns=[name for name in output if name.startswith("prior_min_")])
     return output
 
 
@@ -91,8 +92,7 @@ def alert_events(frame, threshold, rule, comparison=">="):
     episode = np.cumsum(begin)
     trigger = high & ((hours - hours[first]) >= rule.sustain_hours - 1 - 1e-9)
     if rule.rise_ratio is not None:
-        name = "prior_min_" + str(rule.rise_window_hours)
-        pm = frame[name].to_numpy(float) if name in frame else prior_minimum(pid, hours, risk, rule.rise_window_hours)
+        pm = prior_minimum(pid, hours, risk, rule.rise_window_hours)
         trigger &= np.isnan(pm) | (risk >= rule.rise_ratio * pm)
     output = np.zeros(len(frame), bool)
     last_pid, last_hour, last_risk, last_episode = None, -np.inf, np.nan, -1
