@@ -8,6 +8,8 @@ Notebooks 04 and 05 are independent development experiments. Notebook 03 now has
 
 The default data are entirely synthetic. These runs do not reproduce notebook 02 or Demo I, replace their weights or 21% policy, or establish patient-level performance. Real-data execution requires authorized notebook 01 artifacts, which were unavailable during this implementation check. Original notebooks 01/02 and the committed Demo I policy remain unchanged.
 
+The later authorized handoff restored the frozen Demo I weights and validation-only inputs locally; see [handoff/README.md](../handoff/README.md). That subset supports reproduction of stored validation predictions, but does not include the training features or complete cohort artifacts required for real-data training of the new combined-label and trajectory baselines. Their current software checks still use synthetic defaults.
+
 ## Module boundaries
 
 | Module in `src/aki_ml/` | Responsibility |
@@ -102,6 +104,10 @@ Input hashes and config are checked before fitting. Patient-level test snapshots
 Each export creates a new timestamp-suffixed directory under ignored `artifacts/extensions/`: model, aggregate report, manifest, and optional classification policy. Provenance includes dataset/config/source hashes, feature order, software versions, Git commit when available and model hash. Source hashes distinguish uncommitted changes at the same commit. No row-level predictions are exported by default. See [artifact inventory](../artifacts/README.md).
 
 Load only trusted local joblib files; hash equality does not make an unknown executable serialization safe.
+
+## Frozen-model alert-policy work
+
+Ke Jin’s independent evaluation is implemented in [src/aki_eval](../src/aki_eval/) and documented in [handoff/KEJIN-EVALUATION.md](../handoff/KEJIN-EVALUATION.md). It audits the restored data, selects a threshold/policy on a validation patient role with cutoff controls, and confirms once on the other role. The 23%/12h candidate reduced false-alert burden but failed its confirmation PPV floor; it was not deployed. This does not complete Jiaju’s calibration/SHAP work, the new-model training extensions or final test evaluation.
 
 ## Later model replacement
 

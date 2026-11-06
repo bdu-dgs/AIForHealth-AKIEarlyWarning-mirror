@@ -10,6 +10,8 @@ Notebooks 01 and 02 and the Demo I evaluation are implemented and have been run 
 |---|---|
 | This README | Research objective, candidate study design, notebook ownership, privacy, and repository-wide status |
 | [pipeline/RESEARCH.md](pipeline/RESEARCH.md) | Offline extension definitions, modules, baseline runs, target extraction and artifact interfaces |
+| [handoff/README.md](handoff/README.md) | Local handoff restoration, validation-only inputs, team task notebooks and reproduction limits |
+| [handoff/KEJIN-EVALUATION.md](handoff/KEJIN-EVALUATION.md) | Artifact audit, validation-role alert selection, cutoff controls and candidate confirmation |
 | [dashboard/README.md](dashboard/README.md) | Website installation, startup, daily use, and local CSV preview |
 | [dashboard/DEVELOPMENT.md](dashboard/DEVELOPMENT.md) | Website architecture, backend/model integration, and development workflow |
 | [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md) | Normative live JSON field and time contract |
@@ -145,6 +147,8 @@ Notebooks 04 and 05 now provide modular combined-label classification and future
 | `pipeline/03_evaluation_and_testing.ipynb` | Executable small-baseline validation/threshold/cutoff path; full locked-test, subgroup, robustness and interpretation study remains pending |
 | `pipeline/04_combined_aki.ipynb` | Independent combined observed-onset labels, grouped LR baseline, validation threshold and cutoff comparisons |
 | `pipeline/05_trajectory_prediction.ipynb` | Actual future-creatinine targets, density audit, persistence/ridge baselines and cutoff comparisons |
+| `pipeline/KeJin_alert_policy_and_checks.ipynb` | Completed A1–A12 and frozen-model validation-role policy experiment; 23%/12h candidate did not meet confirmation PPV floor and remains inactive |
+| `pipeline/Jiaju_stability.ipynb` | Imported calibration/predictor/risk-stability scaffold; setup and Part 0 reproduced, later tasks pending |
 
 Notebooks exchange versioned local Parquet artifacts rather than in-memory variables. Code shared by notebooks and the website lives in `src/aki_ml/`.
 
@@ -191,8 +195,12 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |   |-- demo_i_evaluation.ipynb
 |   |-- 04_combined_aki.ipynb
 |   |-- 05_trajectory_prediction.ipynb
+|   |-- KeJin_alert_policy_and_checks.ipynb
+|   |-- Jiaju_stability.ipynb
 |   `-- RESEARCH.md            # offline extension definitions and workflow
 |-- src/aki_ml/                # shared code: feature engine, model containers, alerts, scoring
+|-- src/aki_eval/              # independent artifact checks, alert events and validation protocol
+|-- tests/                    # synthetic evaluation and protocol tests
 |-- dashboard/
 |   |-- app.py                 # preserved original placeholder
 |   |-- launcher.py            # starts the website and the model worker
@@ -203,6 +211,7 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |   |-- api/                   # FastAPI, SQLite, file ingestion, demo playback
 |   |-- web/                   # React and TypeScript frontend
 |   `-- tests/                 # synthetic backend tests
+|-- handoff/                   # team handoff and evaluation guides/dependencies
 |-- scripts/                   # setup, synthetic demo patients, batch scoring, demo upload
 |-- filter/                    # separately added CSV/TSV cleaning tool
 |-- Setup-AKI.cmd
@@ -246,7 +255,9 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 - **Demo I (`demo-v1`, `pipeline/demo_i_evaluation.ipynb`):** monitoring window ICU hours 1-72; alert when the 24 h risk is at least 21%. On validation: 76% of AKI events flagged (95% CI 74-79%), a median of 12.7 h before onset; about 1 in 3 alerts is followed by AKI; 0.8 alerts per patient-day.
 - **Website:** can run the locked model live when the matching local model artifacts are installed, showing risk, the 24 h warning, and the top five drivers; cloning the source and installing dependencies does not provide the model weights. `Start-AKI-Demo.cmd` replays four synthetic patients with a "+1 h" clock. Scoring retains subsecond input times, retries deferred revisions, and selects static inputs separately at each data cutoff. Test evidence and limitations are in [dashboard/VALIDATION.md](dashboard/VALIDATION.md).
 - **Development extensions:** combined-label LR and creatinine persistence/ridge baselines, validation-selected thresholds linked to cutoff stability, independent artifact versions, and explicit synthetic website demonstration are implemented. Synthetic checks do not establish real-data performance.
-- **Not done yet:** the test set has not been used. Next are notebook 03 (one locked test-set evaluation with patient-level confidence intervals, subgroup and urine-output analyses), real-data prediction-stability studies, and alert rules that reduce false alarms. There is no clinical validation.
+- **Local handoff restoration:** the authorized bundle restored the original model artifacts and a validation-only subset on this computer. Frozen risks and alert metrics were reproduced; model and derived-data files remain outside Git. Team task notebooks and data limitations are documented in [handoff/README.md](handoff/README.md).
+- **Ke Jin alert-policy study:** the frozen-model audit, validation-role selection and sampled cutoff checks are complete. The 23%/12h candidate missed its confirmation PPV floor and remains inactive. Numerical replay and risk-history-cache defects are diagnosed; production repairs are pending. See [the evaluation guide](handoff/KEJIN-EVALUATION.md) and [numerical diagnosis](handoff/REPLAY-NUMERIC-DIAGNOSIS.md).
+- **Not done yet:** the test set has not been used. Remaining research includes notebook 03's locked-test/subgroup/urine-output evaluation and Jiaju's broader calibration/predictor/risk-stability work. A reduced-burden replacement alert policy has not been confirmed. There is no clinical validation.
 
 Local website changes do not become available from GitHub until they are explicitly committed and pushed. Windows EXE, installer, and portable runtime packaging have not been built.
 

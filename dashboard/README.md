@@ -72,6 +72,12 @@ To show a live upload during the demo, run `python scripts\make_demo_upload.py` 
 
 On the risk chart, the red dashed line comes from the selected model policy (21% for the original Demo I policy). Demo playback spans at least ICU hours 0-72; arbitrary model horizons remain supported. The observation chart opens on creatinine when available.
 
+### Using a locally restored handoff model
+
+If the authorized `AKI_handoff_v1` bundle has been restored on this computer, the default `demo-v1` LightGBM model can run without `--demo-model`. Use `Start-AKI-Demo.cmd --port 8766` for a fresh fictional-patient demo. Stop and restart any older service before expecting the restored model to be active; daily records are not overwritten by restoration.
+
+The weights and validation files remain local and are not supplied by GitHub. See [handoff/README.md](../handoff/README.md) for the imported task notebooks, partial-data layout and verification limits.
+
 ### Demonstration without fitted MIMIC model weights
 
 Use the explicit synthetic baseline option:

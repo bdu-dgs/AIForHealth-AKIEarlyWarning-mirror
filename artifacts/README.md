@@ -17,6 +17,18 @@ The default Demo I run is `aki_ml_v1_28e0b1fb83`. The website's model worker and
 For an existing matching run, restore its authorized local `lightgbm__no_dc` model directory at that path. The worker verifies `pipeline.joblib` against `pipeline_sha256` in the policy before loading it. `Setup-AKI.cmd` installs libraries but does not download or train weights. Restoring only `policy.json` is insufficient. Keep the fitted artifact and its provenance files together; do not replace the policy hash to make an unrelated model load.
 
 
+## Local handoff restoration
+
+On 2026-11-05, the authorized handoff restored all five model-family directories, saved predictions and aggregate Demo I tables for `aki_ml_v1_28e0b1fb83`. The default pipeline and feature-order hashes match the committed policy. The fitted model containers, feature engine and configs match the package snapshot; current runtime fixes were preserved.
+
+Validation-only companion data were copied to `../Cleaned/` with their original subset filenames. Training features and test features remain absent. Import manifests and check reports are ignored under `handoff-imports/20261105-235915/`. These files are local, not included in a source clone. Details are in [handoff/README.md](../handoff/README.md).
+
+## Ke Jin evaluation outputs
+
+Versioned `artifacts/handoff/kejin/` outputs include immutable prespec/choice records, A1–A12 checks, OOF diagnostics, validation-role grids, paired bootstrap tables, zero-lag representation controls, trade-off figures and an executed aggregate-only notebook. `LATEST.json` points to the completed run. These files remain local and ignored; no model weights or patient rows are copied into the aggregate result package.
+
+The current v2 candidate is 23% with 12h cooldown. It is marked unconfirmed and `threshold.locked=false` after missing the confirmation PPV floor. It must not replace the live policy. Methodology and limitations are in [handoff/KEJIN-EVALUATION.md](../handoff/KEJIN-EVALUATION.md).
+
 ## Independent development baselines
 
 `extensions/<run_id>-<timestamp>/` contains `pipeline.joblib`, `manifest.json`, `report.json` and, for classification, `policy.json`. Every execution creates a new directory. Provenance records feature order, dataset/config/source hashes, model hash, software versions and Git commit when available. Classification policies resolve model paths from their own directory and never overwrite `demo_i/policy.json`.

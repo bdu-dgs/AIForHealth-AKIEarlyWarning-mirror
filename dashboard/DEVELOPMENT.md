@@ -202,6 +202,10 @@ Offline training and target definitions belong in [pipeline/RESEARCH.md](../pipe
 
 The worker still has one heartbeat and one selected risk adapter. Concurrent independent workers and a model registry are not implemented.
 
+## Research alert-event candidates
+
+[Ke Jin’s evaluation](../handoff/KEJIN-EVALUATION.md) separates alert events from instantaneous risk and above-threshold display. Its exported policy remains unlocked, so the live loader rejects it. A cooldown/episode candidate needs an explicit stateful alert adapter and a validated input-frequency contract; copying its threshold into the current chart does not implement its alert behavior. No website default was changed by the evaluation, and feature-replay representation differences remain an open review item.
+
 ## Frontend conventions
 
 Use `web/lib/api.ts` for `/api` requests. Update TypeScript types when backend schemas change. SSE sends only the global revision; it does not send patient data. The page queries again after receiving a new revision.
