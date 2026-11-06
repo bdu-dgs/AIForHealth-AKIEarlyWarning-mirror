@@ -1,0 +1,9 @@
+{
+  "synthetic_tests_passed": 8,
+  "original_files_unchanged": 251,
+  "required_artifacts_present": true,
+  "reliability_cells": 36,
+  "patient_identifier_columns_present": false,
+  "minimum_valid_auc_bootstraps": 200,
+  "minimum_valid_slope_bootstraps": 200
+}
