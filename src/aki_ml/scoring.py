@@ -20,7 +20,8 @@ from .features import (compute_features, static_feature_names, feature_engine_ve
 from .models import logit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_POLICY = REPO_ROOT / "artifacts" / "demo_i" / "policy.json"
+# Demo I policy on batch-independent features (same weights/threshold); policy.json keeps the original record.
+DEFAULT_POLICY = REPO_ROOT / "artifacts" / "demo_i" / "policy_feature_v2.json"
 MODEL_ID = "aki-lightgbm-no_dc"
 TARGET = "AKI (KDIGO creatinine)"
 MAX_HOUR = 72                      # model monitoring grid: ICU hours 1-72

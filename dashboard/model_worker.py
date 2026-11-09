@@ -3,7 +3,7 @@
 Event-driven: each accepted input batch creates a patient input revision at the time it arrived (service clock,
 which is the demo clock during playback). For every revision not yet scored, the worker predicts at that time
 (origin = data cutoff = arrival time) from all observations measured up to then, using the locked model in
-`artifacts/demo_i/policy.json` and the shared scoring code in `src/aki_ml/scoring.py`. Times outside ICU hours
+`artifacts/demo_i/policy_feature_v2.json` and the shared scoring code in `src/aki_ml/scoring.py`. Times outside ICU hours
 1-72 or before the first usable creatinine get no prediction. Revisions are never skipped, so stepping the demo
 clock several hours at once still gives one prediction per hour.
 Observation history and fingerprints share the captured generation time as their knowledge boundary.
@@ -158,7 +158,7 @@ class Worker:
 def main():
     ap = argparse.ArgumentParser(description="AKI live model worker")
     ap.add_argument("--api", default="http://127.0.0.1:8765")
-    ap.add_argument("--policy", default=None, help="policy.json (default artifacts/demo_i/policy.json)")
+    ap.add_argument("--policy", default=None, help="policy file (default artifacts/demo_i/policy_feature_v2.json)")
     args = ap.parse_args()
     try:
         from aki_ml.scoring import DEFAULT_POLICY, LockedModel
