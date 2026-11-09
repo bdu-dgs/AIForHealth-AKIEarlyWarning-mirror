@@ -1,0 +1,69 @@
+# Research candidate, not a clinical operating policy. Model weights and calibration are those of Demo I.
+# v3 redoes the validation-patient selection of v2 (configs/alert_policy_v1.yaml) on risks recomputed with the
+# batch-independent feature engine, and adds multi-horizon confirmation and stricter early-threshold rules.
+version: validation-policy-v3
+output_directory: policy_v3            # artifacts/handoff/policy_v3/
+method_amendment:
+  previous_version: kejin-validation-policy-v2
+  reason: legacy feature arithmetic depends on batch composition; risks recomputed with patient_window_v2
+  previous_confirmation_patients_reused: true     # same 70/30 roles; the 30% were used once in v2
+model_run_id: aki_ml_v1_28e0b1fb83
+family: lightgbm
+feature_set: no_dc
+horizons: [6, 12, 24, 48]
+alert_horizon_h: 24
+monitoring_hours: [1, 72]
+risk_source: validation_feature_v2             # artifacts/predictions/<run>_validation_feature_v2.parquet
+feature_engine_version: patient_window_v2
+admission_inputs: artifacts/feature_v2/admission_inputs
+selection_data: validation_selection
+confirmation_data: validation_confirmation
+training_oof_role: none                        # OOF risks exist only for the legacy engine
+validation_selection_fraction: 0.70
+seed: 20261102
+bootstrap_resamples: 1000
+thresholds: {start: 0.10, stop: 0.40, step: 0.01}
+cutoff:
+  lags_hours: [0, 1, 2]
+  reference_bases: [stored_snapshot]
+  selection_patient_cap: 800
+  confirmation_patient_cap: 400
+  measurement_time_cutoff: true
+  fixed_origin_and_windows: true
+feature_checks:
+  patient_cap: 384
+  rows: 2048
+  minimum_rows: 2000
+  rtol: 0.00001
+  atol: 0.0001
+selection_rule:
+  objective: minimise_false_alerts_per_scorable_patient_day
+  min_event_detection_rate: 0.70
+  max_detection_loss: 0.05
+  min_median_lead_h: 6
+  max_median_lead_loss_h: 2
+  min_ppv: 0.3333333333333333
+  max_alerts_per_patient_day: 1
+  max_non_target_patient_alert_increase: 0.0
+  max_warning_flip_fraction: 0.10
+  max_patient_alert_flip_fraction: 0.10
+  min_pair_coverage: 0.85
+candidates:
+  - {name: baseline, sustain_hours: 1, cooldown_hours: 6}
+  - {name: sustain2_cool6, sustain_hours: 2, cooldown_hours: 6}
+  - {name: sustain2_cool12, sustain_hours: 2, cooldown_hours: 12}
+  - {name: cool12, sustain_hours: 1, cooldown_hours: 12}
+  - {name: cool24, sustain_hours: 1, cooldown_hours: 24}
+  - {name: episode_cool6, cooldown_hours: 6, repeat_mode: episode}
+  - {name: episode_cool12, cooldown_hours: 12, repeat_mode: episode}
+  - {name: episode_sustain2_cool6, sustain_hours: 2, cooldown_hours: 6, repeat_mode: episode}
+  - {name: episode_sustain2_cool12, sustain_hours: 2, cooldown_hours: 12, repeat_mode: episode}
+  - {name: rise_repeat_cool6, cooldown_hours: 6, repeat_mode: episode_or_rise, repeat_delta: 0.05}
+  - {name: rise_repeat_cool12, cooldown_hours: 12, repeat_mode: episode_or_rise, repeat_delta: 0.05}
+  - {name: rapid_rise, cooldown_hours: 6, rise_ratio: 1.5, rise_window_hours: 12}
+  # Multi-horizon confirmation: 12 h risk >= 0.5 x threshold (uniform-hazard share of the 24 h risk).
+  - {name: confirm12_cool6, cooldown_hours: 6, confirm_horizon_h: 12, confirm_ratio: 0.5}
+  - {name: confirm12_cool12, cooldown_hours: 12, confirm_horizon_h: 12, confirm_ratio: 0.5}
+  # Stricter early threshold: +0.05 during ICU hours 1-6 (lowest segment AUROC, sparse data).
+  - {name: early6_cool6, cooldown_hours: 6, early_hours: 6, early_delta: 0.05}
+  - {name: early6_cool12, cooldown_hours: 12, early_hours: 6, early_delta: 0.05}

@@ -18,6 +18,13 @@ class AlertRule:
     rise_ratio: float | None = None
     rise_window_hours: float = 12
     max_gap_hours: float = 1.01
+    # Multi-horizon confirmation: the `confirm_horizon_h` risk must also reach confirm_ratio x threshold
+    # (0.5 = at least half of the 24 h risk expected within the first 12 h, the uniform-hazard share).
+    confirm_horizon_h: int | None = None
+    confirm_ratio: float = .5
+    # Stricter early threshold: threshold + early_delta at ICU hours <= early_hours (sparse early data).
+    early_hours: float | None = None
+    early_delta: float = .05
 
     def __post_init__(self):
         if self.sustain_hours < 1 or int(self.sustain_hours) != self.sustain_hours:
@@ -28,6 +35,15 @@ class AlertRule:
             raise ValueError("Unknown repeat mode")
         if self.repeat_delta < 0 or (self.rise_ratio is not None and self.rise_ratio <= 0):
             raise ValueError("Invalid rise rule")
+        if self.confirm_horizon_h is not None and not 0 < self.confirm_ratio <= 1:
+            raise ValueError("confirm_ratio must be in (0, 1]")
+        if self.early_hours is not None and (self.early_hours <= 0 or self.early_delta < 0):
+            raise ValueError("Invalid early threshold")
+
+    @property
+    def risk_columns(self):
+        """Frame columns the rule reads besides `risk` (the alert-horizon risk)."""
+        return [] if self.confirm_horizon_h is None else [f"risk_{self.confirm_horizon_h}h"]
 
     def to_dict(self):
         return asdict(self)
@@ -86,7 +102,11 @@ def alert_events(frame, threshold, rule, comparison=">="):
     if len(set(starts)) != len(starts):
         raise ValueError("Patient rows must be grouped")
     same = same_patient & np.r_[False, np.diff(hours) <= rule.max_gap_hours]
-    high = (risk >= threshold if comparison == ">=" else risk > threshold) & np.isfinite(risk)
+    level = threshold + (rule.early_delta * (hours <= rule.early_hours) if rule.early_hours is not None else 0.0)
+    high = (risk >= level if comparison == ">=" else risk > level) & np.isfinite(risk)
+    if rule.confirm_horizon_h is not None:
+        other = frame[f"risk_{rule.confirm_horizon_h}h"].to_numpy(float)
+        high &= np.isfinite(other) & (other >= rule.confirm_ratio * threshold)
     begin = high & ~(np.r_[False, high[:-1]] & same)
     first = np.maximum.accumulate(np.where(begin, np.arange(len(frame)), 0))
     episode = np.cumsum(begin)
@@ -138,12 +158,15 @@ def stability_grid(reference, variants, rules, thresholds):
     n_patients = int(code[-1] + 1) if len(code) else 0
     rows = []
     for lag, values in variants.items():
-        values = np.asarray(values, float)
+        # A variant is the alert-horizon risk array, or {column: array} when rules also read other horizons.
+        columns = values if isinstance(values, dict) else {"risk": values}
+        values = np.asarray(columns["risk"], float)
         if values.shape != current.shape:
             raise ValueError("Unaligned cutoff predictions")
         paired = np.isfinite(current) & np.isfinite(values)
         shifted = reference.copy()
-        shifted["risk"] = values
+        for name, column in columns.items():
+            shifted[name] = np.asarray(column, float)
         delta = np.abs(current[paired] - values[paired])
         for rule in rules:
             for threshold in thresholds:
@@ -184,8 +207,9 @@ def choose(grid, stability, baseline_metrics, criteria):
     if eligible.empty:
         return None, result
     mode_complexity = {"cooldown":0,"episode":1,"episode_or_rise":2}
+    extra = sum(eligible[c].notna().astype(int) for c in ["confirm_horizon_h", "early_hours"] if c in eligible)
     eligible = eligible.assign(complexity=eligible["repeat_mode"].map(mode_complexity) +
-                               (eligible["sustain_hours"]-1) + eligible["rise_ratio"].notna().astype(int))
+                               (eligible["sustain_hours"]-1) + eligible["rise_ratio"].notna().astype(int) + extra)
     selected = eligible.sort_values(["false_alerts_per_patient_day","non_aki_patients_alerted",
                                     "complexity","threshold","candidate"],
                                    ascending=[True,True,True,False,True]).iloc[0]

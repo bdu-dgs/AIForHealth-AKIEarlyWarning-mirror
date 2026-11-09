@@ -48,10 +48,11 @@ def finalize_reports(directory):
                (["confirmation.json"] if (out/"confirmation.json").exists() else [])}
     spec=json.loads((out/"prespec.json").read_text(encoding="utf-8"))["specification"]["config"]
     criteria=spec["selection_rule"]
-    baseline_table=pd.read_csv(out/"baseline_reproduction.csv")
-    baseline_oof=baseline_table[baseline_table["data"]=="train_oof"].iloc[0].to_dict()
-    grid=pd.read_csv(out/"policy_grid_train_oof.csv")
-    diagnostic_representatives(grid,baseline_oof,criteria).to_csv(out/"policy_candidates_train_oof.csv",index=False)
+    if spec.get("training_oof_role")!="none":
+        baseline_table=pd.read_csv(out/"baseline_reproduction.csv")
+        baseline_oof=baseline_table[baseline_table["data"]=="train_oof"].iloc[0].to_dict()
+        grid=pd.read_csv(out/"policy_grid_train_oof.csv")
+        diagnostic_representatives(grid,baseline_oof,criteria).to_csv(out/"policy_candidates_train_oof.csv",index=False)
     if (out/"confirmation.json").exists():
         confirmation=json.loads((out/"confirmation.json").read_text(encoding="utf-8"))
         a,b=confirmation["baseline"],confirmation["candidate"]

@@ -34,6 +34,29 @@ def test_episode_repeat_and_absolute_rise():
     assert np.flatnonzero(alert_events(f,.3,AlertRule("rise",cooldown_hours=2,repeat_mode="episode_or_rise"))).tolist()==[0,3,6]
 
 
+
+def test_multi_horizon_confirmation_needs_short_horizon_agreement():
+    f=frame([.4,.4,.4,.4]);f["risk_12h"]=[.1,.25,.14,.3]
+    rule=AlertRule("mh",cooldown_hours=0,confirm_horizon_h=12,confirm_ratio=.5)
+    assert np.flatnonzero(alert_events(f,.3,rule)).tolist()==[1,3]          # 12 h risk >= .5 x .3
+    f["risk_12h"]=np.nan
+    assert not alert_events(f,.3,rule).any()                                  # unknown short-horizon risk never confirms
+
+
+def test_early_threshold_applies_only_inside_early_hours():
+    f=frame([.32,.32,.32,.32],[5.,6.,7.,8.])
+    rule=AlertRule("early",cooldown_hours=0,early_hours=6,early_delta=.05)
+    assert np.flatnonzero(alert_events(f,.3,rule)).tolist()==[2,3]
+    f["risk"]=[.36,.2,.2,.2]
+    assert np.flatnonzero(alert_events(f,.3,rule)).tolist()==[0]
+
+
+def test_new_components_switched_off_reproduce_legacy():
+    f=frame(np.random.default_rng(3).uniform(0,1,96));f["risk_12h"]=1.0
+    rule=AlertRule("off",cooldown_hours=6,confirm_horizon_h=12,confirm_ratio=.5)
+    np.testing.assert_array_equal(alert_events(f,.3,rule),old.policy_alerts(f,.3,old.Policy(1,6)))
+    assert AlertRule("early",early_hours=None).risk_columns==[] and rule.risk_columns==["risk_12h"]
+
 def test_sustain_uses_elapsed_time_not_number_of_minute_updates():
     f=frame([.4,.4,.4],[1.,1.1,2.])
     result=alert_events(f,.3,AlertRule("sustain",sustain_hours=2,cooldown_hours=0))
@@ -131,7 +154,7 @@ def test_exported_research_candidate_cannot_be_silently_deployed(tmp_path,monkey
     study.data=SimpleNamespace(policy=original,prespec={"prespec_sha256":"a"*64})
     study._export_candidate(None,{"status":"no_feasible_candidate"})
     path=tmp_path/"policy_v1_candidate.json"
-    exported=json.loads(path.read_text())
+    exported=json.loads(path.read_text(encoding="utf-8"))
     assert "validation_metrics" not in exported and not exported["threshold"]["locked"]
     monkeypatch.setattr("aki_ml.scoring.joblib.load",lambda *_:pytest.fail("Unlocked candidate must not load weights"))
     with pytest.raises(RuntimeError,match="not locked"):
@@ -183,7 +206,7 @@ def test_full_synthetic_selection_confirmation_and_cached_rerun(tmp_path):
     assert len(calls)==before  # completed confirmation reused, no new evaluation or tuning
     text=study.summary()
     assert len(text.splitlines())==10
-    assert json.loads((out/"run_manifest.json").read_text())["trained_model_unchanged"]
-    candidate=json.loads((out/"policy_v1_candidate.json").read_text())
+    assert json.loads((out/"run_manifest.json").read_text(encoding="utf-8"))["trained_model_unchanged"]
+    candidate=json.loads((out/"policy_v1_candidate.json").read_text(encoding="utf-8"))
     assert candidate["threshold"]["locked"] is False
     assert "validation_metrics" not in candidate

@@ -2,6 +2,7 @@
 from importlib import metadata
 from pathlib import Path
 import json
+import os
 
 import numpy as np
 import pandas as pd
@@ -18,6 +19,30 @@ PRED_COLUMNS = ["run_id","family","feature_set","horizon_h","prediction_set","pa
                 "eligible","label","risk_raw","risk_platt","risk_isotonic"]
 
 
+def dataset_paths(root):
+    """Data locations from configs/default.yaml, with the same AKI_* overrides as notebook 01 (see .env.example).
+
+    The hand-off copy holds validation-only files; a full local dataset is used when present (callers filter splits).
+    """
+    root = Path(root).resolve()
+    paths = yaml.safe_load((root/"configs/default.yaml").read_text(encoding="utf-8"))["paths"]
+
+    def resolve(env, value):
+        path = Path(os.environ.get(env, value))
+        return path if path.is_absolute() else (root/path).resolve()
+
+    data, mimic = resolve("AKI_OUTPUT_ROOT", paths["output_root"]), resolve("AKI_MIMIC_ROOT", paths["mimic_root"])
+    policy = json.loads((root/"artifacts/demo_i/policy.json").read_text(encoding="utf-8"))
+
+    def first(*candidates):
+        return next((p for p in candidates if p.is_file()), candidates[0])
+
+    return {"data_root": data, "mimic_root": mimic,
+            "snapshots": first(data/"datasets/snapshot_dataset_validation.parquet", data/"datasets/snapshot_dataset.parquet"),
+            "events": first(data/"datasets/event_stream_validation.parquet", data/"datasets/event_stream.parquet"),
+            "predictions": root/"artifacts/predictions"/(policy["model"]["run_id"]+".parquet")}
+
+
 def _source_files(root):
     paths = sorted((root/"src/aki_eval").glob("*.py"))
     paths += [root/"src/aki_ml"/name for name in ["models.py","features.py","feature_windows.py","admission_inputs.py","alerts.py"]]
@@ -29,13 +54,13 @@ class StudyData:
         self.root = Path(root).resolve()
         config_path = Path(config_path or self.root/"configs/alert_policy_v1.yaml")
         self.config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-        self.data_root = Path(data_root or self.root.parent/"Cleaned").resolve()
+        self.data_root = Path(data_root).resolve() if data_root else dataset_paths(self.root)["data_root"]
         self.policy_path = self.root/"artifacts/demo_i/policy.json"
         self.policy = json.loads(self.policy_path.read_text(encoding="utf-8"))
         cfg = self.config
         if cfg["selection_data"] != "validation_selection" or cfg["confirmation_data"] != "validation_confirmation":
             raise ValueError("This experiment selects on validation, with a fixed separate patient confirmation role")
-        if cfg["training_oof_role"] != "diagnostic_only" or cfg["feature_set"] != "no_dc":
+        if cfg["training_oof_role"] not in ["diagnostic_only", "none"] or cfg["feature_set"] != "no_dc":
             raise ValueError("Unexpected data role or deployable feature set")
         self.rules = [AlertRule(**rule) for rule in cfg["candidates"]]
         if len({r.name for r in self.rules}) != len(self.rules):
@@ -59,6 +84,11 @@ class StudyData:
             "policy":self.policy_path,"dataset_config":self.root/"configs/default.yaml",
             "evaluation_config":config_path,
         }
+        # v3: selection/confirmation risks recomputed with the batch-independent feature engine (same weights).
+        self.risk_source = cfg.get("risk_source")
+        if self.risk_source:
+            self.paths["risk_predictions"] = self.root/"artifacts/predictions"/(run+"_"+self.risk_source+".parquet")
+            self.paths["admission_inputs"] = self.root/cfg["admission_inputs"]/"manifest.json"
         for key,path in self.paths.items():
             if not path.is_file():
                 raise FileNotFoundError("Required local artifact missing: "+key)
@@ -85,7 +115,7 @@ class StudyData:
         sources = _source_files(self.root)
         self.source_hash = {name:sha256(path) for name,path in sources.items()}
         run_key = digest({"config":cfg,"inputs":self.inputs_hash,"source":self.source_hash})[:16]
-        self.output_root = Path(output_root or self.root/"artifacts/handoff/kejin")
+        self.output_root = Path(output_root or self.root/"artifacts/handoff"/cfg.get("output_directory", "kejin"))
         self.out = self.output_root/(cfg["version"]+"-"+run_key)
         self.prespec = freeze_prespec(self.out,cfg,self.paths,sources)
         write_json(self.output_root/"LATEST.json",{"run_directory":self.out.name,
@@ -127,11 +157,38 @@ class StudyData:
         val["evaluation_role"]=val["patient_id"].map(lookup)
         if val["evaluation_role"].isna().any():
             raise ValueError("Validation predictions lack a snapshot role")
-        self.frames={"train_oof":prepare(train,h),
-                     "validation":prepare(val,h),
-                     "selection":prepare(val[val["evaluation_role"]=="selection"],h),
-                     "confirmation":prepare(val[val["evaluation_role"]=="confirmation"],h)}
+        # train_oof/validation keep the stored legacy risks: Part 0 reproduces Demo I from them.
+        self.frames={"train_oof":prepare(train,h),"validation":prepare(val,h)}
+        if self.risk_source:
+            val=self._recomputed_risks(lookup)
+        self.frames["selection"]=prepare(val[val["evaluation_role"]=="selection"],h)
+        self.frames["confirmation"]=prepare(val[val["evaluation_role"]=="confirmation"],h)
         return self.frames
+
+    def confirm_horizons(self):
+        return sorted({r.confirm_horizon_h for r in self.rules if r.confirm_horizon_h is not None})
+
+    def _recomputed_risks(self, roles):
+        """Validation rows of the alert horizon with Platt risk from risk_source, plus other horizons rules read."""
+        cfg=self.config;h=cfg["alert_horizon_h"];lo,hi=cfg["monitoring_hours"]
+        table=pq.read_table(self.paths["risk_predictions"],
+            filters=[("family","=",cfg["family"]),("feature_set","=",cfg["feature_set"]),
+                     ("horizon_h","in",[h,*self.confirm_horizons()])]).to_pandas()
+        if set(table["split"].astype(str))!={"validation"} or set(table["feature_engine_version"])!={cfg["feature_engine_version"]}:
+            raise ValueError("Recomputed risks must be validation rows from the declared feature engine")
+        table["patient_id"]=table["patient_id"].astype(str)
+        table=table[table["hours_since_icu"].between(lo,hi)]
+        val=table[table["horizon_h"]==h].copy();val["risk"]=val["risk_platt"].astype(float)
+        legacy=self.frames["validation"]
+        if len(val)!=len(legacy) or set(zip(val["patient_id"],val["hours_since_icu"]))!=set(zip(legacy["patient_id"],legacy["hours_since_icu"])):
+            raise ValueError("Recomputed risks cover different origins than the stored validation predictions")
+        for other in self.confirm_horizons():
+            extra=table[table["horizon_h"]==other][["patient_id","hours_since_icu","risk_platt"]]
+            val=val.merge(extra.rename(columns={"risk_platt":f"risk_{other}h"}),on=["patient_id","hours_since_icu"],
+                          how="left",validate="one_to_one")
+            val[f"risk_{other}h"]=val[f"risk_{other}h"].astype(float)
+        val["evaluation_role"]=val["patient_id"].map(roles)
+        return val
 
     def metadata(self):
         frames = self.load()

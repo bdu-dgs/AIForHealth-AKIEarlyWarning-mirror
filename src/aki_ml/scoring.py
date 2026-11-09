@@ -55,8 +55,13 @@ class LockedModel:
         trained_engine = feature_engine_version(getattr(self.pipe, "metadata", {}).get("feature_engine_version"))
         declared_engine = feature_engine_version(m.get("feature_engine_version"))
         if declared_engine != trained_engine:
-            raise RuntimeError("Policy and fitted model declare different feature engines; revalidate a new version")
-        self.feature_engine_version = trained_engine
+            # Fixed weights may run on another feature engine only with a revalidation report for this exact model.
+            report = REPO_ROOT / m.get("feature_engine_revalidation", "")
+            evidence = json.loads(report.read_text(encoding="utf-8")) if report.is_file() else {}
+            if (evidence.get("feature_engine_version"), evidence.get("model_pipeline_sha256")) != (
+                    declared_engine, m["pipeline_sha256"]):
+                raise RuntimeError("Policy and fitted model declare different feature engines; revalidate a new version")
+        self.feature_engine_version = declared_engine
         assert (self.pipe.family, self.pipe.feature_set) == (m["family"], m["feature_set"])
         self.version = m["run_id"]
         self.data_cfg = yaml.safe_load((REPO_ROOT / "configs" / "default.yaml").read_text(encoding="utf-8"))

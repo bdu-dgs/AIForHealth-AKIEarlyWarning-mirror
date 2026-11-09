@@ -143,13 +143,17 @@ class KeJinStudy:
         queries=ref[keys].merge(pool,on=keys,how="left",validate="one_to_one")
         if queries["stay_id"].isna().any():
             raise RuntimeError("Missing replay inputs")
-        context=ReplayData.load(data.paths["events"],pool,data.data_config,data.features)
-        pipe=self._model();h=self.config["alert_horizon_h"]
+        recomputed=bool(getattr(data,"risk_source",None))
+        engine={"engine_version":self.config["feature_engine_version"],
+                "admission_inputs":self.data.root/self.config["admission_inputs"]} if recomputed else {}
+        context=ReplayData.load(data.paths["events"],pool,data.data_config,data.features,**engine)
+        pipe=self._model();h=self.config["alert_horizon_h"];others=data.confirm_horizons() if recomputed else []
         stored_X = queries[data.features].to_numpy(np.float32)
-        with threadpool_limits(limits=2):
-            stored_risk = pipe.predict(stored_X,h,"platt")
-        if not np.allclose(stored_risk,ref["risk"],atol=1e-6,rtol=0):
-            raise RuntimeError("Stored features do not reproduce saved risks; model/key alignment invalid")
+        if not recomputed:
+            with threadpool_limits(limits=2):
+                stored_risk = pipe.predict(stored_X,h,"platt")
+            if not np.allclose(stored_risk,ref["risk"],atol=1e-6,rtol=0):
+                raise RuntimeError("Stored features do not reproduce saved risks; model/key alignment invalid")
         variants={}
         diagnostics=[]
         for lag in cfg["lags_hours"]:
@@ -157,9 +161,22 @@ class KeJinStudy:
             X,ok=context.matrix(queries,lag_hours=lag,clip="all")
             with threadpool_limits(limits=2):
                 risk=pipe.predict(X,h,"platt").astype(float)
+                extra={f"risk_{o}h":pipe.predict(X,o,"platt").astype(float) for o in others}
             risk[~ok]=np.nan
-            variants[lag]=risk
-            if lag == 0:
+            for value in extra.values():
+                value[~ok]=np.nan
+            variants[lag]={"risk":risk,**extra} if extra else risk
+            if lag == 0 and recomputed:
+                # Batch-independent features: replay cut at each origin must reproduce the rescored risks.
+                difference=np.abs(risk-ref["risk"].to_numpy(float))
+                if not (ok.all() and np.nanmax(difference) <= 1e-6):
+                    raise RuntimeError("Origin-cut replay does not reproduce the recomputed risks")
+                diagnostics.append({"role":role,"rows":len(queries),"paired_rows":int(ok.sum()),
+                    "risk_rows_above_1e6_difference":int((difference>1e-6).sum()),
+                    "max_absolute_risk_difference":float(np.nanmax(difference)),
+                    "feature_engine_version":self.config["feature_engine_version"],
+                    "interpretation":"live-equivalent replay reproduces the evaluated risks"})
+            elif lag == 0:
                 close=np.isclose(X,stored_X,rtol=1e-5,atol=1e-4,equal_nan=True)
                 paired=np.isfinite(risk)
                 difference=np.abs(risk[paired]-ref["risk"].to_numpy(float)[paired])
@@ -180,6 +197,8 @@ class KeJinStudy:
         if 0 not in variants:
             raise ValueError("Zero-lag replay control is required")
         stored = stability_grid(ref,variants,rules,thresholds).assign(reference_basis="stored_snapshot")
+        if "zero_lag_event_replay" not in self.config["cutoff"].get("reference_bases",["zero_lag_event_replay"]):
+            return stored
         replay = ref.copy()
         replay["risk"] = variants[0]
         replayed = stability_grid(replay,{lag:value for lag,value in variants.items() if lag != 0},
@@ -227,6 +246,15 @@ class KeJinStudy:
         if (not required.union({"accepted"}) <= set(ranked) or len(ranked) != len(expected) or
                 set(zip(ranked["candidate"], ranked["threshold"])) != expected):
             raise RuntimeError("Sealed selection grid is incomplete; do not reselect after confirmation")
+        if self.config.get("training_oof_role") == "none":
+            selection_summary = self.out/"policy_candidates_validation_selection.csv"
+            if not self._complete_table(selection_summary, required, len(data.rules)):
+                self._atomic_csv(ranked.sort_values(["accepted", "false_alerts_per_patient_day"], ascending=[False, True])
+                                 .groupby("candidate", sort=False).head(1), selection_summary)
+            if not self._complete_png(self.out/"policy_tradeoff_validation_selection.png"):
+                baseline = metrics(data.load()["selection"], data.policy["threshold"]["value"], data.baseline)
+                self._plot_grid(ranked, baseline, "policy_tradeoff_validation_selection.png", "Validation selection")
+            return
         path = self.out/"policy_grid_train_oof.csv"
         diagnostic = None
         if path.exists():
@@ -377,7 +405,11 @@ class KeJinStudy:
         original = self.data.policy
         policy = {"policy_version": self.config["version"],
                   "created_at": datetime.now(timezone.utc).isoformat(),
-                  "model": json.loads(canonical(original["model"])),
+                  "model": json.loads(canonical(original["model"])) | ({
+                      "feature_engine_version": self.config["feature_engine_version"],
+                      "fitted_feature_engine_version": "legacy_prefix_v1",
+                      "feature_engine_revalidation": "artifacts/handoff/feature_v2/rescore_report.json"}
+                      if getattr(self.data,"risk_source",None) else {}),
                   "alert_horizon_h": self.config["alert_horizon_h"],
                   "display_horizons_h": [h for h in self.config["horizons"] if h != self.config["alert_horizon_h"]],
                   "monitoring_hours": self.config["monitoring_hours"],
@@ -415,7 +447,9 @@ class KeJinStudy:
             value=json.loads((self.out/"confirmation.json").read_text(encoding="utf-8"))
             a,b=value["baseline"],value["candidate"]
             text="\n".join([
-                "Model: frozen LightGBM no_dc; no retraining.",
+                "Model: frozen LightGBM no_dc; no retraining."+(
+                    " Features: "+self.config["feature_engine_version"]+" (batch-independent), same weights."
+                    if getattr(self.data,"risk_source",None) else ""),
                 "Choice: "+chosen["candidate"]+"; threshold "+format(chosen["threshold"],".2f")+".",
                 "Selection: deterministic validation patient role with cutoff-stability constraints.",
                 "Confirmation: separate validation patients; previously viewed baseline, not a final test.",

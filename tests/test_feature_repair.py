@@ -153,7 +153,7 @@ def test_admission_reader_rejects_invalid_artifact(tmp_path, baseline_data, conf
         if broken == "patient": frame.loc[0, "patient_id"] = "OTHER-SYNTHETIC"
         if broken == "missing_stay": frame = frame.iloc[1:]
         pq.write_table(pa.Table.from_pandas(frame, preserve_index=False), directory/"inputs.parquet")
-        meta = json.loads((directory/"manifest.json").read_text())
+        meta = json.loads((directory/"manifest.json").read_text(encoding="utf-8"))
         meta["sha256"] = file_hash(directory/"inputs.parquet")
         (directory/"manifest.json").write_text(json.dumps(meta))
     with pytest.raises(ValueError):
@@ -211,6 +211,27 @@ def test_live_model_engine_contract(tmp_path, monkeypatch, config, declared, tra
         with pytest.raises(RuntimeError, match="different feature engines"):
             scoring.LockedModel(policy_path)
 
+
+
+@pytest.mark.parametrize("report_hash,valid", [("match", True), ("other", False), (None, False)])
+def test_fixed_weights_run_on_v2_only_with_matching_revalidation(tmp_path, monkeypatch, config, report_hash, valid):
+    (tmp_path/"configs").mkdir(); (tmp_path/"configs/default.yaml").write_text(yaml.safe_dump(config))
+    modeldir = tmp_path/"model"; modeldir.mkdir(); (modeldir/"pipeline.joblib").write_bytes(b"synthetic")
+    digest = hashlib.sha256(b"synthetic").hexdigest()
+    model = {"model_dir": str(modeldir), "pipeline_sha256": digest, "family": "lightgbm", "feature_set": "no_dc",
+             "run_id": "synthetic", "feature_engine_version": STABLE_FEATURE_ENGINE}
+    if report_hash is not None:
+        (tmp_path/"report.json").write_text(json.dumps({"feature_engine_version": STABLE_FEATURE_ENGINE,
+            "model_pipeline_sha256": digest if report_hash == "match" else "0"*64}))
+        model["feature_engine_revalidation"] = "report.json"
+    policy_path = tmp_path/"policy.json"; policy_path.write_text(json.dumps({"model": model, "threshold": {"locked": True}}))
+    pipeline = SimpleNamespace(family="lightgbm", feature_set="no_dc", metadata={}, feature_names=[])
+    monkeypatch.setattr(scoring, "REPO_ROOT", tmp_path); monkeypatch.setattr(scoring.joblib, "load", lambda _: pipeline)
+    if valid:
+        assert scoring.LockedModel(policy_path).feature_engine_version == STABLE_FEATURE_ENGINE
+    else:
+        with pytest.raises(RuntimeError, match="different feature engines"):
+            scoring.LockedModel(policy_path)
 
 def test_v2_live_feature_path_keeps_precision_and_ignores_future(config):
     admit=datetime(2020,1,1,tzinfo=timezone.utc)
