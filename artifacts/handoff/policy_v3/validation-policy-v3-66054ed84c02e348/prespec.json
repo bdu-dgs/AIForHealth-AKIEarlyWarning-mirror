@@ -1,0 +1,202 @@
+{
+  "created_at": "2026-11-09T20:05:16.252643+00:00",
+  "prespec_sha256": "32ac1611690ae55267b9f3675d0069d082dcc96e8fb4323bb5db19fcb1f718c4",
+  "specification": {
+    "config": {
+      "version": "validation-policy-v3",
+      "output_directory": "policy_v3",
+      "method_amendment": {
+        "previous_version": "kejin-validation-policy-v2",
+        "reason": "legacy feature arithmetic depends on batch composition; risks recomputed with patient_window_v2",
+        "previous_confirmation_patients_reused": true
+      },
+      "model_run_id": "aki_ml_v1_28e0b1fb83",
+      "family": "lightgbm",
+      "feature_set": "no_dc",
+      "horizons": [
+        6,
+        12,
+        24,
+        48
+      ],
+      "alert_horizon_h": 24,
+      "monitoring_hours": [
+        1,
+        72
+      ],
+      "risk_source": "validation_feature_v2",
+      "feature_engine_version": "patient_window_v2",
+      "admission_inputs": "artifacts/feature_v2/admission_inputs",
+      "selection_data": "validation_selection",
+      "confirmation_data": "validation_confirmation",
+      "training_oof_role": "none",
+      "validation_selection_fraction": 0.7,
+      "seed": 20261102,
+      "bootstrap_resamples": 1000,
+      "thresholds": {
+        "start": 0.1,
+        "stop": 0.4,
+        "step": 0.01
+      },
+      "cutoff": {
+        "lags_hours": [
+          0,
+          1,
+          2
+        ],
+        "reference_bases": [
+          "stored_snapshot"
+        ],
+        "selection_patient_cap": 800,
+        "confirmation_patient_cap": 400,
+        "measurement_time_cutoff": true,
+        "fixed_origin_and_windows": true
+      },
+      "feature_checks": {
+        "patient_cap": 384,
+        "rows": 2048,
+        "minimum_rows": 2000,
+        "rtol": 1e-05,
+        "atol": 0.0001
+      },
+      "selection_rule": {
+        "objective": "minimise_false_alerts_per_scorable_patient_day",
+        "min_event_detection_rate": 0.7,
+        "max_detection_loss": 0.05,
+        "min_median_lead_h": 6,
+        "max_median_lead_loss_h": 2,
+        "min_ppv": 0.3333333333333333,
+        "max_alerts_per_patient_day": 1,
+        "max_non_target_patient_alert_increase": 0.0,
+        "max_warning_flip_fraction": 0.1,
+        "max_patient_alert_flip_fraction": 0.1,
+        "min_pair_coverage": 0.85
+      },
+      "candidates": [
+        {
+          "name": "baseline",
+          "sustain_hours": 1,
+          "cooldown_hours": 6
+        },
+        {
+          "name": "sustain2_cool6",
+          "sustain_hours": 2,
+          "cooldown_hours": 6
+        },
+        {
+          "name": "sustain2_cool12",
+          "sustain_hours": 2,
+          "cooldown_hours": 12
+        },
+        {
+          "name": "cool12",
+          "sustain_hours": 1,
+          "cooldown_hours": 12
+        },
+        {
+          "name": "cool24",
+          "sustain_hours": 1,
+          "cooldown_hours": 24
+        },
+        {
+          "name": "episode_cool6",
+          "cooldown_hours": 6,
+          "repeat_mode": "episode"
+        },
+        {
+          "name": "episode_cool12",
+          "cooldown_hours": 12,
+          "repeat_mode": "episode"
+        },
+        {
+          "name": "episode_sustain2_cool6",
+          "sustain_hours": 2,
+          "cooldown_hours": 6,
+          "repeat_mode": "episode"
+        },
+        {
+          "name": "episode_sustain2_cool12",
+          "sustain_hours": 2,
+          "cooldown_hours": 12,
+          "repeat_mode": "episode"
+        },
+        {
+          "name": "rise_repeat_cool6",
+          "cooldown_hours": 6,
+          "repeat_mode": "episode_or_rise",
+          "repeat_delta": 0.05
+        },
+        {
+          "name": "rise_repeat_cool12",
+          "cooldown_hours": 12,
+          "repeat_mode": "episode_or_rise",
+          "repeat_delta": 0.05
+        },
+        {
+          "name": "rapid_rise",
+          "cooldown_hours": 6,
+          "rise_ratio": 1.5,
+          "rise_window_hours": 12
+        },
+        {
+          "name": "confirm12_cool6",
+          "cooldown_hours": 6,
+          "confirm_horizon_h": 12,
+          "confirm_ratio": 0.5
+        },
+        {
+          "name": "confirm12_cool12",
+          "cooldown_hours": 12,
+          "confirm_horizon_h": 12,
+          "confirm_ratio": 0.5
+        },
+        {
+          "name": "early6_cool6",
+          "cooldown_hours": 6,
+          "early_hours": 6,
+          "early_delta": 0.05
+        },
+        {
+          "name": "early6_cool12",
+          "cooldown_hours": 12,
+          "early_hours": 6,
+          "early_delta": 0.05
+        }
+      ]
+    },
+    "input_sha256": {
+      "snapshots": "b27c11be7dc55d01e65b16b1866c5e5e8f0824bc1e3e695c9b103db6c548bd8a",
+      "events": "49d6b233ad824721bb4eb677155c52c34f4e16abf5b5db42b3f7eb3d913d903c",
+      "splits": "0e570a28ae9bd8d63dc2d2404d9acdf7fa3fde1af18ce11de87ffdf470a7a33d",
+      "dictionary": "d38521cf3714ac5444b491833b986897a5e219c2d3eaca7c7e513b4d4c60dfec",
+      "dataset_manifest": "4cea7e01c4827ec5cf48d4284dee6e54eeba54e43b7d368cc693cb0f9f4d51b1",
+      "run_manifest": "69f94aa122ee760caeb71c94e9e17afbe37c65ded7b6d66b2df0e965865d6e23",
+      "predictions": "7faeb590b62a8cda9487a57c69bfbde26d3222a1336326b0c9d6c59687a38a00",
+      "model": "605044df37b040285bf6f91676d4e05506f21cb84aba01119e17bf46d2043ff1",
+      "feature_order": "00852980fc320d9b853442e30fad8c6fc4269668d075c38c232838cc7cfb5f8a",
+      "policy": "4569c8c5d081edb2612e99cfc960861e894c3fbc9473d4d3e55c722c38df8e91",
+      "dataset_config": "2827bf11becb33c8c5d7070b4ad9c6eedf7a72b122aefd8cd56eccf81609ef12",
+      "evaluation_config": "e6cc874b5287e3b451cdba41ffab43eb651a7574a422d0c8f3c02c2cf606b6e6",
+      "risk_predictions": "65579eef5dfd86ef5531beed77aa0fe4c0d43dea8537b4044daddb9117644de3",
+      "admission_inputs": "904f2044805ef3c05598b8df268213909fb6074c3bce522c236f1b75bde05ed1"
+    },
+    "source_sha256": {
+      "src/aki_eval/__init__.py": "3c2f74f61513229d15a259d1874b34d9a7b49c126794383aa50f6d04c1e760ad",
+      "src/aki_eval/checks.py": "e20b9480f5edc42fc825435e73ddcc8f3563c223885a74d67b2424344fddfc4c",
+      "src/aki_eval/data.py": "54f40a683b55e73a73d31606cf47730ff75a06d35c10759114fd6cccaa1dd9ff",
+      "src/aki_eval/policies.py": "c5db05f229229846c9af56d844e31b0388f5d7fbbec04497459720b1039f1c1b",
+      "src/aki_eval/protocol.py": "505ab8178403e7c816f0990807b929c7ad956ce8e6987d631a60b4094c4a8e11",
+      "src/aki_eval/replay.py": "e9d6edf5dadcb1a162fc682236b201dd5a80a66fb4bc4c79e9f55f6e744f8a72",
+      "src/aki_eval/reporting.py": "fdd74292d54de67e35351b8c8b2eb2864f3e5e4e832174fe900ded5a77f372e1",
+      "src/aki_eval/stability.py": "353ea40179409b9c9ba3b859af2d284a7ab573c81ed3c96ab4b3ff95f6d32471",
+      "src/aki_eval/study.py": "ce87eff1e18c57ef55c6ef62836b1a1e0645d2668cd44e609323edefaf6da915",
+      "src/aki_ml/models.py": "c3738b69d9b10c8dcc0e322a415edb029a902b6ef840dce733a418d522049c30",
+      "src/aki_ml/features.py": "a6ef0d5527b8e7e15f6ac95716dfdc2bec32eedbcba48b208b6f2ed51704dcbf",
+      "src/aki_ml/feature_windows.py": "d09f7fbbecadc4132dc3ce4f88433f92993bcd21a62a40ae9b6c0e85cb4a7e73",
+      "src/aki_ml/admission_inputs.py": "405911f90938ef4f2669de458d23bf5f2375477cf1ea3b52ecc8449a384425bd",
+      "src/aki_ml/alerts.py": "3ba3bd7a74ccd118a7140c6f3614de50f4bcea6eb488ff72d37c24f7b3c56e58"
+    },
+    "commit_before_results": false,
+    "registration": "immutable local record; not public preregistration"
+  }
+}

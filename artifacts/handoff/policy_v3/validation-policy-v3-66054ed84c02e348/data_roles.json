@@ -1,0 +1,20 @@
+{
+  "prespec_sha256": "32ac1611690ae55267b9f3675d0069d082dcc96e8fb4323bb5db19fcb1f718c4",
+  "output_directory": "G:\\DB\\physionet.org\\files\\AIForHealth-AKIEarlyWarning\\artifacts\\handoff\\policy_v3\\validation-policy-v3-66054ed84c02e348",
+  "patients": {
+    "train_oof": 22998,
+    "validation": 4950,
+    "selection": 3420,
+    "confirmation": 1530
+  },
+  "rows": {
+    "train_oof": 938762,
+    "validation": 198524,
+    "selection": 137171,
+    "confirmation": 61353
+  },
+  "baseline_validation_previously_viewed": true,
+  "confirmation_interpretation": "internal patient holdout for this candidate; not an untouched final test",
+  "static_service_timing": "provided admission inputs and stored hourly service states; raw source timing not independently available",
+  "metric_denominator": "scorable monitored hours / 24; non_aki means no target event within evaluated horizon"
+}

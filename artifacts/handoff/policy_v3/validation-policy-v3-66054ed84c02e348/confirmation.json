@@ -1,0 +1,32 @@
+{
+  "choice_sha256": "5936a656d995ef3562919ee8142777cbc281f865dc6eba8d33792b881bc73718",
+  "status": "not_confirmed_no_retuning",
+  "candidate_confirmed": false,
+  "baseline": {
+    "patient_days": 2556.375,
+    "alerts_per_patient_day": 0.8042638501784753,
+    "false_alerts_per_patient_day": 0.4236467654393428,
+    "unlabelled_alerts_per_patient_day": 0.1650775023226248,
+    "alert_ppv": 0.3372093023255814,
+    "aki_events": 295,
+    "event_detection_rate": 0.7694915254237288,
+    "lead_time_median_h": 12.805833333333334,
+    "lead_time_mean_h": 13.163313754282918,
+    "non_aki_patients_alerted": 0.35789473684210527
+  },
+  "candidate": {
+    "patient_days": 2556.375,
+    "alerts_per_patient_day": 0.4228644076084299,
+    "false_alerts_per_patient_day": 0.2296220233729402,
+    "unlabelled_alerts_per_patient_day": 0.07549753068309618,
+    "alert_ppv": 0.33896396396396394,
+    "aki_events": 295,
+    "event_detection_rate": 0.7186440677966102,
+    "lead_time_median_h": 11.662777777777778,
+    "lead_time_mean_h": 11.7160678721174,
+    "non_aki_patients_alerted": 0.31093117408906884
+  },
+  "test_evaluated": false,
+  "clinical_validation": false,
+  "patient_bootstrap_resamples": 1000
+}

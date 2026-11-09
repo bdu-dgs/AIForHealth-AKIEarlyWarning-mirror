@@ -1,0 +1,9 @@
+criterion,observed,comparison,limit,passed
+event_detection_rate,0.7186440677966102,>=,0.7194915254237287,False
+lead_time_median_h,11.662777777777778,>=,10.805833333333334,True
+alert_ppv,0.33896396396396394,>=,0.3333333333333333,True
+alerts_per_patient_day,0.4228644076084299,<=,1.0,True
+non_target_event_patients_alerted,0.31093117408906884,<=,0.35789473684210527,True
+worst_point_warning_flip,0.0443450226988617,<=,0.1,True
+worst_patient_alert_flip,0.07,<=,0.1,True
+minimum_paired_coverage,0.9499968748046752,>=,0.85,True

@@ -1,0 +1,2 @@
+role,rows,paired_rows,risk_rows_above_1e6_difference,max_absolute_risk_difference,feature_engine_version,interpretation
+confirmation,15999,15999,0,0.0,patient_window_v2,live-equivalent replay reproduces the evaluated risks

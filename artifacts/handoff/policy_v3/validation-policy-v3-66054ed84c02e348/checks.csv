@@ -1,0 +1,13 @@
+id,check,passed,detail,evidence
+A1,Unique prediction/snapshot keys,True,predictions: rows=4549144; duplicate_keys=0; null_keys=0; snapshots: rows=198524; duplicate_keys=0; null_keys=0,artifact contents
+A2,"Finite probabilities in [0,1]",True,probability_values=13647432; invalid_values=0,artifact contents
+A3,"Schemas, versions and immutable model",True,missing_columns=0; dtype_mismatches=0; versions_match=True; model_hash_matches=True; config_hash_matches=True; dictionary_and_split_hashes_match=True,artifact contents
+A4,Every eligible snapshot has each horizon,True,missing_6h=0; missing_12h=0; missing_24h=0; missing_48h=0,artifact contents
+A5,Frozen patient splits,True,patients=35732; mismatched_or_unassigned_rows=0,artifact contents
+A6,One selected stay per patient,True,mismatched_identity_rows=0,artifact contents
+A7,Chronology and ICU-relative hours,True,invalid_chronology_rows=0,artifact contents
+A8,"Horizon labels, eligibility and alignment",True,invalid_snapshot_labels=0; inconsistent_prediction_labels=0,artifact contents
+A9,No at/after-onset prediction snapshots,True,at_or_after_onset_rows=0,artifact contents
+A10,Past-only feature parity and future injection,True,sampled_rows=2048; compared_features=246; replay_mismatches=0; future_injection_mismatches=0,"deployed features; static admission/service inputs supplied from snapshots, not independently source-timed"
+A11,No future urine contribution,True,urine_related_features=8; changed_values=0,urine-only truncation at every sampled origin; rates and fluid balance included
+A12,No test use declared and OOF patient folds,True,test_declared_unused=True; calibration_on_train_oof=True; historical_training_checks_recorded=True; evidence=manifest_declaration_only; actual_prediction_fold_roles_match=True,historical fitting declaration + current prediction fold invariants; full fitting cannot be re-audited

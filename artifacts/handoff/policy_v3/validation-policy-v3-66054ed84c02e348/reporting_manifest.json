@@ -1,0 +1,8 @@
+{
+  "role": "report-only; no candidate selection or confirmation re-evaluation",
+  "reporter_sha256": "fdd74292d54de67e35351b8c8b2eb2864f3e5e4e832174fe900ded5a77f372e1",
+  "immutable_analysis_files_unchanged": true,
+  "failed_confirmation_criteria": [
+    "event_detection_rate"
+  ]
+}
