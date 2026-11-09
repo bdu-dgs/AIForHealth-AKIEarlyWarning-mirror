@@ -127,6 +127,7 @@ References a versioned stability assessment across different data cutoffs. The c
 | `locked` | Whether the threshold is locked |
 | `selection_basis` | Selection rationale, at most 2,000 characters |
 | `stability_assessment_id` | Optional stability-assessment reference |
+| `confirmation` | Optional `{horizon_h, value, risk}`: the risk of another horizon at the same origin; a warning also requires `risk >= value` |
 
 Thresholds are specific to the model, version, target, horizon, and calibration policy; they are not global constants. Without a threshold or with `locked=false`, the frontend must not derive an AKI alert. Schema validation cannot prove that a validation conclusion is scientifically valid.
 

@@ -33,6 +33,7 @@ artifacts/*
 artifacts/demo_i/*
 !artifacts/demo_i/policy.json
 !artifacts/demo_i/policy_feature_v2.json
+!artifacts/policy/
 # Collaborator hand-back outputs (aggregate tables and figures only).
 !artifacts/handoff/
 MIMIC.docx

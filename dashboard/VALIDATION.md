@@ -23,6 +23,7 @@ This document records checks actually executed, the environment, results, and ap
 | 2026-11-04 | Frontend tests and production build | 7 passed; TypeScript and build passed | Existing UI contracts remain compatible with the runtime fixes |
 | 2026-11-09 | Backend, research and scoring tests | 117 passed | After removing the research extensions; includes the new alert rules and the feature-engine revalidation guard |
 | 2026-11-09 | Frontend tests and production build | 7 passed; build passed | After reverting the trajectory views |
+| 2026-11-09 | Locked policy v3 on the website | Backend 118 passed; frontend 8 passed; build passed | 12 h confirmation in the threshold object (schema, scoring, frontend warning) |
 
 The two backend warnings on 2026-09-12 were future-compatibility deprecation notices from Starlette TestClient for httpx and AnyIO BlockingPortal aliases; the tests themselves passed.
 
@@ -40,42 +41,9 @@ not read.
   `confirm12_cool12` at 0.21; not confirmed (detection loss 5.08 points, limit 5). The notebook was executed end to end
   with nbconvert; it reused the sealed records and left every output file unchanged.
 - The four synthetic demo patients score identically with `policy.json` (legacy) and `policy_feature_v2.json`.
+- After the owner locked v3 (`artifacts/policy/policy_v3.json`), the real model scored the four synthetic patients: warning hours with 12 h confirmation DEMO-002 55 (unchanged), DEMO-003 17 -> 7, DEMO-001/004 0.
 - Jiaju's notebook re-executed into a separate directory: 7 of 12 CSV outputs byte-identical, the other 5 within
   5e-8 relative difference.
-
-## Local handoff import — 2026-11-05
-
-Source: `AKI_handoff_v1.rar`, recording archive code commit `a0c6906f9da626b9e5e5210eb60f9724c9ea43fd`. Current code baseline: `cb16d7d`. The package was extracted to a separate temporary folder; all 251 listed checksums passed. The 23 differing tracked files were preserved locally, and the archive's old code/configuration did not replace current runtime changes.
-
-- Restored 5 model-family directories, stored predictions, aggregate policy reports and the 8-file validation companion dataset. Model/data artifacts are ignored or outside the repository. No GitHub upload was performed as part of this import.
-- The default LightGBM pipeline and feature-order hashes match the committed `demo-v1` policy. Model containers, feature engine, alert helpers and core configs match the archive. Current metadata provides 246 deployed features and 6/12/24/48-hour heads.
-- All 5 model families loaded and matched stored Platt risks on 8 validation snapshots per horizon; maximum difference was approximately `2.98e-8`. XGBoost 3.4.1 was installed in a separate ignored target directory, leaving the project environment unchanged.
-- Ke Jin's setup and Part 0 reproduced the frozen train-OOF and validation alert metrics.
-- Jiaju's setup and Part 0 rescored all 198,524 validation snapshots for 4,950 patients. All four stored risk arrays matched exactly; validation AUROC was 0.865 / 0.839 / 0.809 / 0.782. This reproduces the named historical experiment, not an untouched final test.
-- Backend: 54 passed, with the 2 known dependency warnings. Frontend: 8 passed; TypeScript and production build passed.
-- An isolated service on port 8767 used 4 fictional patients with the restored real LightGBM model. Homepage, 4 horizons, 5 contributors, input-file-triggered rescoring, freshness/fingerprint matching and earlier replay boundaries passed. Watcher errors and pending file writes were zero.
-- Browser inspection confirmed the real model heartbeat, risk display and 5 contributors. The existing service and daily database were not restarted or changed.
-
-The first smoke check hit a native LightGBM access violation while calling `reset_parameter` on a loaded Booster. Successful checks used `predict(..., num_threads=2)` instead; no model file or learned parameter was rewritten.
-
-Imported task notebooks are scaffolds. Only their first two code cells (setup and Part 0) were executed in fresh namespaces; later checks/policy-selection/stability TODOs remain unfinished. The task notebook code cells were preserved unchanged. The archive's Docker mounts were narrowed to this project and its Cleaned companion; Docker and Jupyter GUI operation were not tested.
-
-Training feature rows, test feature rows and raw MIMIC tables are not supplied. The full-dataset manifest is provenance for the original data, not proof that the subset is complete. No original notebook 01/02 rerun, new threshold selection, model retraining, final-test evaluation or clinical validation was performed. Local reports are under `artifacts/handoff-imports/20261105-235915/`.
-
-## Ke Jin audit and policy experiment — 2026-11-05
-
-The executable notebook and independent `src/aki_eval/` package were completed locally. The deployed feature engine, fitted model containers, original alert helpers, learned weights, default policy and dataset config were unchanged.
-
-- New research tests: 45 synthetic cases covering each A1–A12 pass/fail pair, event lifecycle/timing, validation-role partitioning, immutable records, full selection/confirmation/cached rerun, report constraints and unlocked-policy rejection. The main joint run passed 98 tests (44 research + 54 existing backend); the additional report-layer test passed separately, for 99 covered cases.
-- The final notebook's 7 code cells executed in a fresh project Jupyter kernel; its aggregate executed copy is local and source outputs are cleared. Repeated fresh-kernel execution preserved prespec.json, choice.json and confirmation.json byte-for-byte.
-- A1–A12 passed their recorded validation/OOF artifact scope: 4,549,144 prediction rows, 13,647,432 probability values, no key/split/label gaps, and 2,048 sampled feature queries across 246 deployed features. A12's fitting claim is provenance-based, not a fresh fitting audit; static/service timing is not independently available.
-- The original v1 run stopped on an extra bit-exact replay-risk requirement. Diagnostic checks showed stored-feature risk equality, small exported-feature differences that can move tree branches, and no risk change from one tested future-event-injection control. A labelled v2 amendment added zero-lag representation controls and both stored/replay reference bases without tuning the rule grid or quality thresholds. Technical retry files were retained.
-- Candidate: 23% threshold, 12h cooldown. Selection used 3,420 validation patients; confirmation used the other 1,530. Train OOF grids were diagnostic only and generated after the choice was sealed.
-- Confirmation: false alerts/scorable patient-day 0.424 -> 0.246; event detection 76.95% -> 73.56%; median lead 12.82 -> 12.09 h. PPV 33.19% missed the fixed 1/3 floor. It is recorded as not_confirmed_no_retuning; the default website policy was not changed.
-- Confirmation cutoff samples had minimum paired coverage about 95%, worst point-warning flip about 3.95%, and worst patient alert-presence flip 6.75%. Larger zero-lag samples retain numeric representation discrepancies (2/5 feature rows beyond tolerance in selection/confirmation), so the sampled A10 pass is not a universal bit-exact replay guarantee.
-- The candidate JSON has threshold.locked=false and is rejected by the live loader. Neither the hourly policy nor its bootstrap result establishes minute/event-driven operation, an untouched final-test result or clinical effectiveness.
-
-Methodology and report semantics are in [handoff/KEJIN-EVALUATION.md](../handoff/KEJIN-EVALUATION.md). Completed local aggregate outputs are under `artifacts/handoff/kejin/kejin-validation-policy-v2-21d980db7c292219/`; original model/data artifacts remain excluded from Git. No automatic commit, push or PR was performed.
 
 ## Capacity-related test evidence
 
@@ -117,7 +85,7 @@ These checks cover synthetic data on one laptop. They are not evidence of clinic
 ## Not implemented or not yet validated
 
 - Locked test-set evaluation of the model and alert policy (notebook 03).
-- Full-population/event-driven cutoff stability and the remaining Jiaju calibration/predictor studies. Ke Jin's sampled fixed-origin hourly 0/1/2h cutoff stress checks and their numerical recheck are complete; see [the diagnosis](../handoff/REPLAY-NUMERIC-DIAGNOSIS.md).
+- Event-driven (minute-level) alerting; alert policy v3 was selected and confirmed on the hourly grid, with sampled 1-2 h cutoff stress checks.
 - Composite data-confidence formula.
 - Actual hospital-system integration, remote multi-user access, and authentication.
 - Sustained multi-hour load, GPU inference, and end-to-end latency.
@@ -163,41 +131,3 @@ Environment: Windows x64, Python 3.13.5, NumPy 2.1.3, pandas 2.2.3, and Node.js 
 - An isolated fresh launch with --no-browser, a custom port, and temporary data became healthy and printed the matching URL. The test server was stopped afterward.
 - Python compilation and git diff --check passed. Unsupported terminal link-click behavior is outside the launcher's control; copying the URL remains available.
 
-## Post-confirmation numerical diagnosis — 2026-11-05
-
-[REPLAY-NUMERIC-DIAGNOSIS.md](../handoff/REPLAY-NUMERIC-DIAGNOSIS.md) owns the cause analysis and proposed implementation plan. This section records evidence only.
-
-- All 4,950 validation patients / 198,524 hourly origins were compared with the fixed LightGBM and fixed baseline/candidate. Saved features exactly reproduced saved risks.
-- Full-batch and origin-wise zero-lag replay changed risk by >1e-6 at 6,503 and 7,134 origins respectively. The largest observed full-population risk change across controls was approximately 8.67 percentage points. These differences can change warning/event timing.
-- Independent native-time/window-local arithmetic, exact zero-lag static-ratio controls and reconstructible pre-ICU baseline precision were evaluated. The seven-day export first reproduced baseline precision for 3,956 patients / 160,682 rows. A subsequent read-only local raw-lab scan reconstructed every admission baseline: 3,956 pre-ICU minima, 222 remote-history medians and 772 missing baselines; all 198,524 resulting ratio rows matched the saved feature, including missingness.
-- Model-path tracing locates near-zero standard-deviation/slope split sensitivity. The trace was checked using float64 threshold comparisons and independently matched all 17,868 changed leaf outputs in the full-batch changed-risk sample; six new synthetic oracle/trace tests passed.
-- Across the fixed-candidate confirmation controls, detection stayed 73.5593%, false alerts/scorable patient-day ranged approximately 0.2441-0.2457, and PPV remained approximately 33.19%-33.26%, below 1/3. The original confirmation status was preserved.
-- Native arithmetic and complete raw-reconstructed admission-baseline precision were also applied to the original 800/400 cutoff samples at 0/1/2h. Worst point-warning flip was 4.0700% / 3.9542%, worst patient alert-presence flip was 6.00% / 6.75%, and paired coverage remained at least 94.96%. Both roles pass the original stability gates. The original candidate remains best under the original saved-snapshot point metrics.
-- A synthetic reproduction found a stale prior-minimum risk cache in rapid-rise cutoff diagnostics. It affects that rule's diagnostic table, not the selected cooldown-only candidate. Repair is proposed before another search; it was not silently changed in the sealed study.
-- Primary diagnosis and cause/cutoff controls completed and wrote separate aggregate-only plans/manifests. The original prespec, choice, confirmation, model, default policy, analysis sources and `LATEST.json` remained unchanged.
-- The original bootstrap intervals were not recomputed for the sensitivity representations. No new independent confirmation, training, final-test evaluation, clinical validation, website activation, dependency change, commit or push occurred.
-
-## Working-tree review after conversation compaction — 2026-11-05
-
-- The combined `tests` and `dashboard/tests` suite passed: 105 tests, with the two existing Starlette/httpx and AnyIO deprecation warnings. This check uses synthetic data; it does not rerun model fitting or patient-level confirmation.
-- Frozen evaluation-source hashes, original prespec/choice/confirmation byte hashes, the source notebook's executed code hash, and its cleared outputs were rechecked. The candidate remains unconfirmed and unlocked. Both task notebooks contain no saved outputs.
-- The current change set contains 6 modified tracked files and 31 new source/configuration/documentation/test files. Expanded Git inventory and representative ignore checks keep model weights, local aggregate result files and raw MIMIC files excluded. No private-format artifact, symbolic link or common credential-token pattern was found in the candidate source set. This is a bounded check, not a universal secret-detection guarantee.
-- Cleaned a duplicated diagnosis paragraph and one encoding-corrupted check label in the evaluation guide, and clarified the root README's remaining-work status.
-- A new synthetic interrupted-run reproduction showed that the cached-choice branch can leave missing OOF reports unrecovered. The completed real run already has those files; no original choice/confirmation was changed. The recovery defect is pending and documented with the other repairs.
-- This review did not stage, commit or push files, and did not modify the production feature engine or default policy.
-
-## Four-defect repair validation — 2026-11-05
-
-Implementation/version semantics are owned by [FEATURE-REPAIR-V2.md](../handoff/FEATURE-REPAIR-V2.md).
-
-- Final combined suite: **127 passed**, 16 backend/plotting dependency deprecation warnings. The old diagnostic function-clone compatibility failure was fixed before this passing run. New cases cover v2 window/batch/future invariance, nonzero small changes, native time bounds, float64 admission inputs and corrupt artifacts, live engine-contract mismatch, live v2 input precision, stale risk histories, and missing/partial report recovery.
-- Full real-data repair run: 4,950 validation patients, 198,524 origins, 246 deployed features and four fixed model heads. Original labels, origins and target windows were retained in new versioned private artifacts. No model fitting, calibrator refit, threshold search, new confirmation or test-set use occurred.
-- The 100-patient / 3,770-origin real-data context checks passed exact feature and 24h-risk equality for remapped cohorts, query chunks, zero-lag clipping and future/unrelated additions. Single-patient and live v2 paths also have synthetic regression coverage.
-- Export roundtrip preserved all 56 non-feature parent columns and exact four-head predictions on 1,024 serialized rows. Full-precision admission inputs preserved 4,178 available and 772 missing baselines. v2 ratio replay now requires a verified float64 input artifact instead of recovering the denominator from a float32 feature.
-- The fixed candidate's confirmation-role sensitivity PPV was 33.2620%, detection 73.5593%, false-alert rate 0.244096/scorable patient-day and median lead 12.0756h. PPV still misses the original 1/3 floor; the original confirmation was not replaced.
-- Candidate cutoff checks on the original 800/400 samples remained inside the old stability limits: maximum point-warning flip 4.0601% / 3.9542%, patient alert-presence flip 6.00% / 6.75%, minimum paired coverage about 94.96% / 95.00%.
-- Four-horizon AUROC/Brier/calibration diagnostics were exported without fitting a new calibrator. At 24h, AUROC 0.808886 -> 0.808948, Brier 0.090142 -> 0.090140 and 10-bin ECE 0.005508 -> 0.005602.
-- Three in-process 100-patient cycles (features, four risk heads and contributions) took about 0.461-0.475s. No HTTP/sustained-load or denser-minute-stream benchmark is claimed.
-- Missing/truncated OOF grids, summaries and PNGs were regenerated in synthetic interrupted-run cases while choice/confirmation/export hashes stayed unchanged. A missing sealed selection grid raises a restoration error rather than rerunning selection.
-- All **137 protected original files** matched their pre-repair hashes. The default locked model loaded successfully and retained `legacy_prefix_v1`. The new `patient_window_v2` route requires matching fitted-model/policy declarations and was not activated as a replacement.
-- Local results: `artifacts/feature-repair/repair-v2-20261106-01/`. Its `private/` data are sensitive derived artifacts; only aggregate evidence is described here. No existing service/database was changed, and no commit or push was performed in this repair turn.

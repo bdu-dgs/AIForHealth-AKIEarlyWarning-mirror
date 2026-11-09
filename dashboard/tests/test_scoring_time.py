@@ -199,3 +199,19 @@ def test_scoring_uses_the_captured_knowledge_boundary(service, monkeypatch, live
     assert changed and predictions
     assert all(p['risk'] == pytest.approx(.1) for p in predictions)
     assert all(scoring.parse(p['generated_at']) == generated_at for p in predictions)
+
+
+def test_confirmed_threshold_carries_the_other_horizon_and_validates():
+    from dashboard.api.schemas import Threshold
+    threshold = {"value": 0.21, "comparison": ">=", "validation_run_id": "synthetic", "policy_version": "synthetic",
+                 "monitoring_window": "ICU hours 1-72", "calibration_version": "platt", "locked": True,
+                 "selection_basis": "synthetic"}
+    policy = {"threshold": threshold, "alert_policy": {"confirm_horizon_h": 12, "confirm_ratio": 0.5}}
+    scored = {12: (np.array([0.08, 0.2]), None), 24: (np.array([0.3, 0.3]), None)}
+    first, second = (scoring.threshold_for(policy, scored, k, hour=10) for k in (0, 1))
+    assert first["confirmation"] == {"horizon_h": 12, "value": 0.105, "risk": 0.08}
+    assert second["confirmation"]["risk"] == 0.2 and "confirmation" not in threshold   # policy is not mutated
+    Threshold.model_validate(first)
+    early = scoring.threshold_for({"threshold": threshold, "alert_policy": {"early_hours": 6, "early_delta": 0.05}},
+                                  scored, 0, hour=3)
+    assert early["value"] == 0.26 and "confirmation" not in early

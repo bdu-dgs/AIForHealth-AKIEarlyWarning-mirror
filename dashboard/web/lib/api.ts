@@ -52,6 +52,8 @@ export type Prediction = {
     monitoring_window: string;
     selection_basis: string;
     stability_assessment_id: string | null;
+    // Another horizon's risk at the same origin that must also reach `value`.
+    confirmation?: { horizon_h: number; value: number; risk: number } | null;
   };
   drivers: {
     feature: string;
@@ -224,10 +226,12 @@ export function alertOf(
   if (stale) return 'Data updated · result pending';
   if (+new Date(p.horizon_end) <= referenceTime) return 'Prediction window ended';
   if (!p.threshold?.locked) return 'Threshold not locked';
+  const confirmation = p.threshold.confirmation;
   const hit =
-    p.threshold.comparison === '>'
+    (p.threshold.comparison === '>'
       ? p.risk > p.threshold.value
-      : p.risk >= p.threshold.value;
+      : p.risk >= p.threshold.value) &&
+    (!confirmation || confirmation.risk >= confirmation.value);
   return hit ? 'AKI warning' : 'Below threshold';
 }
 export async function history<T>(

@@ -55,6 +55,13 @@ class Observation(Strict):
     available_at: AwareDatetime | None = None
 
 
+class Confirmation(Strict):
+    """Another horizon's risk at the same origin that must also reach `value` for a warning."""
+    horizon_h: int = Field(ge=1)
+    value: float = Field(ge=0, le=1)
+    risk: float = Field(ge=0, le=1)
+
+
 class Threshold(Strict):
     value: float = Field(ge=0, le=1)
     comparison: Literal['>=', '>'] = '>='
@@ -65,6 +72,7 @@ class Threshold(Strict):
     locked: bool
     selection_basis: str = Field(max_length=2000)
     stability_assessment_id: Text | None = None
+    confirmation: Confirmation | None = None
 
 
 class Driver(Strict):

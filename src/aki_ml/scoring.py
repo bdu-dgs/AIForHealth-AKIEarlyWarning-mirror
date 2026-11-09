@@ -20,8 +20,8 @@ from .features import (compute_features, static_feature_names, feature_engine_ve
 from .models import logit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-# Demo I policy on batch-independent features (same weights/threshold); policy.json keeps the original record.
-DEFAULT_POLICY = REPO_ROOT / "artifacts" / "demo_i" / "policy_feature_v2.json"
+# Locked alert policy v3 (12 h-confirmed 24 h warning, batch-independent features, Demo I weights).
+DEFAULT_POLICY = REPO_ROOT / "artifacts" / "policy" / "policy_v3.json"
 MODEL_ID = "aki-lightgbm-no_dc"
 TARGET = "AKI (KDIGO creatinine)"
 MAX_HOUR = 72                      # model monitoring grid: ICU hours 1-72
@@ -205,9 +205,22 @@ def prediction_records(model, patient, origin, fingerprint, input_revision, gene
              "horizon_end": stamp(origin + timedelta(hours=h)), "generated_at": stamp(generated_at),
              "risk": round(float(risk[k]), 6), "drivers": drivers[k]}
         if h == policy["alert_horizon_h"] and lo <= hour <= hi:
-            p["threshold"] = policy["threshold"]
+            p["threshold"] = threshold_for(policy, scored, k, hour)
         out.append(p)
     return out
+
+
+def threshold_for(policy, scored, k, hour):
+    """The policy threshold for row k: early-hour adjustment and the other-horizon confirmation it requires."""
+    t = dict(policy["threshold"])
+    rule = policy.get("alert_policy", {})
+    if rule.get("confirm_horizon_h"):
+        h = int(rule["confirm_horizon_h"])
+        t["confirmation"] = {"horizon_h": h, "value": round(rule["confirm_ratio"] * t["value"], 6),
+                             "risk": round(float(scored[h][0][k]), 6)}
+    if rule.get("early_hours") and hour <= rule["early_hours"]:
+        t["value"] = round(t["value"] + rule["early_delta"], 6)
+    return t
 
 
 def model_identity(model):

@@ -26,6 +26,15 @@ test('missing and unlocked thresholds never invent a warning', () => {
   );
   assert.equal(alertOf(null, false, reference), 'Awaiting model result');
 });
+test('a confirmation horizon below its value suppresses the warning', () => {
+  const confirmed = (risk: number) =>
+    ({
+      ...result,
+      threshold: { ...result.threshold!, confirmation: { horizon_h: 12, value: 0.3, risk } },
+    }) as Prediction;
+  assert.equal(alertOf(confirmed(0.3), false, reference), 'AKI warning');
+  assert.equal(alertOf(confirmed(0.29), false, reference), 'Below threshold');
+});
 test('threshold comparator, stale inputs and expired windows remain distinct', () => {
   assert.equal(alertOf(result, false, reference), 'AKI warning');
   assert.equal(

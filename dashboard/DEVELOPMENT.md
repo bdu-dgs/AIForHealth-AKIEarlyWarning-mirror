@@ -118,7 +118,7 @@ Successful input writes SQLite and a durable outbox. The outbox creates an `acce
 ## Model worker
 
 The implemented worker is `dashboard/model_worker.py`, started by the launcher as a separate process (skip it with
-`--no-model`). It loads the locked model named in `artifacts/demo_i/policy_feature_v2.json` (LightGBM `no_dc`, Platt, `demo-v1`
+`--no-model`). It loads the locked model named in `artifacts/policy/policy_v3.json` (LightGBM `no_dc`, Platt, alert policy v3
 threshold and monitoring window) with the shared scoring code in `src/aki_ml/scoring.py`, and needs the pinned
 packages in `requirements-model.txt` (installed by setup). It is event-driven: every accepted input batch creates a
 patient input revision (`GET /api/patients/{id}/revisions` lists them with their arrival time), and the worker
@@ -187,17 +187,20 @@ The history endpoint uses `start/end` for event-time range, `as_of` for the info
 
 The frontend loads at most 24,000 records per history type with bounded caching. Larger ranges should use pagination, a shorter window, or export. Chart downsampling is display-only and must not be used as model input or export data.
 
-## Research alert-event candidates
+## Alert policy
 
-[Ke Jin’s evaluation](../handoff/KEJIN-EVALUATION.md) separates alert events from instantaneous risk and above-threshold display. Its exported policy remains unlocked, so the live loader rejects it. A cooldown/episode candidate needs an explicit stateful alert adapter and a validated input-frequency contract; copying its threshold into the current chart does not implement its alert behavior. No website default was changed by the evaluation, and feature-replay representation differences remain an open review item.
+The worker loads `artifacts/policy/policy_v3.json` ([docs/ALERT-POLICY.md](../docs/ALERT-POLICY.md)). For predictions
+of the alert horizon inside the monitoring window, `scoring.threshold_for` attaches the locked threshold with a
+`confirmation` object holding the 12 h risk at the same origin and its minimum (0.5 x threshold); the frontend warns
+only when both are reached. Cooldown is not applied to the display; it counts toward alert-burden metrics only.
 
 ## Feature-engine versions
 
 The shared API defaults to `legacy_prefix_v1` for old callers/artifacts. The repaired `patient_window_v2` implementation uses patient-native times and window-local arithmetic. High-precision admission baselines are separate inputs; a rounded feature column is not a replacement.
 
-`LockedModel` requires the engine version in the policy's `model` object to match fitted-pipeline metadata (missing declarations mean v1), unless the policy also names a `feature_engine_revalidation` report for the same model hash and engine. The website default `artifacts/demo_i/policy_feature_v2.json` uses that route: the `demo-v1` weights run on v2 features, revalidated in `artifacts/handoff/feature_v2/rescore_report.json`. Never edit existing weight metadata to bypass the guard. `score_hours` dispatches explicitly, and v2 record keys include the engine identity. Raw observation/static numeric precision is retained in the live input builder.
+`LockedModel` requires the engine version in the policy's `model` object to match fitted-pipeline metadata (missing declarations mean v1), unless the policy also names a `feature_engine_revalidation` report for the same model hash and engine. The website policy `artifacts/policy/policy_v3.json` uses that route: the Demo I weights run on v2 features, revalidated in `artifacts/handoff/feature_v2/rescore_report.json`. Never edit existing weight metadata to bypass the guard. `score_hours` dispatches explicitly, and v2 record keys include the engine identity. Raw observation/static numeric precision is retained in the live input builder.
 
-See [FEATURE-REPAIR-V2.md](../handoff/FEATURE-REPAIR-V2.md) for input artifact validation, the compatibility decision and actual evidence. No prediction JSON schema or clinician-facing configuration was added by this repair.
+See [docs/FEATURE-ENGINE-V2.md](../docs/FEATURE-ENGINE-V2.md) for the defect, the fix and the revalidation evidence.
 
 ## Frontend conventions
 
