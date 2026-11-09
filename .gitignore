@@ -42,3 +42,6 @@ DEMO_I_PLAN.md
 !artifacts/handoff/
 artifacts/handoff/*
 !artifacts/handoff/jiaju/
+# Feature-engine v2 revalidation and alert policy v3 (aggregate tables, figures, records only).
+!artifacts/handoff/feature_v2/
+!artifacts/handoff/policy_v3/

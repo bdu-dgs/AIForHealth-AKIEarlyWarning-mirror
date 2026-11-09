@@ -1,0 +1,93 @@
+{
+  "created_at": "2026-11-09T20:04:51.188412+00:00",
+  "model_run_id": "aki_ml_v1_28e0b1fb83",
+  "model_pipeline_sha256": "605044df37b040285bf6f91676d4e05506f21cb84aba01119e17bf46d2043ff1",
+  "weights_and_calibration_changed": false,
+  "feature_engine_version": "patient_window_v2",
+  "data": "validation only; test split not read",
+  "origins": 198524,
+  "patients": 4950,
+  "admission_inputs": {
+    "schema_version": "admission_inputs_v2",
+    "baseline_rule": "baseline_v1_float64",
+    "rows": 4950,
+    "sha256": "dbf255cfe81c26d1661f47ca984a3009f6dcac257dceb44b4efb283b38c6960a"
+  },
+  "predictions_sha256": "65579eef5dfd86ef5531beed77aa0fe4c0d43dea8537b4044daddb9117644de3",
+  "invariance": {
+    "legacy_prefix_v1": {
+      "rows": 2532,
+      "patients": 60,
+      "batch_vs_single_patient_identical": false,
+      "batch_vs_origin_cut_identical": false,
+      "rows_differing_batch_vs_single": 1202,
+      "rows_differing_batch_vs_origin_cut": 1209
+    },
+    "patient_window_v2": {
+      "rows": 2532,
+      "patients": 60,
+      "batch_vs_single_patient_identical": true,
+      "batch_vs_origin_cut_identical": true,
+      "rows_differing_batch_vs_single": 0,
+      "rows_differing_batch_vs_origin_cut": 0
+    }
+  },
+  "comparison": [
+    {
+      "horizon_h": 6,
+      "rows": 198524,
+      "eligible_rows": 180443,
+      "rows_risk_changed_gt_1e6": 3649,
+      "max_abs_risk_change": 0.035401105880737305,
+      "p99_abs_risk_change": 0.0005304667213931655,
+      "auroc_legacy": 0.8647525511991726,
+      "brier_legacy": 0.02539789588610852,
+      "mean_risk_minus_prevalence_legacy": -0.0002893978833126594,
+      "auroc_v2": 0.8647533191409054,
+      "brier_v2": 0.025397252181512554,
+      "mean_risk_minus_prevalence_v2": -0.0002982414893340328
+    },
+    {
+      "horizon_h": 12,
+      "rows": 198524,
+      "eligible_rows": 162191,
+      "rows_risk_changed_gt_1e6": 4352,
+      "max_abs_risk_change": 0.02712392807006836,
+      "p99_abs_risk_change": 0.0014815418794751098,
+      "auroc_legacy": 0.839355295207356,
+      "brier_legacy": 0.04862345850234877,
+      "mean_risk_minus_prevalence_legacy": -0.0009556250370353694,
+      "auroc_v2": 0.8394442152428563,
+      "brier_v2": 0.04861859510008336,
+      "mean_risk_minus_prevalence_v2": -0.0010186101653041207
+    },
+    {
+      "horizon_h": 24,
+      "rows": 198524,
+      "eligible_rows": 129215,
+      "rows_risk_changed_gt_1e6": 4935,
+      "max_abs_risk_change": 0.08666673302650452,
+      "p99_abs_risk_change": 0.003963174335658548,
+      "auroc_legacy": 0.80888606532316,
+      "brier_legacy": 0.09014154223261422,
+      "mean_risk_minus_prevalence_legacy": -0.0014112812285938109,
+      "auroc_v2": 0.808948299439241,
+      "brier_v2": 0.09014042875041382,
+      "mean_risk_minus_prevalence_v2": -0.0015922301886379525
+    },
+    {
+      "horizon_h": 48,
+      "rows": 198524,
+      "eligible_rows": 90500,
+      "rows_risk_changed_gt_1e6": 8140,
+      "max_abs_risk_change": 0.07132622599601746,
+      "p99_abs_risk_change": 0.01167028799653044,
+      "auroc_legacy": 0.7820216188085964,
+      "brier_legacy": 0.15126714843067673,
+      "mean_risk_minus_prevalence_legacy": -0.0011760356012752715,
+      "auroc_v2": 0.7819300711730299,
+      "brier_v2": 0.15129880463665285,
+      "mean_risk_minus_prevalence_v2": -0.0015067508766088422
+    }
+  ]
+}
