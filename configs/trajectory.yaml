@@ -1,0 +1,12 @@
+# Candidate creatinine task. Revisit leads/tolerance after the real measurement-density audit.
+experiment_version: creatinine-observed-trajectory-v1
+metric: creatinine
+unit: mg/dL
+leads_hours: [6, 12, 24]
+matching_tolerance_hours: 2
+origin_scope: before_either_known_aki
+target_scope: before_discharge_death_rrt
+feature_names: [hours_since_icu, creatinine_last, creatinine_delta_prev, heart_rate_last]
+cutoff_lags_hours: [1, 2]
+ridge_alpha: 1.0
+# No interpolation of truth and no invented confidence interval.

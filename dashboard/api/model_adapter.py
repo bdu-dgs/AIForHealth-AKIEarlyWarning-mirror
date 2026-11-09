@@ -10,6 +10,6 @@ class ModelAdapter(Protocol):
         ...
 
 
-# The current deployment uses requests/*.json and inbox/prediction/*.json as the adapter boundary.
-# The future model worker must coalesce by patient/input_revision, cancel superseded jobs,
-# and measure queue + preprocessing + inference + explanation + display latency separately.
+# The bundled worker uses HTTP revision/history/snapshot/import endpoints and preserves each input revision.
+# requests/*.json and inbox/prediction/*.json remain the file boundary for alternative external workers.
+# Queue, preprocessing, inference, explanation and display latency need separate measurement.

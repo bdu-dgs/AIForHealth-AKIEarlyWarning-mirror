@@ -54,10 +54,17 @@ def demo_batch(path):
     return module.build(module.SCENARIOS, np.random.default_rng(module.SEED))
 
 
-def start_model_worker(url):
+def start_model_worker(url, *, demo_model=False, policy=None, trajectory_model=None):
     """The model runs in its own process; the website keeps working (without risk results) if it cannot start."""
     try:
-        return subprocess.Popen([sys.executable, '-m', 'dashboard.model_worker', '--api', url], cwd=REPO_ROOT)
+        command = [sys.executable, '-m', 'dashboard.model_worker', '--api', url]
+        if demo_model:
+            command.append('--demo-model')
+        if policy:
+            command.extend(['--policy', policy])
+        if trajectory_model:
+            command.extend(['--trajectory-model', trajectory_model])
+        return subprocess.Popen(command, cwd=REPO_ROOT)
     except OSError as error:
         print(f'Model worker could not start: {error}', flush=True)
         return None
@@ -71,7 +78,12 @@ def main():
     parser.add_argument('--demo', nargs='?', const='', default=None, metavar='FILE',
                         help='demo playback with a stepped clock; FILE is an InputBatch JSON (default: synthetic patients)')
     parser.add_argument('--no-model', action='store_true', help='do not start the model worker')
+    parser.add_argument('--demo-model', action='store_true', help='synthetic LR + ridge placeholder; requires built-in --demo')
+    parser.add_argument('--policy', default=None, help='explicit local model policy; default remains Demo I')
+    parser.add_argument('--trajectory-model', default=None, help='explicit local trajectory artifact directory')
     args = parser.parse_args()
+    if args.demo_model and (args.demo != '' or args.policy or args.no_model or args.trajectory_model):
+        parser.error('--demo-model requires built-in --demo, without --policy or --no-model')
     demo, demo_start = None, None
     if args.demo is not None:
         demo = demo_batch(args.demo)
@@ -106,7 +118,7 @@ def main():
         print('Automatic browser opening timed out. Once ready, open: ' + url, flush=True)
     if not args.no_browser:
         threading.Thread(target=open_when_ready, daemon=True).start()
-    worker = None if args.no_model else start_model_worker(url)
+    worker = None if args.no_model else start_model_worker(url, demo_model=args.demo_model, policy=args.policy, trajectory_model=args.trajectory_model)
     print('AKI local workbench: ' + url)
     print('Course project; not for clinical use. Press Ctrl+C to stop.')
     try:

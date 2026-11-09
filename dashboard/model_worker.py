@@ -6,6 +6,7 @@ which is the demo clock during playback). For every revision not yet scored, the
 `artifacts/demo_i/policy.json` and the shared scoring code in `src/aki_ml/scoring.py`. Times outside ICU hours
 1-72 or before the first usable creatinine get no prediction. Revisions are never skipped, so stepping the demo
 clock several hours at once still gives one prediction per hour.
+Observation history and fingerprints share the captured generation time as their knowledge boundary.
 
 Started by the launcher; runs only against the local service on 127.0.0.1:
     python -m dashboard.model_worker --api http://127.0.0.1:8765
@@ -51,7 +52,8 @@ class Worker:
     def beat(self, force=False):
         if force or time.monotonic() - self.last_beat >= HEARTBEAT_SECONDS:
             call(self.base, "/api/model/heartbeat", {
-                "status": self.status, "model_id": self.sc.MODEL_ID, "model_version": self.model.version,
+                "status": self.status, "model_id": self.sc.model_identity(self.model)[0], "model_version": self.model.version,
+                "intended_use": self.model.policy.get("intended_use", "research"),
                 "policy_version": self.model.policy["policy_version"], "detail": self.detail[:500]}, timeout=10)
             self.last_beat = time.monotonic()
 
@@ -60,24 +62,33 @@ class Worker:
         best, offset = 0, 0
         while offset is not None:
             page = call(self.base, f"/api/patients/{pid}/history?kind=prediction&limit=10000&offset={offset}")
-            best = max([best] + [p["input_revision"] for p in page["items"] if p["model_id"] == self.sc.MODEL_ID])
+            best = max([best] + [p["input_revision"] for p in page["items"]
+                                if (p["model_id"], p["model_version"], p["target"]) ==
+                                (self.sc.model_identity(self.model)[0], self.model.version, self.sc.model_identity(self.model)[1])
+                                and (p.get("policy_version") or (p.get("threshold") or {}).get("policy_version")) ==
+                                self.model.policy["policy_version"]])
             offset = page["next_offset"]
         return best
 
-    def observations(self, pid):
-        """Latest revision of every observation known now (history endpoint; faster than the export)."""
+    def observations(self, pid, as_of):
+        """Latest observation revisions visible at this sync's captured knowledge time."""
         obs, offset = [], 0
         while offset is not None:
-            page = call(self.base, f"/api/patients/{pid}/history?kind=observation&limit=10000&offset={offset}")
+            query = urllib.parse.urlencode({"kind": "observation", "limit": 10000,
+                                            "offset": offset, "as_of": self.sc.stamp(as_of)})
+            page = call(self.base, f"/api/patients/{pid}/history?{query}")
             obs += page["items"]
             offset = page["next_offset"]
         return obs
 
     def sync(self):
-        """Score every patient's new revisions, then import all results in one batch (one page refresh)."""
+        """Score visible revisions; return False while an advertised revision is deferred past the captured time."""
         records, done, t0 = [], {}, time.monotonic()
-        generated_at = self.sc.parse(call(self.base, "/api/health")["server_time"]).replace(microsecond=0)
-        jobs = []
+        health = call(self.base, "/api/health")
+        if self.model.policy.get("intended_use") == "synthetic_demo" and health.get("clock", {}).get("mode") != "demo":
+            raise ValueError("The synthetic placeholder runs only in an isolated demo session")
+        generated_at = self.sc.parse(health["server_time"])
+        jobs, pending = [], False
         for patient in call(self.base, "/api/patients"):
             pid = patient["patient_id"]
             if pid not in self.scored:
@@ -87,6 +98,8 @@ class Worker:
             # Revisions that arrived after generated_at (e.g. a demo step during this sync) wait for the next sync.
             todo = [r for r in call(self.base, f"/api/patients/{pid}/revisions")
                     if r["input_revision"] > self.scored[pid] and self.sc.parse(r["available_at"]) <= generated_at]
+            if not todo or max(r["input_revision"] for r in todo) < patient["input_revision"]:
+                pending = True
             if todo:
                 jobs.append((patient, todo))
                 done[pid] = max(r["input_revision"] for r in todo)
@@ -98,17 +111,20 @@ class Worker:
         self.scored.update(done)
         if done:
             print(f"scored {len(done)} patient(s), {len(records)} predictions in {time.monotonic() - t0:.1f} s", flush=True)
+        return not pending
 
     def score(self, patient, revisions, generated_at):
         sc, pid = self.sc, patient["patient_id"]
         admit = sc.parse(patient["icu_admitted_at"])
-        origins = [sc.parse(r["available_at"]).replace(microsecond=0) for r in revisions]
+        origins = [sc.parse(r["available_at"]) for r in revisions]
         hours = [(o - admit) / timedelta(hours=1) for o in origins]
-        obs = self.observations(pid)
+        obs = self.observations(pid, generated_at)
         kept, scored = sc.score_hours(self.model, obs, admit, hours)
         records = []
+        # score_hours preserves query order, including equal-time revisions.
+        positions = iter(enumerate(hours))
         for k, hour in enumerate(kept):
-            i = hours.index(hour)
+            i = next(i for i, candidate in positions if candidate == hour)
             origin, version = origins[i], revisions[i]["input_revision"]
             q = urllib.parse.urlencode({"as_of": sc.stamp(generated_at), "cutoff": sc.stamp(origin)})
             fp = call(self.base, f"/api/patients/{pid}/snapshot?{q}")["input_fingerprint"]
@@ -125,8 +141,9 @@ class Worker:
                 if revision != last_revision:
                     self.status = "scoring"
                     self.beat(force=True)
-                    self.sync()
-                    last_revision, self.status, self.detail = revision, "ready", ""
+                    complete = self.sync()
+                    last_revision = revision if complete else None
+                    self.status, self.detail = "ready", ""
                 self.beat()
             except (urllib.error.URLError, ConnectionError, TimeoutError):
                 if time.monotonic() - reachable > GIVE_UP_SECONDS:
@@ -150,10 +167,18 @@ def main():
     ap = argparse.ArgumentParser(description="AKI live model worker")
     ap.add_argument("--api", default="http://127.0.0.1:8765")
     ap.add_argument("--policy", default=None, help="policy.json (default artifacts/demo_i/policy.json)")
+    ap.add_argument("--demo-model", action="store_true", help="synthetic LR + ridge baseline; demo service only")
+    ap.add_argument("--trajectory-model", help="local trajectory artifact directory to attach to the risk model")
     args = ap.parse_args()
+    if args.demo_model and (args.policy or args.trajectory_model):
+        ap.error("--demo-model and --policy are mutually exclusive")
     try:
-        from aki_ml.scoring import DEFAULT_POLICY, LockedModel
-        model = LockedModel(args.policy or DEFAULT_POLICY)
+        from aki_ml.scoring import DEFAULT_POLICY, load_model
+        if args.demo_model:
+            from aki_ml.baselines import synthetic_demo_model
+            model = synthetic_demo_model()
+        else:
+            model = load_model(args.policy or DEFAULT_POLICY, args.trajectory_model)
     except Exception as error:
         print(f"Model worker not started: {type(error).__name__}: {error}", flush=True)
         return 1

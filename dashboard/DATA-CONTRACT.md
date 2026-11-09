@@ -8,6 +8,7 @@ This document defines normative fields, constraints, and compatibility rules for
 - Schemas are strict: unknown fields are rejected, strings are trimmed, and NaN or infinite values are rejected.
 - IDs are 1–80 characters and may contain only letters, digits, underscores, and hyphens.
 - Times must be timezone-aware ISO 8601 values, such as `2026-09-10T10:30:00+08:00` or `Z`; storage normalizes them to UTC.
+- Preserve the supplied fractional seconds. Do not round or truncate times to whole seconds to select revisions or construct prediction origins; two input revisions may have identical timestamps and still remain distinct revisions.
 - A JSON batch contains at most 10,000 observations or predictions. An input batch also contains at most 1,000 patients.
 - The same `record_id + revision` must always represent the same content; increment `revision` for corrections.
 - If `available_at` is absent, the backend uses the local first-received time and records `availability_basis=local_received`.
@@ -97,6 +98,13 @@ Required prediction fields:
 
 ### Optional fields
 
+#### intended_use and policy_version
+
+`intended_use` is `research` (default for existing files) or `synthetic_demo`. Synthetic output must be explicitly labelled in the UI; an above-threshold synthetic result is a **Demo warning**. The bundled synthetic worker runs only against a demo-clock service.
+
+`policy_version` is optional at prediction level and populated by the bundled worker. It identifies the output policy, including an attached trajectory-model version. Restart checkpoints match model ID, model version, target and policy; record IDs include that identity. Older records can use the threshold policy version when present.
+
+
 #### data_confidence
 
 `data_confidence` ranges from 0 to 1 and requires a nonempty `confidence_definition`. It is a model- or quality-module-defined data-confidence value, not prediction accuracy, and does not change `risk`.
@@ -107,11 +115,15 @@ At most 100 items. Each item contains `feature`, `label`, and `contribution`, pl
 
 #### trajectories
 
-At most 30 series, with at most 10,000 points per series. A series contains `metric`, `label`, and `unit`; each point contains `time` and `value`, with optional `lower` and `upper`. Points must be time-ordered and lie between `origin_time` and `horizon_end`; if present, `lower ≤ value ≤ upper`. The frontend currently draws trajectory lines but not interval bands.
+At most 30 series, with at most 10,000 points per series. A series contains `metric`, `label`, and `unit`; each point contains `time` and `value`, with optional `lower` and `upper`. Points must be time-ordered and lie between `origin_time` and `horizon_end`; if present, `lower ≤ value ≤ upper`. The frontend draws trajectory lines on overview cards and details. An interval band appears only when every point supplies both bounds and the series provides interval metadata.
+
+A series may carry `model_id` and `model_version` (both together), and `method` (at most 500 characters). `interval_level` must be between 0 and 1 and requires `interval_method` (at most 500 characters), plus both bounds at every point. Legacy series remain readable. Schema acceptance does not validate interval coverage.
+
+`risk` remains required for a prediction record. Standalone regression must not invent risk to fit this schema.
 
 #### stability_assessment_id
 
-References a versioned stability assessment across different data cutoffs. The current system stores the field but does not generate stability conclusions.
+References a versioned cutoff assessment. New baseline policies populate this from their evaluation report, whose scope identifies synthetic data. This does not validate stability of the original Demo I model.
 
 #### threshold
 
@@ -145,11 +157,16 @@ The backend owns normalization. Use:
 GET /api/patients/{id}/snapshot?as_of=<time available at generation>&cutoff=<data cutoff>
 ```
 
+The two boundaries are independent: choose the highest observation revision with `available_at <= as_of` first, then exclude measurements after `cutoff`. A correction that moves a measurement beyond the cutoff must not make its superseded version reappear. Static admission inputs and later static corrections obey the same measurement boundary as other variables.
+
+The bundled live and batch scorers capture `generated_at` from the service clock before reading inputs, retain its precision, and use it as `as_of` on every history page and fingerprint request. Each prediction's `data_cutoff` determines which measured values may enter that query. A retrospective prediction with an earlier origin and a later `generated_at` is a recomputation with the knowledge available at generation, not proof of what was known at the earlier origin. To evaluate prospective performance, select the historical knowledge boundary explicitly; do not backdate `generated_at` or reinterpret a recomputation as an original warning.
+
 Prediction import recomputes and verifies the fingerprint. After input changes, old predictions may remain in history but are marked stale in current results.
 
 ## Compatibility
 
 - v1 rejects unknown fields.
-- New optional fields must preserve readability of existing v1 files.
+- New optional fields preserve readability and idempotent reimport of existing v1 files. Comparisons normalize absent defaults without rewriting stored history.
+- Older strict consumers may reject newly emitted optional fields. Update both sides together or omit new fields when exporting to an older consumer.
 - Removing or renaming fields, changing units, or changing time meaning normally requires a new `schema_version` and migration plan.
 - JSON/ZIP exchange, model scheduling, HTTP pagination, and UI behavior belong in the development guide rather than this contract.

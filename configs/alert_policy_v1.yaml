@@ -1,0 +1,59 @@
+# Research candidate, not a clinical operating policy. Model and original Demo I remain fixed.
+version: kejin-validation-policy-v2
+method_amendment:
+  previous_version: kejin-validation-policy-v1
+  reason: exported_event_numeric_representation_requires_zero_lag_control
+  previous_run_aborted_before_choice: true
+  confirmation_not_used: true
+  policy_grid_and_quality_constraints_unchanged: true
+model_run_id: aki_ml_v1_28e0b1fb83
+family: lightgbm
+feature_set: no_dc
+horizons: [6, 12, 24, 48]
+alert_horizon_h: 24
+monitoring_hours: [1, 72]
+selection_data: validation_selection
+confirmation_data: validation_confirmation
+training_oof_role: diagnostic_only
+validation_selection_fraction: 0.70
+seed: 20261102
+bootstrap_resamples: 1000
+thresholds: {start: 0.10, stop: 0.40, step: 0.01}
+cutoff:
+  lags_hours: [0, 1, 2]
+  reference_bases: [stored_snapshot, zero_lag_event_replay]
+  selection_patient_cap: 800
+  confirmation_patient_cap: 400
+  measurement_time_cutoff: true
+  fixed_origin_and_windows: true
+feature_checks:
+  patient_cap: 384
+  rows: 2048
+  minimum_rows: 2000
+  rtol: 0.00001
+  atol: 0.0001
+selection_rule:
+  objective: minimise_false_alerts_per_scorable_patient_day
+  min_event_detection_rate: 0.70
+  max_detection_loss: 0.05
+  min_median_lead_h: 6
+  max_median_lead_loss_h: 2
+  min_ppv: 0.3333333333333333
+  max_alerts_per_patient_day: 1
+  max_non_target_patient_alert_increase: 0.0
+  max_warning_flip_fraction: 0.10
+  max_patient_alert_flip_fraction: 0.10
+  min_pair_coverage: 0.85
+candidates:
+  - {name: baseline, sustain_hours: 1, cooldown_hours: 6}
+  - {name: sustain2_cool6, sustain_hours: 2, cooldown_hours: 6}
+  - {name: sustain2_cool12, sustain_hours: 2, cooldown_hours: 12}
+  - {name: cool12, sustain_hours: 1, cooldown_hours: 12}
+  - {name: cool24, sustain_hours: 1, cooldown_hours: 24}
+  - {name: episode_cool6, cooldown_hours: 6, repeat_mode: episode}
+  - {name: episode_cool12, cooldown_hours: 12, repeat_mode: episode}
+  - {name: episode_sustain2_cool6, sustain_hours: 2, cooldown_hours: 6, repeat_mode: episode}
+  - {name: episode_sustain2_cool12, sustain_hours: 2, cooldown_hours: 12, repeat_mode: episode}
+  - {name: rise_repeat_cool6, cooldown_hours: 6, repeat_mode: episode_or_rise, repeat_delta: 0.05}
+  - {name: rise_repeat_cool12, cooldown_hours: 12, repeat_mode: episode_or_rise, repeat_delta: 0.05}
+  - {name: rapid_rise, cooldown_hours: 6, rise_ratio: 1.5, rise_window_hours: 12}

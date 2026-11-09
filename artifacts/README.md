@@ -12,4 +12,31 @@ Everything in this folder except this README and `demo_i/policy.json` is ignored
 | `demo_i/` | `pipeline/demo_i_evaluation.ipynb` | `policy.json` (locked `demo-v1` threshold, monitoring window, alert policy, model hashes; committed), `policy_demo-v0.json`, aggregate validation tables (`*.csv`) and figures (`*.png`) | No |
 | `demo_i/site_data/`, `demo_i/shots/`, `demo_i/patients_now.json` | demo runs and screenshots | Local website data, screenshots and time-shifted synthetic patients | No (synthetic) |
 
-The current run is `aki_ml_v1_28e0b1fb83`. The website's model worker and `scripts/score_dashboard.py` load `demo_i/policy.json` and the model in `models/aki_ml_v1_28e0b1fb83/lightgbm__no_dc/`, so the live model runs only on a computer that holds this folder. To rebuild it, rerun notebook 01 (writes `../Cleaned` and `interim/`), notebook 02 (`models/`, `predictions/`) and `demo_i_evaluation.ipynb` (`demo_i/`).
+The default Demo I run is `aki_ml_v1_28e0b1fb83`. The website's model worker and `scripts/score_dashboard.py` load `demo_i/policy.json` and the model in `models/aki_ml_v1_28e0b1fb83/lightgbm__no_dc/`, so the live model runs only on a computer that holds this folder. To rebuild it, rerun notebook 01 (writes `../Cleaned` and `interim/`), notebook 02 (`models/`, `predictions/`) and `demo_i_evaluation.ipynb` (`demo_i/`).
+
+For an existing matching run, restore its authorized local `lightgbm__no_dc` model directory at that path. The worker verifies `pipeline.joblib` against `pipeline_sha256` in the policy before loading it. `Setup-AKI.cmd` installs libraries but does not download or train weights. Restoring only `policy.json` is insufficient. Keep the fitted artifact and its provenance files together; do not replace the policy hash to make an unrelated model load.
+
+
+## Local handoff restoration
+
+On 2026-11-05, the authorized handoff restored all five model-family directories, saved predictions and aggregate Demo I tables for `aki_ml_v1_28e0b1fb83`. The default pipeline and feature-order hashes match the committed policy. At restoration, the fitted model containers, feature engine and configs matched the package snapshot, while current runtime fixes were preserved. Subsequent feature-engine repairs are versioned separately below.
+
+Validation-only companion data were copied to `../Cleaned/` with their original subset filenames. Training features and test features remain absent. Import manifests and check reports are ignored under `handoff-imports/20261105-235915/`. These files are local, not included in a source clone. Details are in [handoff/README.md](../handoff/README.md).
+
+## Ke Jin evaluation outputs
+
+Versioned `artifacts/handoff/kejin/` outputs include immutable prespec/choice records, A1–A12 checks, OOF diagnostics, validation-role grids, paired bootstrap tables, zero-lag representation controls, trade-off figures and an executed aggregate-only notebook. `LATEST.json` points to the completed run. These files remain local and ignored; no model weights or patient rows are copied into the aggregate result package.
+
+The current v2 candidate is 23% with 12h cooldown. It is marked unconfirmed and `threshold.locked=false` after missing the confirmation PPV floor. It must not replace the live policy. Methodology and limitations are in [handoff/KEJIN-EVALUATION.md](../handoff/KEJIN-EVALUATION.md).
+
+## Independent development baselines
+
+`extensions/<run_id>-<timestamp>/` contains `pipeline.joblib`, `manifest.json`, `report.json` and, for classification, `policy.json`. Every execution creates a new directory. Provenance records feature order, dataset/config/source hashes, model hash, software versions and Git commit when available. Classification policies resolve model paths from their own directory and never overwrite `demo_i/policy.json`.
+
+`trajectory-targets/<local-run>/target_events.parquet` and its JSON sidecar hold optional future measurements exported from notebook 01's complete standardized lab view. These may contain patient-derived records and must remain local. The original 72-hour event stream is not rewritten.
+
+These directories remain ignored, including synthetic weights and temporary web-test databases. Commands and offline interfaces are in [pipeline/RESEARCH.md](../pipeline/RESEARCH.md); runtime composition is in [dashboard/DEVELOPMENT.md](../dashboard/DEVELOPMENT.md).
+
+## Feature-repair outputs
+
+`feature-repair/` contains the original-file protection manifest, frozen source, and separate repaired validation runs. Their aggregate tables/manifests describe fixed-weight sensitivity and software checks. Their `private/` subdirectories contain credentialed patient-level float64 admission inputs, corrected snapshots and predictions; keep all of them outside Git. The original `handoff/kejin/` records, latest-run pointer, original datasets and all model weights were hash-verified unchanged. The [repair guide](../handoff/FEATURE-REPAIR-V2.md) owns version semantics and evidence.

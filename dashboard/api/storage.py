@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .schemas import InputBatch, PredictionBatch, now, stamp
+from .schemas import InputBatch, Prediction, PredictionBatch, now, stamp
 
 
 def encode(value):
@@ -120,6 +120,11 @@ class Store:
                 if previous:
                     old_body = json.loads(previous['body'])
                     old_body.pop('availability_basis', None)
+                    if kind == 'prediction':
+                        old_body = Prediction.model_validate(old_body).model_dump(mode='json')
+                        for key in time_keys:
+                            if old_body[key] is not None:
+                                old_body[key] = stamp(old_body[key])
                     candidate = dict(body)
                     if candidate['available_at'] is None:
                         candidate['available_at'] = old_body['available_at']

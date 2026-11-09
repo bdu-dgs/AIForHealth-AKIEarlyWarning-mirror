@@ -1,5 +1,5 @@
 # Run from this folder:  docker compose up --build   then open http://127.0.0.1:8888
-# Mounts the hand-off root (the folder holding AIForHealth-AKIEarlyWarning/ and Cleaned/) at /work.
+# Mount only this repository and the configured Cleaned companion folder.
 services:
   aki:
     build: .
@@ -7,4 +7,5 @@ services:
     ports:
       - "127.0.0.1:8888:8888"     # this computer only; Jupyter runs without a token
     volumes:
-      - ../..:/work
+      - ..:/work/AIForHealth-AKIEarlyWarning
+      - ../../Cleaned:/work/Cleaned:ro

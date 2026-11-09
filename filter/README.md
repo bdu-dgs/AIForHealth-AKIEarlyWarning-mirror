@@ -36,13 +36,13 @@ No `pip install` step is needed for this standalone application.
 
 ### Windows
 
-From the repository folder, double-click:
+Inside this repository's `filter/` folder, double-click:
 
 ```text
 start_filter.bat
 ```
 
-The launcher uses `.venv\Scripts\python.exe` if present; otherwise, it uses the Windows Python launcher (`py -3`). If Python is installed but `py` is unavailable, run:
+The launcher uses `filter/.venv/Scripts/python.exe` if present; otherwise, it uses the Windows Python launcher (`py -3`). To use the website's environment from the repository root, run `.\.venv\Scripts\python.exe -B filter/simple_app/server.py`. If Python is installed but `py` is unavailable, run the following from `filter/`:
 
 ```powershell
 python -B simple_app/server.py
@@ -50,7 +50,7 @@ python -B simple_app/server.py
 
 ### macOS / Linux
 
-From the repository folder:
+From `filter/` (`cd filter` from the repository root):
 
 ```bash
 python3 -B simple_app/server.py
@@ -76,7 +76,7 @@ Do not open `index.html` directly: the interface needs the local Python server.
    | Fill missing | Replace missing values in this column with the specified constant. |
    | Fill value | The replacement text; used only when Fill missing is checked. |
 
-6. Click **Porcess** to run the configured cleaning steps. This button spelling is retained from the original interface requirement in both languages.
+6. Click **Process** to run the configured cleaning steps.
 7. Review **Cleaned results** and click **Download cleaned CSV**.
 8. Use **Clear session data** when finished, or stop the server.
 
@@ -137,7 +137,7 @@ simple_app/
 
 ## Tests
 
-From the repository folder:
+From `filter/` (`cd filter` from the repository root):
 
 ```powershell
 python -B -m unittest discover -s simple_app -p test_filter.py -v

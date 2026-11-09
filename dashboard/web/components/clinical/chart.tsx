@@ -5,6 +5,8 @@ export type Point = {
   t: number;
   v: number;
   confidence?: number | null;
+  lower?: number | null;
+  upper?: number | null;
   label?: string;
 };
 // Preserve first/last/min/max in each display bucket; never average away spikes.
@@ -34,6 +36,7 @@ export function ClinicalChart({
   forecast = [],
   formatTick,
   threshold = null,
+  intervalLabel,
 }: {
   points: Point[];
   start: number;
@@ -44,6 +47,7 @@ export function ClinicalChart({
   forecast?: Point[];
   formatTick?: (time: number) => string;
   threshold?: number | null;
+  intervalLabel?: string;
 }) {
   const id = useId().replaceAll(':', '');
   const [hover, setHover] = useState<Point | null>(null);
@@ -68,8 +72,11 @@ export function ClinicalChart({
       Math.max(0.1, (threshold ?? 0) * 2, ...all.map((p) => p.v * 1.15)) * 20,
     ) / 20,
   );
-  const min = risk ? 0 : Math.min(...all.map((p) => p.v));
-  const max = risk ? riskTop : Math.max(...all.map((p) => p.v));
+  // Only label/display uncertainty when its producer supplies both bounds and their meaning.
+  const bounded = !!intervalLabel && forecast.length > 0 &&
+    forecast.every((p) => p.lower != null && p.upper != null && p.lower <= p.v && p.v <= p.upper);
+  const min = risk ? 0 : Math.min(...all.map((p) => p.v), ...(bounded ? forecast.map((p) => p.lower!) : []));
+  const max = risk ? riskTop : Math.max(...all.map((p) => p.v), ...(bounded ? forecast.map((p) => p.upper!) : []));
   const pad = risk
     ? 0
     : Math.max((max - min) * 0.12, Math.abs(max) * 0.02, 0.01);
@@ -205,6 +212,16 @@ export function ClinicalChart({
             strokeWidth="2"
           />
         )}
+        {bounded && (
+          <polygon
+            aria-label={intervalLabel}
+            points={[
+              ...forecast.map((p) => x(p.t) + ',' + y(p.upper!)),
+              ...[...forecast].reverse().map((p) => x(p.t) + ',' + y(p.lower!)),
+            ].join(' ')}
+            fill="#6682c2" opacity="0.15"
+          />
+        )}
         {forecast.length > 0 && (
           <polyline
             points={forecast.map((p) => x(p.t) + ',' + y(p.v)).join(' ')}
@@ -214,6 +231,9 @@ export function ClinicalChart({
             strokeDasharray="6 4"
           />
         )}
+        {forecast.map((p, i) => (
+          <circle key={'forecast-' + i} cx={x(p.t)} cy={y(p.v)} r="3" fill="#6682c2" />
+        ))}
         {data.length === 1 && !risk && (
           <circle cx={x(data[0].t)} cy={y(data[0].v)} r="4" fill="#248b88" />
         )}
@@ -241,6 +261,7 @@ export function ClinicalChart({
               ? 'Each point is the probability at one prediction origin; emphasis reflects the provided data confidence'
               : 'Measured data · lines do not imply measurements in between'}
             {forecast.length > 0 ? '\u00a0\u00a0┄ Model forecast trajectory' : ''}
+            {bounded ? ' · ' + intervalLabel : ''}
           </>
         )}
       </div>

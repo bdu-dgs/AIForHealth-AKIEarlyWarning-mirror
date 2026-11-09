@@ -2,7 +2,7 @@
 
 This document covers website architecture, backend integration, and change conventions. Installation and routine operation are in [README.md](README.md); normative JSON fields are in [DATA-CONTRACT.md](DATA-CONTRACT.md); test evidence is in [VALIDATION.md](VALIDATION.md).
 
-The website uses one local FastAPI process for the React page, HTTP API, SSE updates, and SQLite data layer, plus a separate model worker process (`model_worker.py`) that scores new input with the locked LightGBM model (see [Model worker](#model-worker)).
+The website uses one local FastAPI process for the React page, HTTP API, SSE updates, and SQLite data layer, plus a separate model worker process (`model_worker.py`) that scores input with an explicitly selected adapter (default: locked LightGBM) (see [Model worker](#model-worker)).
 
 ## Documentation maintenance
 
@@ -11,6 +11,7 @@ Maintain each fact fully in one primary document and use links plus a short summ
 | Information | Primary document |
 |---|---|
 | Research goals, candidate models, notebooks, and research artifacts | Root `README.md` |
+| Offline extension definitions, extraction, baseline modules and run procedure | `pipeline/RESEARCH.md` |
 | User installation, startup, and website operation | `dashboard/README.md` |
 | Module responsibilities, integration order, API inventory, and development workflow | This document |
 | JSON fields, types, time equations, revisions, and fingerprint algorithm | `DATA-CONTRACT.md` |
@@ -31,7 +32,7 @@ When updating documentation:
 - React handles entry, queries, and display; model computation enters through the versioned contract.
 - Store observations by append and revision; historical replay is read-only.
 - Do not conflate measurement time, source availability time, local receipt time, prediction origin time, or generation time.
-- Without model output, keep an empty state; do not generate demo, rule-based, or random risk.
+- Without model output, keep an empty state. An explicit `--demo --demo-model` session may use the synthetic baseline adapter; missing real weights must never trigger simulated risk automatically.
 - Only thresholds with complete validation metadata and `locked=true` may produce an AKI alert.
 - Keep the local real-time workflow separate from the MIMIC CSV preview.
 - Do not commit local databases, MIMIC files, photos, models, patient-level artifacts, or credentials.
@@ -50,7 +51,7 @@ When updating documentation:
 | `api/dataset_preview.py` | Read-only MIMIC subset preview |
 | `api/main.py` | HTTP, SSE, local request protection, service clock, model status, and compiled page |
 | `launcher.py` | Starts the website and the model worker; `--demo` for demo playback, `--no-model` to skip the worker |
-| `model_worker.py` | Live scoring of new input revisions with the locked model (`src/aki_ml/scoring.py`) |
+| `model_worker.py` | Live scoring of new input revisions with the selected adapter (`src/aki_ml/scoring.py`) |
 | `web/lib/api.ts` | Shared frontend types, requests, historical pagination, and alert decisions |
 | `web/components/clinical/` | Patient cards, details, entry, preview, and charts |
 | `web/app/page.tsx` | Page routing, overview state, and live updates |
@@ -118,16 +119,27 @@ Successful input writes SQLite and a durable outbox. The outbox creates an `acce
 ## Model worker
 
 The implemented worker is `dashboard/model_worker.py`, started by the launcher as a separate process (skip it with
-`--no-model`). It loads the locked model named in `artifacts/demo_i/policy.json` (LightGBM `no_dc`, Platt, `demo-v1`
+`--no-model`). By default it loads the locked model named in `artifacts/demo_i/policy.json` (LightGBM `no_dc`, Platt, `demo-v1`
 threshold and monitoring window) with the shared scoring code in `src/aki_ml/scoring.py`, and needs the pinned
 packages in `requirements-model.txt` (installed by setup). It is event-driven: every accepted input batch creates a
 patient input revision (`GET /api/patients/{id}/revisions` lists them with their arrival time), and the worker
 scores each new revision at its arrival time (origin = data cutoff) from all observations measured up to then.
-Revisions are not merged, so every arrival gets a result; times outside ICU hours 1-72 or before the first usable
-creatinine get none. The 24h prediction carries the locked threshold inside the monitoring window; 6/12/48h are
-display-only. The worker reports itself with `POST /api/model/heartbeat` every few seconds; `GET /api/health`
+One service-clock time is captured for each sync and used consistently as the knowledge boundary for history
+pagination, scoring inputs, and fingerprints. The field semantics and the distinction between retrospective
+recomputation and prospective replay are defined in [DATA-CONTRACT.md](DATA-CONTRACT.md).
+Revisions are not merged. Scorable arrivals receive results; input coverage and the model monitoring window can exclude a query. For the original Demo I policy, the window is ICU hours 1-72, the 24h output carries its threshold, and 6/12/48h are display-only. Extension policies provide their own range, horizons and threshold. The worker reports itself with `POST /api/model/heartbeat` every few seconds; `GET /api/health`
 shows `model_status` (`running`, `error`, `offline`, `not_configured`). For retrospective hourly scoring of data
 that is already stored, use `scripts/score_dashboard.py`.
+
+The worker keeps fractional seconds and retries a sync when a patient's advertised revision is not yet visible
+at the captured time; it does not cache that global revision as complete. Equal-time input revisions retain
+separate prediction IDs. Shared scoring selects static values per query cutoff and groups equal static states
+for vectorized calls to the unchanged training feature engine. `build_inputs` now returns a static frame aligned
+with its query-hour array; callers should use `score_hours` rather than assume a one-row static frame.
+
+The November 4 timing fixes did not change schemas, fitted weights, feature ordering, calibration or threshold. The later extension work adds compatible optional output fields and independent baseline policies; neither change requires a SQLite migration. Existing stored predictions are not rewritten. Acceptance uses isolated synthetic data; repair
+of pre-fix results must be an explicit append/revision or new-record workflow. Model scoring tests require
+`requirements-dev.txt`, which also installs the model runtime dependencies, but no model weights.
 
 ### Demo playback
 
@@ -146,7 +158,7 @@ When input changes, the backend also updates:
 <data-root>/requests/{patient_id}.json
 ```
 
-The request means “pending processing” and includes patient and encounter IDs, input version, the latest fingerprint, and locations for history and input export. A model worker should:
+The request means “pending processing” and includes patient and encounter IDs, input version, the latest fingerprint, and locations for history and input export. These files support alternative external workers; the bundled worker polls the HTTP revision API and preserves every revision. An external worker choosing to coalesce requests can:
 
 1. Watch or poll `requests`.
 2. Merge tasks by patient and retain only the newest input version.
@@ -172,6 +184,35 @@ The data contract defines result fields, time constraints, and optional explanat
 The history endpoint uses `start/end` for event-time range, `as_of` for the information-availability boundary, `kind` for observation or prediction, and `offset/limit` for pagination. Storage first selects the highest revision visible at `as_of`, then filters by event time, preventing superseded versions from reappearing. Queries and replay do not trigger model computation.
 
 The frontend loads at most 24,000 records per history type with bounded caching. Larger ranges should use pagination, a shorter window, or export. Chart downsampling is display-only and must not be used as model input or export data.
+
+## Extension model adapters
+
+Offline training and target definitions belong in [pipeline/RESEARCH.md](../pipeline/RESEARCH.md). React consumes model output only.
+
+- `scoring.load_model` loads the original LightGBM policy or the versioned `baseline_lr_v1` adapter.
+- Model ID and target come from policy; existing policies without them retain the original identity.
+- Monitoring limits come from model policy; the frontend does not choose training horizons or sampling density.
+- Baseline relative artifact paths resolve from the policy directory when `artifact_base=policy_directory`.
+- `--trajectory-model <directory>` attaches a separate ridge artifact to a compatible risk model. Feature order, configuration and hashes are checked; the composite output policy changes.
+- Example: `Start-AKI.cmd --policy artifacts\extensions\CLASSIFICATION_RUN\policy.json --trajectory-model artifacts\extensions\TRAJECTORY_RUN`. Replace run directories with actual outputs. Add `--demo` for synthetic artifacts.
+- Restart checkpoints match model ID/version, target and policy version. Changing the trajectory creates new output IDs while preserving earlier history.
+- `--demo-model` builds a small synthetic pair in memory in an isolated demo session, with no saved trained artifact by default.
+- LR contributors are standardized-feature contributions on calibrated log-odds, not TreeSHAP or causal effects.
+- Legacy optional defaults are normalized during duplicate-import comparison only; no database rewrite or schema migration is needed.
+
+The worker still has one heartbeat and one selected risk adapter. Concurrent independent workers and a model registry are not implemented.
+
+## Research alert-event candidates
+
+[Ke Jin’s evaluation](../handoff/KEJIN-EVALUATION.md) separates alert events from instantaneous risk and above-threshold display. Its exported policy remains unlocked, so the live loader rejects it. A cooldown/episode candidate needs an explicit stateful alert adapter and a validated input-frequency contract; copying its threshold into the current chart does not implement its alert behavior. No website default was changed by the evaluation, and feature-replay representation differences remain an open review item.
+
+## Feature-engine versions
+
+The shared API defaults to `legacy_prefix_v1` for old callers/artifacts. The repaired `patient_window_v2` implementation uses patient-native times and window-local arithmetic. High-precision admission baselines are separate inputs; a rounded feature column is not a replacement.
+
+`LockedModel` requires the engine version in the policy's `model` object to match fitted-pipeline metadata. Missing declarations in old artifacts mean v1. A future v2 artifact must declare v2 in both places and pass its own model/policy validation; never edit existing weight metadata to bypass the guard. `score_hours` dispatches explicitly, and v2 record keys include the engine identity. Raw observation/static numeric precision is retained in the live input builder.
+
+See [FEATURE-REPAIR-V2.md](../handoff/FEATURE-REPAIR-V2.md) for input artifact validation, the compatibility decision and actual evidence. No prediction JSON schema or clinician-facing configuration was added by this repair.
 
 ## Frontend conventions
 
@@ -204,6 +245,8 @@ Backend:
 .\.venv\Scripts\python.exe -m pytest dashboard/tests -q
 ```
 
+Install developer dependencies first with `.\.venv\Scripts\python.exe -m pip install -r dashboard/requirements-dev.txt`.
+
 Frontend:
 
 ```powershell
@@ -221,9 +264,13 @@ Done (October 2026): modeling data, cohort, and outcome definitions (notebook 01
 Remaining:
 
 1. Evaluate the locked system once on the test set (notebook 03).
-2. Compare prediction stability across data cutoffs and link it to the alert policy.
+2. Run real-data cutoff-stability studies and lock the original-study policy. Shared baseline evaluation exists; synthetic execution is not that study.
 3. Define and validate composite confidence from actual data density.
 4. Measure sustained load, model latency, failure recovery, and physician workflow.
 5. Evaluate a Windows package only after an explicit request.
+
+The current `/api/settings` research flags are placeholders: `validation_threshold=not_selected` does not
+describe the committed Demo I policy. Use the policy and research documents for that experiment's status until
+the settings endpoint is connected to research artifacts. Those flags do not describe new baseline experiments either; read each versioned policy/report. Original-model real-data cutoff stability remains unevaluated.
 
 When GitHub and local work conflict, list the exact files and differences, preserve local work, and then choose the merge strategy. Do not let an old summary overwrite current source, and do not describe plans or placeholder interfaces as implemented functionality.

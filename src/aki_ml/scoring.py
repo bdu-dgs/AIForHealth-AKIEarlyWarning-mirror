@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from .features import compute_features, static_feature_names
+from .features import (compute_features, static_feature_names, feature_engine_version,
+                       LEGACY_FEATURE_ENGINE)
 from .models import logit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -51,8 +52,15 @@ class LockedModel:
         if not self.policy["threshold"]["locked"]:
             raise RuntimeError("policy threshold is not locked")
         self.pipe = joblib.load(model_dir / "pipeline.joblib")
+        trained_engine = feature_engine_version(getattr(self.pipe, "metadata", {}).get("feature_engine_version"))
+        declared_engine = feature_engine_version(m.get("feature_engine_version"))
+        if declared_engine != trained_engine:
+            raise RuntimeError("Policy and fitted model declare different feature engines; revalidate a new version")
+        self.feature_engine_version = trained_engine
         assert (self.pipe.family, self.pipe.feature_set) == (m["family"], m["feature_set"])
         self.version = m["run_id"]
+        self.model_id = m.get("model_id", MODEL_ID)
+        self.target = self.policy.get("target", TARGET)
         self.data_cfg = yaml.safe_load((REPO_ROOT / "configs" / "default.yaml").read_text(encoding="utf-8"))
         dictionary = (REPO_ROOT / self.data_cfg["paths"]["output_root"]).resolve() / "datasets" / "feature_dictionary.csv"
         fd = pd.read_csv(dictionary).set_index("feature") if dictionary.exists() else pd.DataFrame()
@@ -103,24 +111,28 @@ def latest_revisions(observations):
 
 
 def build_inputs(obs, admit, hours, data_cfg):
-    """Event frame, one-row static frame and per-hour surgical_service from dashboard observations."""
+    """Events plus static inputs and surgical_service aligned with each query hour.
+
+    The caller supplies observation revisions visible at its captured generation time.
+    A static measurement is usable only at query hours at or after its measurement time.
+    """
+    hours = np.asarray(hours, np.float64)
     static_cols = static_feature_names(data_cfg)
     rows = pd.DataFrame([{"metric": o["metric"], "value": float(o["value"]),
                           "t": (parse(o["measured_at"]) - admit) / timedelta(hours=1)} for o in obs])
     if rows.empty:
         rows = pd.DataFrame(columns=["metric", "value", "t"])
     is_static = rows["metric"].isin(static_cols)
-    static = {c: np.nan for c in static_cols}
+    static = pd.DataFrame(np.nan, index=np.arange(len(hours)), columns=static_cols)
     for c in static_cols:                                  # one-hot / flag defaults: absent means 0
         if c.startswith(("admission_type_", "admission_location_group_", "first_careunit_")) or c.endswith("_dc"):
             static[c] = 0.0
-    for _, r in rows[is_static].sort_values("t").iterrows():
-        static[r["metric"]] = r["value"]
-    if np.isnan(static["age_over_89"]):
-        static["age_over_89"] = float(static["age_years"] > 89) if not np.isnan(static["age_years"]) else np.nan
-    if np.isnan(static["baseline_cr_available"]):
-        static["baseline_cr_available"] = float(not np.isnan(static["baseline_cr_admission"]))
-    static = pd.DataFrame([static], index=[0])
+    for _, r in rows[is_static].sort_values("t", kind="stable").iterrows():
+        static.loc[hours >= r["t"], r["metric"]] = r["value"]
+    static["age_over_89"] = static["age_over_89"].fillna(
+        (static["age_years"] > 89).astype(float).where(static["age_years"].notna()))
+    static["baseline_cr_available"] = static["baseline_cr_available"].fillna(
+        static["baseline_cr_admission"].notna().astype(float))
 
     svc = rows[rows["metric"] == "surgical_service"].sort_values("t")
     surgical = np.array([svc.loc[svc["t"] <= h, "value"].iloc[-1] if (svc["t"] <= h).any() else 0.0 for h in hours])
@@ -147,9 +159,10 @@ def coverage(ev, hours, data_cfg):
 
 
 def score_hours(model, obs, admit, hours):
-    """Scorable hours (inside 1-72 h and coverage) and model output for them: (hours, {h: (risk, drivers)})."""
+    """Scorable hours and output, preserving query order and duplicate hours: (hours, {h: (risk, drivers)})."""
     hours = np.asarray(hours, np.float64)
-    hours = hours[(hours >= 1) & (hours <= MAX_HOUR)]
+    window = model.policy.get("monitoring_hours", [1, MAX_HOUR])
+    hours = hours[(hours >= window[0]) & (hours <= window[-1])]
     if not len(hours):
         return hours, {}
     ev, static, surgical = build_inputs(obs, admit, hours, model.data_cfg)
@@ -157,8 +170,15 @@ def score_hours(model, obs, admit, hours):
     hours, surgical = hours[ok], surgical[ok]
     if not len(hours):
         return hours, {}
-    X = compute_features(ev, static, surgical, np.zeros(len(hours), np.int64), hours, model.data_cfg,
-                         model.pipe.feature_names)
+    static = static.loc[ok].reset_index(drop=True)
+    X = np.empty((len(hours), len(model.pipe.feature_names)), dtype=np.float32)
+    # Old fitted artifacts retain v1. A v2 model/policy must both declare the new contract.
+    version = feature_engine_version(getattr(model, "feature_engine_version", None))
+    # Queries with the same high-precision static state keep one vectorized call.
+    for indices in static.groupby(list(static.columns), dropna=False, sort=False).indices.values():
+        state = static.iloc[[indices[0]]].set_axis([0])
+        X[indices] = compute_features(ev, state, surgical[indices], np.zeros(len(indices), np.int64),
+                                      hours[indices], model.data_cfg, model.pipe.feature_names, engine_version=version)
     return hours, model.predict(X)
 
 
@@ -172,16 +192,51 @@ def prediction_records(model, patient, origin, fingerprint, input_revision, gene
     hour = (origin - parse(patient["icu_admitted_at"])) / timedelta(hours=1)
     out = []
     for h, (risk, drivers) in scored.items():
-        rid = f"{key}-{h}h"
+        rid = f"{key}-{model_key(model)}-{h}h"
         if len(rid) > 80:
             rid = "aki-" + hashlib.sha256(rid.encode()).hexdigest()[:40]
         p = {"record_id": rid, "revision": 1, "patient_id": patient["patient_id"],
              "encounter_id": patient["encounter_id"], "input_revision": int(input_revision),
-             "input_fingerprint": fingerprint, "model_id": MODEL_ID, "model_version": model.version,
-             "target": TARGET, "origin_time": stamp(origin), "data_cutoff": stamp(origin),
+             "input_fingerprint": fingerprint, "model_id": model_identity(model)[0], "model_version": model.version,
+             "target": model_identity(model)[1], "origin_time": stamp(origin), "data_cutoff": stamp(origin),
+             "intended_use": policy.get("intended_use", "research"), "policy_version": policy["policy_version"],
              "horizon_end": stamp(origin + timedelta(hours=h)), "generated_at": stamp(generated_at),
              "risk": round(float(risk[k]), 6), "drivers": drivers[k]}
-        if h == policy["alert_horizon_h"] and lo <= hour <= hi:
+        if policy.get("threshold") and h == policy["alert_horizon_h"] and lo <= hour <= hi:
             p["threshold"] = policy["threshold"]
+        p["stability_assessment_id"] = policy.get("stability_assessment_id")
+        series = getattr(scored, "trajectory", None)
+        if series:
+            points = [{"time": stamp(origin + timedelta(hours=float(lead))), "value": float(values[k])}
+                      for lead, values in sorted(series["values"].items()) if 0 < lead <= h and np.isfinite(values[k])]
+            if points:
+                p["trajectories"] = [{**{name: value for name, value in series.items() if name != "values"},
+                                      "points": points}]
         out.append(p)
     return out
+
+
+def model_identity(model):
+    """Legacy policies retain their original identity; new policies specify it explicitly."""
+    return (model.policy.get("model", {}).get("model_id", MODEL_ID), model.policy.get("target", TARGET))
+
+
+def model_key(model):
+    identity = [*model_identity(model), model.version, model.policy["policy_version"]]
+    version = feature_engine_version(getattr(model, "feature_engine_version", None))
+    if version != LEGACY_FEATURE_ENGINE:
+        identity.append(version)
+    return hashlib.sha256(json.dumps(identity).encode()).hexdigest()[:16]
+
+
+def load_model(policy_path=DEFAULT_POLICY, trajectory_directory=None):
+    policy = json.loads(Path(policy_path).read_text(encoding="utf-8"))
+    if policy.get("adapter") == "baseline_lr_v1":
+        from .baselines import BaselineModel
+        model = BaselineModel.from_policy(policy_path)
+    else:
+        model = LockedModel(policy_path)
+    if trajectory_directory:
+        from .baselines import WithTrajectory
+        model = WithTrajectory(model, trajectory_directory)
+    return model
