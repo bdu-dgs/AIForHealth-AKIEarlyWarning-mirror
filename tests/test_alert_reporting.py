@@ -10,7 +10,7 @@ from scripts.summarize_alert_policy import diagnostic_representatives
 
 def test_diagnostic_summary_rejects_low_false_alarm_but_poor_detection():
     root=Path(__file__).resolve().parents[1]
-    c=yaml.safe_load((root/"configs/alert_policy_v1.yaml").read_text(encoding="utf-8"))["selection_rule"]
+    c=yaml.safe_load((root/"tests/fixtures/alert_policy_v2_legacy.yaml").read_text(encoding="utf-8"))["selection_rule"]
     base={"event_detection_rate":.76,"lead_time_median_h":12.5,"non_aki_patients_alerted":.37}
     values={"candidate":"rule","alert_ppv":.4,"alerts_per_patient_day":.6,
             "lead_time_median_h":12.,"non_aki_patients_alerted":.3,"analysis_role":"train_oof_diagnostic_not_selection"}

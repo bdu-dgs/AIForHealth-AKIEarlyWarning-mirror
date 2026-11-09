@@ -1,4 +1,4 @@
-"""Run the frozen Ke Jin research workflow locally; no model training or live activation."""
+"""Run the alert-policy study (default: configs/alert_policy_v3.yaml) locally; no model training."""
 import argparse
 import os
 from pathlib import Path
@@ -18,7 +18,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-root",default=None,help="authorized Cleaned companion directory")
     parser.add_argument("--output-root",default=None,help="local aggregate-output root")
-    parser.add_argument("--config",default=None,help="versioned study YAML")
+    parser.add_argument("--config",default=str(ROOT/"configs/alert_policy_v3.yaml"),help="versioned study YAML")
     parser.add_argument("--checks-only",action="store_true")
     args=parser.parse_args()
     with threadpool_limits(limits=2):

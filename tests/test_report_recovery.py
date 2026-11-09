@@ -17,7 +17,7 @@ from aki_eval.protocol import digest, lock_choice, sha256, write_json
 
 def make_study(tmp_path):
     root=Path(__file__).resolve().parents[1]
-    config=yaml.safe_load((root/"configs/alert_policy_v1.yaml").read_text(encoding="utf-8"))
+    config=yaml.safe_load((root/"tests/fixtures/alert_policy_v2_legacy.yaml").read_text(encoding="utf-8"))
     config["selection_rule"].update(min_ppv=0, min_event_detection_rate=0, max_detection_loss=1,
                                     min_median_lead_h=0, max_median_lead_loss_h=100, max_alerts_per_patient_day=100)
     rows=[]

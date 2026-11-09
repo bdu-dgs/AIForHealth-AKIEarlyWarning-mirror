@@ -1,6 +1,0 @@
-# Optional evaluation/notebook environment; do not replace the older archive requirements in place.
--r ../dashboard/requirements-model.txt
-pytest==9.1.1
-matplotlib==3.10.0
-nbclient==0.10.2
-ipykernel==6.29.5

@@ -123,7 +123,7 @@ def test_prespec_and_choice_cannot_be_replaced(tmp_path):
 def test_selection_rejects_less_burdensome_but_unstable_candidate():
     import yaml
     from aki_eval.policies import choose
-    criteria=yaml.safe_load((Path(__file__).resolve().parents[1]/"configs/alert_policy_v1.yaml").read_text(encoding="utf-8"))["selection_rule"]
+    criteria=yaml.safe_load((Path(__file__).resolve().parents[1]/"tests/fixtures/alert_policy_v2_legacy.yaml").read_text(encoding="utf-8"))["selection_rule"]
     common={"event_detection_rate":.75,"lead_time_median_h":12.,"alert_ppv":.4,"alerts_per_patient_day":.7,
             "non_aki_patients_alerted":.3,"repeat_mode":"cooldown","sustain_hours":1,"rise_ratio":np.nan}
     grid=pd.DataFrame([{"candidate":"unstable","threshold":.2,"false_alerts_per_patient_day":.1,**common},
@@ -179,7 +179,7 @@ def test_full_synthetic_selection_confirmation_and_cached_rerun(tmp_path):
     original={"policy_version":"demo-v1","model":{"model_dir":str(modeldir),"pipeline_sha256":sha256(artifact)},
               "threshold":{"locked":True,"value":.21},"alert_policy":{}}
     policyfile=tmp_path/"original.json";policyfile.write_text(json.dumps(original))
-    cfg=yaml.safe_load((Path(__file__).resolve().parents[1]/"configs/alert_policy_v1.yaml").read_text(encoding="utf-8"))
+    cfg=yaml.safe_load((Path(__file__).resolve().parents[1]/"tests/fixtures/alert_policy_v2_legacy.yaml").read_text(encoding="utf-8"))
     cfg["bootstrap_resamples"]=20
     cfg["selection_rule"].update(max_alerts_per_patient_day=10,min_ppv=.1,min_median_lead_h=0)
     rules=[AlertRule("simple"),AlertRule("episode",repeat_mode="episode")]
