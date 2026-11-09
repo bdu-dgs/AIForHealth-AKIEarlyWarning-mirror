@@ -1,57 +1,32 @@
-# Imported handoff package
+# Collaborator hand-off
 
-This directory contains the additional team handoff material from `AKI_handoff_v1.rar`. The archive records source commit `a0c6906f9da626b9e5e5210eb60f9724c9ea43fd`; it is a snapshot, not authority to replace the current repository or change research definitions.
+In November 2026 two team members received a validation-only package (`AKI_handoff_v1`, built by
+`scripts/make_handoff.py` from commit `a0c6906`) to complete two parts of notebook 03. Package instructions are in
+[HANDOFF.md](HANDOFF.md); the Docker files and pinned requirements are in this folder.
 
-## Local layout
+The package holds the locked model, stored predictions (train out-of-fold and validation) and validation-only
+dataset files. It has no raw MIMIC tables, no training feature rows and no test split.
 
-- Models and stored predictions: `artifacts/models/aki_ml_v1_28e0b1fb83/` and `artifacts/predictions/`.
-- Validation-only data: the existing configured companion directory `../Cleaned/`. Keep the `_validation.parquet` names.
-- Import/check reports: ignored `artifacts/handoff-imports/20261105-235915/`.
-- Original package instructions: [HANDOFF.md](HANDOFF.md). Current operation and integration are defined by [dashboard/README.md](../dashboard/README.md), [DEVELOPMENT.md](../dashboard/DEVELOPMENT.md) and [DATA-CONTRACT.md](../dashboard/DATA-CONTRACT.md).
-
-The package does not contain raw MIMIC tables, training feature rows or test feature rows. Its patient split manifest includes split assignments, but does not supply held-out test features. The original `dataset_manifest.json` describes the complete dataset; package-level SHA256 checks and `HANDOFF_MANIFEST.json` identify this partial handoff. Do not rename the subset to a full-dataset filename or make the new extension loader silently accept it as complete.
-
-All model, prediction and derived-data artifacts remain local. The current repository ignores `artifacts/handoff/` too; the archive's statement that those outputs are tracked does not describe this checkout.
-
-## Two team task notebooks
+## Task notebooks
 
 | Notebook | Scope | Status |
 |---|---|---|
-| [KeJin_alert_policy_and_checks.ipynb](../pipeline/KeJin_alert_policy_and_checks.ipynb) | Artifact/leakage checks and a lower-burden alert policy | Full notebook completed; candidate not confirmed and not activated; see [evaluation guide](KEJIN-EVALUATION.md) |
-| [Jiaju_stability.ipynb](../pipeline/Jiaju_stability.ipynb) | Calibration, predictor and risk stability | Setup and Part 0 reproduced; later tasks remain TODO |
+| [KeJin_alert_policy_and_checks.ipynb](../pipeline/KeJin_alert_policy_and_checks.ipynb) | A1-A12 artifact/leakage checks and a lower-burden alert policy | Checks pass. Alert policy v3 (re-run locally, see below) selected a 12 h-confirmed rule that cut false alerts by 46% but was not confirmed (detection loss 5.08 points, limit 5). [Evaluation guide](KEJIN-EVALUATION.md) |
+| [Jiaju_stability.ipynb](../pipeline/Jiaju_stability.ipynb) | Calibration, predictor and risk stability | Complete; aggregate results in `artifacts/handoff/jiaju/` and [RESULTS.md](../artifacts/handoff/jiaju/RESULTS.md) |
 
-These are the concrete two-person work assignments supplied by this archive. Demo I's train-OOF selection/validation-confirmation protocol is retained as the original experiment; no new threshold or candidate policy was selected during this import.
+The collaborators' own alert-policy study (v2) selected on legacy-engine risks and kept its outputs on their
+computer. It was superseded by v3, which was run on the full local dataset after the feature-engine fix:
 
-The later Ke Jin completion uses validation patient roles for selection and confirmation to meet the user requirement, while preserving original Demo I. It exports aggregate results and an unlocked candidate; see [KEJIN-EVALUATION.md](KEJIN-EVALUATION.md). Jiaju tasks remain at their original scaffold status.
+- [FEATURE-REPAIR-V2.md](FEATURE-REPAIR-V2.md): the batch-dependent feature arithmetic, the `patient_window_v2` fix and
+  its revalidation with the locked weights (`scripts/rescore_validation_feature_v2.py`).
+- [REPLAY-NUMERIC-DIAGNOSIS.md](REPLAY-NUMERIC-DIAGNOSIS.md): the collaborators' original diagnosis (historical).
 
-## Running locally
+## Aggregate outputs tracked in Git
 
-The normal project environment matches the required LightGBM, sklearn, NumPy, pandas and Arrow versions. From the repository root, the restored default model can be used with fictional demo patients:
+| Folder | Content |
+|---|---|
+| `artifacts/handoff/jiaju/` | Jiaju's stability tables and figures |
+| `artifacts/handoff/feature_v2/` | Legacy versus v2 feature-engine comparison on validation |
+| `artifacts/handoff/policy_v3/` | Alert policy v3: prespec, checks, selection grid, sealed choice, confirmation, candidate policy |
 
-```powershell
-.\Start-AKI-Demo.cmd --port 8766
-```
-
-Advance to ICU hour 3 for the built-in scenarios' first usable creatinine. An already-running Python service must be restarted to load the restored model and current code.
-
-Notebook setup and Part 0 were executed as Python code cells, not through a Jupyter GUI. JupyterLab and matplotlib were not added during that import stage. The later Ke Jin evaluation added its optional notebook/matplotlib dependencies through `requirements-eval.txt`; see [KEJIN-EVALUATION.md](KEJIN-EVALUATION.md). The supplied `requirements-handoff.txt` describes the original isolated environment and pins pytest 8.3.4, while the main project uses pytest 9.1.1; do not install it wholesale over the current environment.
-
-XGBoost 3.4.1 was installed only in the ignored import report directory's `optional-runtime/` for its smoke check. It was not added to the main environment, and it is not required by the default LightGBM worker.
-
-## Docker configuration
-
-The imported Compose configuration was adapted to mount only this repository and `../Cleaned` separately, with Cleaned read-only, instead of the entire parent folder. Docker was not started or validated during this import.
-
-## Actual checks and limits
-
-See [dashboard/VALIDATION.md](../dashboard/VALIDATION.md) for the aggregate evidence. During the import, model weights, component definitions, the committed Demo I policy, existing runtime source, and daily data were preserved. The packaging helper `scripts/make_handoff.py` was imported but not run; rebuilding a full handoff still requires the original source artifacts.
-
-For a loaded LightGBM Booster, pass `num_threads` to `predict` when limiting test resources. Resetting its parameters triggered a native access violation in the first check; the successful checks used prediction-call options instead and did not save changed model files.
-
-## Later numerical diagnosis
-
-[REPLAY-NUMERIC-DIAGNOSIS.md](REPLAY-NUMERIC-DIAGNOSIS.md) owns the completed post-confirmation investigation and proposed repairs. It preserves the negative candidate result and original policy, and separates numerical/input consistency defects from the later policy-development decision.
-
-## Feature consistency repair
-
-[FEATURE-REPAIR-V2.md](FEATURE-REPAIR-V2.md) owns the implemented four fixes, explicit v1/v2 contracts and new validation evidence. Original model weights and research outputs remain preserved; corrected patient-level inputs/features/predictions are in a separate ignored directory. The original default model still uses its declared legacy contract.
+Patient-level files (predictions, admission inputs, replay features) stay local and ignored.

@@ -21,8 +21,27 @@ This document records checks actually executed, the environment, results, and ap
 | 2026-10-10 | English-only browser controls | Passed; frontend tests 6 passed, build passed | File pickers, date-time fields, and form-validation messages no longer use browser-native widgets that follow the OS language; Data entry page checked in Chrome with `--lang=zh-CN` |
 | 2026-11-04 | Backend and scoring regressions | 36 passed, 2 dependency warnings | Previous 28 checks plus 8 synthetic time-boundary regressions; no model weights loaded |
 | 2026-11-04 | Frontend tests and production build | 7 passed; TypeScript and build passed | Existing UI contracts remain compatible with the runtime fixes |
+| 2026-11-09 | Backend, research and scoring tests | 117 passed | After removing the research extensions; includes the new alert rules and the feature-engine revalidation guard |
+| 2026-11-09 | Frontend tests and production build | 7 passed; build passed | After reverting the trajectory views |
 
 The two backend warnings on 2026-09-12 were future-compatibility deprecation notices from Starlette TestClient for httpx and AnyIO BlockingPortal aliases; the tests themselves passed.
+
+## Feature engine v2 and alert policy v3 — 2026-11-09
+
+Run on the full local dataset (Windows, Python 3.13.5, pinned model packages); validation patients only, test split
+not read.
+
+- `scripts/rescore_validation_feature_v2.py`: float64 admission baselines rebuilt from LABEVENTS for 4,950 validation
+  stays (all match the stored float32 values); 198,524 origins x 4 horizons rescored with the locked weights. Sampled
+  invariance (60 patients, 2,532 origins): legacy engine 1,202 origins differ between batch and single patient; v2
+  0, and 0 against events cut at each origin. AUROC/Brier unchanged to 4 decimals.
+- Alert policy v3 (`validation-policy-v3-66054ed84c02e348`): Part 0 reproduced demo-v1 on the stored risks; A1-A12
+  passed; zero-lag replay reproduced all selection (31,694) and confirmation (15,999) risks exactly. Selected
+  `confirm12_cool12` at 0.21; not confirmed (detection loss 5.08 points, limit 5). The notebook was executed end to end
+  with nbconvert; it reused the sealed records and left every output file unchanged.
+- The four synthetic demo patients score identically with `policy.json` (legacy) and `policy_feature_v2.json`.
+- Jiaju's notebook re-executed into a separate directory: 7 of 12 CSV outputs byte-identical, the other 5 within
+  5e-8 relative difference.
 
 ## Local handoff import — 2026-11-05
 

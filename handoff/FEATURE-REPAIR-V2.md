@@ -1,5 +1,22 @@
 # Feature consistency repair v2
 
+## Status (2026-11-09): v2 in use with the locked weights
+
+`scripts/rescore_validation_feature_v2.py` rebuilt the float64 admission baseline from the local LABEVENTS file
+(every value matches the stored float32 baseline) and rescored all 198,524 validation origins with the unchanged
+weights and calibrators. Report: `artifacts/handoff/feature_v2/rescore_report.json`.
+
+- On 60 sampled patients (2,532 origins), the legacy engine's features differed for 1,202 origins between batch and
+  single-patient computation; v2 features were bit-identical for whole batch, single patient and events cut at each
+  origin.
+- Validation AUROC and Brier score are unchanged to 4 decimals for 6/12/24/48 h; 2-4% of origins change risk by more
+  than 1e-6 (largest change 0.087).
+- Alert policy v3 selects and confirms on these risks. The website default policy
+  `artifacts/demo_i/policy_feature_v2.json` runs demo-v1 on v2 features; `scoring.LockedModel` accepts a policy whose
+  engine differs from the fitted one only with a revalidation report for the same model hash.
+- The one-off diagnosis/validation scripts referenced below were bound to the collaborators' run directories and have
+  been removed.
+
 This document owns the current four software fixes, their integration contracts and repair-validation evidence. [KEJIN-EVALUATION.md](KEJIN-EVALUATION.md) owns the original alert-policy experiment; [REPLAY-NUMERIC-DIAGNOSIS.md](REPLAY-NUMERIC-DIAGNOSIS.md) preserves the pre-repair diagnosis. Website operation remains in [dashboard/README.md](../dashboard/README.md).
 
 ## Current status

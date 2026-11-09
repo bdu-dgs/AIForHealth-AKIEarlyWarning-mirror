@@ -118,7 +118,7 @@ Successful input writes SQLite and a durable outbox. The outbox creates an `acce
 ## Model worker
 
 The implemented worker is `dashboard/model_worker.py`, started by the launcher as a separate process (skip it with
-`--no-model`). It loads the locked model named in `artifacts/demo_i/policy.json` (LightGBM `no_dc`, Platt, `demo-v1`
+`--no-model`). It loads the locked model named in `artifacts/demo_i/policy_feature_v2.json` (LightGBM `no_dc`, Platt, `demo-v1`
 threshold and monitoring window) with the shared scoring code in `src/aki_ml/scoring.py`, and needs the pinned
 packages in `requirements-model.txt` (installed by setup). It is event-driven: every accepted input batch creates a
 patient input revision (`GET /api/patients/{id}/revisions` lists them with their arrival time), and the worker
@@ -195,7 +195,7 @@ The frontend loads at most 24,000 records per history type with bounded caching.
 
 The shared API defaults to `legacy_prefix_v1` for old callers/artifacts. The repaired `patient_window_v2` implementation uses patient-native times and window-local arithmetic. High-precision admission baselines are separate inputs; a rounded feature column is not a replacement.
 
-`LockedModel` requires the engine version in the policy's `model` object to match fitted-pipeline metadata. Missing declarations in old artifacts mean v1. A future v2 artifact must declare v2 in both places and pass its own model/policy validation; never edit existing weight metadata to bypass the guard. `score_hours` dispatches explicitly, and v2 record keys include the engine identity. Raw observation/static numeric precision is retained in the live input builder.
+`LockedModel` requires the engine version in the policy's `model` object to match fitted-pipeline metadata (missing declarations mean v1), unless the policy also names a `feature_engine_revalidation` report for the same model hash and engine. The website default `artifacts/demo_i/policy_feature_v2.json` uses that route: the `demo-v1` weights run on v2 features, revalidated in `artifacts/handoff/feature_v2/rescore_report.json`. Never edit existing weight metadata to bypass the guard. `score_hours` dispatches explicitly, and v2 record keys include the engine identity. Raw observation/static numeric precision is retained in the live input builder.
 
 See [FEATURE-REPAIR-V2.md](../handoff/FEATURE-REPAIR-V2.md) for input artifact validation, the compatibility decision and actual evidence. No prediction JSON schema or clinician-facing configuration was added by this repair.
 

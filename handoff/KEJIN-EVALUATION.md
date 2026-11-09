@@ -1,5 +1,39 @@
 # Ke Jin: artifact checks and alert-policy evaluation
 
+## Current version: alert policy v3 (2026-11-09)
+
+v3 (`configs/alert_policy_v3.yaml`, run `validation-policy-v3-66054ed84c02e348`, outputs in
+`artifacts/handoff/policy_v3/`) replaces the v2 study described below. It keeps v2's 70/30 validation patient roles,
+constraints and 12 rules, and changes two things:
+
+- **Risks** are recomputed with the batch-independent feature engine `patient_window_v2` and the unchanged weights
+  ([FEATURE-REPAIR-V2.md](FEATURE-REPAIR-V2.md)). At zero lag, the cutoff replay now reproduces every evaluated risk
+  exactly (31,694 selection and 15,999 confirmation rows), so the v2 "zero-lag representation" caveat no longer applies.
+  Train out-of-fold risks exist only for the legacy engine, so v3 has no OOF diagnostic.
+- **Four more rules:** multi-horizon confirmation (the 12 h risk must also reach 0.5 x threshold, the share of the 24 h
+  risk expected in the first 12 h under a uniform hazard) and a stricter early threshold (+0.05 at ICU hours 1-6), each
+  with 6 h and 12 h cooldown. 16 rules x 31 thresholds in total.
+
+Selected on 3,420 patients: `confirm12_cool12`, 24 h risk >= 0.21 with 12 h risk >= 0.105 and 12 h cooldown.
+Confirmation on 1,530 patients against demo-v1 on the same risks (1,000 paired patient bootstraps):
+
+| Metric | demo-v1 | Candidate | Difference (95% CI) |
+|---|---:|---:|---:|
+| False alerts / patient-day | 0.424 | 0.230 | -0.194 (-0.219 to -0.171) |
+| Alert PPV | 33.7% | 33.9% | +0.2 pp (-0.9 to +1.3) |
+| AKI event detection | 76.9% | 71.9% | -5.1 pp (-7.7 to -2.7) |
+| Median first-correct-alert lead | 12.8 h | 11.7 h | -1.1 h |
+| Non-AKI patients alerted | 35.8% | 31.1% | -4.7 pp |
+
+All criteria passed except the maximum detection loss of 5 points (observed 5.08; limit 71.95%, observed 71.86% of
+295 events). The candidate is therefore **not confirmed**; no retuning was done and the website keeps demo-v1. The
+confirmation patients were already used once in v2 and the whole validation set was viewed in Demo I, so this is an
+internal holdout, not an untouched test.
+
+The v2 sections below are the collaborators' record; their outputs were not handed back and were not reproduced.
+
+## Original v2 study (superseded)
+
 This guide owns the completed Ke Jin experiment's methods and module interfaces. General website operation stays in [dashboard/README.md](../dashboard/README.md), live JSON rules in [DATA-CONTRACT.md](../dashboard/DATA-CONTRACT.md), and actual checks/results in [VALIDATION.md](../dashboard/VALIDATION.md). [The notebook](../pipeline/KeJin_alert_policy_and_checks.ipynb) is the execution entry point.
 
 ## Scope and system decisions
