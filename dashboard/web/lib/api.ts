@@ -41,8 +41,6 @@ export type Prediction = {
   generated_at: string;
   available_at: string;
   risk: number;
-  intended_use?: "research" | "synthetic_demo";
-  policy_version?: string | null;
   data_confidence: number | null;
   confidence_definition: string | null;
   threshold: null | {
@@ -63,11 +61,6 @@ export type Prediction = {
     unit: string;
   }[];
   trajectories: {
-    model_id?: string | null;
-    model_version?: string | null;
-    method?: string | null;
-    interval_level?: number | null;
-    interval_method?: string | null;
     metric: string;
     label: string;
     unit: string;
@@ -106,7 +99,6 @@ export type Health = {
   revision: number;
   model_status: string;
   model: null | {
-    intended_use?: "research" | "synthetic_demo";
     status: string;
     model_id: string;
     model_version: string;
@@ -236,7 +228,6 @@ export function alertOf(
     p.threshold.comparison === '>'
       ? p.risk > p.threshold.value
       : p.risk >= p.threshold.value;
-  if (p.intended_use === 'synthetic_demo') return hit ? 'Demo warning' : 'Demo below threshold';
   return hit ? 'AKI warning' : 'Below threshold';
 }
 export async function history<T>(

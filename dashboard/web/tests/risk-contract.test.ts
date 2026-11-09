@@ -55,11 +55,3 @@ test('default series is the one with a locked threshold', () => {
   assert.equal(defaultGroup([display]), groupKey(display));
   assert.equal(defaultGroup([]), '');
 });
-
-
-test('synthetic probabilities and thresholds remain explicitly labelled as a demo', () => {
-  const demo = { ...result, intended_use: 'synthetic_demo' as const };
-  assert.equal(alertOf(demo, false, reference), 'Demo warning');
-  assert.equal(alertOf({ ...demo, risk: 0.1 }, false, reference), 'Demo below threshold');
-  assert.equal(alertOf({ ...demo, threshold: null }, false, reference), 'Threshold not locked');
-});

@@ -320,7 +320,7 @@ export function PatientView({
           <span
             className={
               'status-label ' +
-              (['AKI warning', 'Demo warning'].includes(status) ? 'warning' : '')
+              (status === 'AKI warning' ? 'warning' : '')
             }
           >
             {error
@@ -329,7 +329,6 @@ export function PatientView({
                 ? 'Loading'
                 : status + (updating ? ' · updating' : '')}
           </span>
-          {current?.intended_use === "synthetic_demo" && <p className="patient-note">Synthetic model · demonstration only</p>}
           {patient.note && <p className="patient-note">{patient.note}</p>}
           {detail && <small>ICU admission: {fmt(patient.icu_admitted_at)}</small>}
         </div>
@@ -355,18 +354,16 @@ export function PatientView({
           end={chartEnd}
           formatTick={icuHourTick}
           unit={observations[0]?.unit}
-          forecast={trajectory?.points.map((p) => ({
-            t: +new Date(p.time), v: p.value,
-            lower: p.lower, upper: p.upper,
-          })) ?? []}
-          intervalLabel={trajectory?.interval_level && trajectory.interval_method
-            ? (trajectory.interval_level * 100).toFixed(0) + '% prediction interval · ' + trajectory.interval_method
-            : undefined}
+          forecast={
+            detail
+              ? (trajectory?.points.map((p) => ({
+                  t: +new Date(p.time),
+                  v: p.value,
+                })) ?? [])
+              : []
+          }
           empty="No observations available in this period"
         />
-        {detail && trajectory?.model_id && <small className="muted">
-          Forecast: {trajectory.model_id}/{trajectory.model_version} · {trajectory.method}
-        </small>}
       </section>
       <section className="patient-chart risk-chart">
         <div className="chart-title">
@@ -554,7 +551,7 @@ export function PatientView({
           <div className="panel-heading">
             <h2>Prediction and contributing factors</h2>
             <span className="badge">
-              {current?.intended_use === 'synthetic_demo' ? 'Synthetic model · demo only' : current ? 'External model result' : 'Model not yet connected'}
+              {current ? 'External model result' : 'Model not yet connected'}
             </span>
           </div>
           <div className="form-body">

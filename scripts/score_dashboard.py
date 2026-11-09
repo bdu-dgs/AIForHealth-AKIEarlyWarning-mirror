@@ -22,7 +22,7 @@ import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
-from aki_ml.scoring import (DEFAULT_POLICY, MAX_HOUR, load_model, parse,  # noqa: E402
+from aki_ml.scoring import (DEFAULT_POLICY, MAX_HOUR, LockedModel, parse,  # noqa: E402
                             prediction_records, score_hours, stamp)
 
 BATCH_SIZE = 2000                  # predictions per import request (contract limit 10,000)
@@ -64,7 +64,7 @@ def existing_ids(base, pid):
 def score_patient(base, model, patient, generated_at):
     pid = patient["patient_id"]
     admit = parse(patient["icu_admitted_at"])
-    last_hour = min(model.policy.get("monitoring_hours", [1, MAX_HOUR])[-1], int((generated_at - admit) / timedelta(hours=1)))
+    last_hour = min(MAX_HOUR, int((generated_at - admit) / timedelta(hours=1)))
     hours, scored = score_hours(model, patient_observations(base, pid, generated_at), admit, np.arange(1, last_hour + 1))
     if not scored:
         return []
@@ -88,15 +88,12 @@ def main():
     ap.add_argument("--input-file", help="InputBatch JSON to import before scoring (e.g. synthetic patients)")
     ap.add_argument("--out", help="also write the PredictionBatch JSON here")
     ap.add_argument("--dry-run", action="store_true", help="score but do not import")
-    ap.add_argument("--trajectory-model", help="local trajectory artifact directory")
     args = ap.parse_args()
     base = args.api.rstrip("/")
 
     if args.input_file:
         print(f"input import: {api(base, '/api/import', json.loads(Path(args.input_file).read_text(encoding='utf-8')))}")
-    model = load_model(args.policy, args.trajectory_model)
-    if model.policy.get("intended_use") == "synthetic_demo" and api(base, "/api/health")["clock"]["mode"] != "demo":
-        raise ValueError("Synthetic baseline policies require an isolated demo service")
+    model = LockedModel(args.policy)
     # generated_at must not be later than the dashboard clock used for the fingerprint check.
     generated_at = parse(api(base, "/api/health")["server_time"])
     patients = [p for p in api(base, "/api/patients") if not args.patient or p["patient_id"] in args.patient]

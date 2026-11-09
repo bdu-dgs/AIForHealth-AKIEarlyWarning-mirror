@@ -98,13 +98,6 @@ Required prediction fields:
 
 ### Optional fields
 
-#### intended_use and policy_version
-
-`intended_use` is `research` (default for existing files) or `synthetic_demo`. Synthetic output must be explicitly labelled in the UI; an above-threshold synthetic result is a **Demo warning**. The bundled synthetic worker runs only against a demo-clock service.
-
-`policy_version` is optional at prediction level and populated by the bundled worker. It identifies the output policy, including an attached trajectory-model version. Restart checkpoints match model ID, model version, target and policy; record IDs include that identity. Older records can use the threshold policy version when present.
-
-
 #### data_confidence
 
 `data_confidence` ranges from 0 to 1 and requires a nonempty `confidence_definition`. It is a model- or quality-module-defined data-confidence value, not prediction accuracy, and does not change `risk`.
@@ -115,15 +108,11 @@ At most 100 items. Each item contains `feature`, `label`, and `contribution`, pl
 
 #### trajectories
 
-At most 30 series, with at most 10,000 points per series. A series contains `metric`, `label`, and `unit`; each point contains `time` and `value`, with optional `lower` and `upper`. Points must be time-ordered and lie between `origin_time` and `horizon_end`; if present, `lower ≤ value ≤ upper`. The frontend draws trajectory lines on overview cards and details. An interval band appears only when every point supplies both bounds and the series provides interval metadata.
-
-A series may carry `model_id` and `model_version` (both together), and `method` (at most 500 characters). `interval_level` must be between 0 and 1 and requires `interval_method` (at most 500 characters), plus both bounds at every point. Legacy series remain readable. Schema acceptance does not validate interval coverage.
-
-`risk` remains required for a prediction record. Standalone regression must not invent risk to fit this schema.
+At most 30 series, with at most 10,000 points per series. A series contains `metric`, `label`, and `unit`; each point contains `time` and `value`, with optional `lower` and `upper`. Points must be time-ordered and lie between `origin_time` and `horizon_end`; if present, `lower ≤ value ≤ upper`. The frontend currently draws trajectory lines but not interval bands.
 
 #### stability_assessment_id
 
-References a versioned cutoff assessment. New baseline policies populate this from their evaluation report, whose scope identifies synthetic data. This does not validate stability of the original Demo I model.
+References a versioned stability assessment across different data cutoffs. The current system stores the field but does not generate stability conclusions.
 
 #### threshold
 
@@ -166,7 +155,6 @@ Prediction import recomputes and verifies the fingerprint. After input changes, 
 ## Compatibility
 
 - v1 rejects unknown fields.
-- New optional fields preserve readability and idempotent reimport of existing v1 files. Comparisons normalize absent defaults without rewriting stored history.
-- Older strict consumers may reject newly emitted optional fields. Update both sides together or omit new fields when exporting to an older consumer.
+- New optional fields must preserve readability of existing v1 files.
 - Removing or renaming fields, changing units, or changing time meaning normally requires a new `schema_version` and migration plan.
 - JSON/ZIP exchange, model scheduling, HTTP pagination, and UI behavior belong in the development guide rather than this contract.

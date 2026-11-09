@@ -20,7 +20,7 @@ All model, prediction and derived-data artifacts remain local. The current repos
 | [KeJin_alert_policy_and_checks.ipynb](../pipeline/KeJin_alert_policy_and_checks.ipynb) | Artifact/leakage checks and a lower-burden alert policy | Full notebook completed; candidate not confirmed and not activated; see [evaluation guide](KEJIN-EVALUATION.md) |
 | [Jiaju_stability.ipynb](../pipeline/Jiaju_stability.ipynb) | Calibration, predictor and risk stability | Setup and Part 0 reproduced; later tasks remain TODO |
 
-These are the concrete two-person work assignments supplied by this archive. They are separate from the combined-label/trajectory development extensions in notebooks 04/05. Demo I's train-OOF selection/validation-confirmation protocol is retained as the original experiment; no new threshold or candidate policy was selected during this import.
+These are the concrete two-person work assignments supplied by this archive. Demo I's train-OOF selection/validation-confirmation protocol is retained as the original experiment; no new threshold or candidate policy was selected during this import.
 
 The later Ke Jin completion uses validation patient roles for selection and confirmation to meet the user requirement, while preserving original Demo I. It exports aggregate results and an unlocked candidate; see [KEJIN-EVALUATION.md](KEJIN-EVALUATION.md). Jiaju tasks remain at their original scaffold status.
 

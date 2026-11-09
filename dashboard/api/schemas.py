@@ -87,21 +87,6 @@ class Trajectory(Strict):
     label: Text
     unit: str = Field(default='', max_length=40)
     points: list[ForecastPoint] = Field(max_length=10000)
-    model_id: Text | None = None
-    model_version: Text | None = None
-    method: str | None = Field(default=None, max_length=500)
-    interval_level: float | None = Field(default=None, gt=0, lt=1)
-    interval_method: str | None = Field(default=None, max_length=500)
-
-    @model_validator(mode='after')
-    def provenance(self):
-        if (self.model_id is None) != (self.model_version is None):
-            raise ValueError('Trajectory model_id and model_version must be supplied together')
-        if (self.interval_level is None) != (self.interval_method is None):
-            raise ValueError('Interval level and method must be supplied together')
-        if self.interval_level is not None and any(p.lower is None or p.upper is None for p in self.points):
-            raise ValueError('Described intervals require both bounds at every point')
-        return self
 
 
 class Prediction(Strict):
@@ -120,8 +105,6 @@ class Prediction(Strict):
     generated_at: AwareDatetime
     available_at: AwareDatetime | None = None
     risk: float = Field(ge=0, le=1)
-    intended_use: Literal["research", "synthetic_demo"] = "research"
-    policy_version: Text | None = None
     data_confidence: float | None = Field(default=None, ge=0, le=1)
     confidence_definition: str | None = Field(default=None, max_length=1000)
     threshold: Threshold | None = None
@@ -151,7 +134,6 @@ class Prediction(Strict):
 
 
 class ModelHeartbeat(Strict):
-    intended_use: Literal['research', 'synthetic_demo'] = 'research'
     status: Literal['ready', 'scoring', 'error']
     model_id: Text
     model_version: Text
