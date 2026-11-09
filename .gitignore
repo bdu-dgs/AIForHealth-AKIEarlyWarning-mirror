@@ -36,3 +36,7 @@ MIMIC.docx
 
 .pnpm-store/
 DEMO_I_PLAN.md
+# Jiaju aggregate validation results; patient-level artifacts remain local.
+!artifacts/handoff/
+artifacts/handoff/*
+!artifacts/handoff/jiaju/
