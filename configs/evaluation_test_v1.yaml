@@ -1,0 +1,38 @@
+# Notebook 03: the one locked evaluation on the test split. Written and committed before any test outcome is read.
+# Nothing here may change after the test split is opened; a change starts a new, labelled evaluation.
+version: test-evaluation-v1
+policy: artifacts/policy/policy_v3.json          # model, feature engine, threshold and alert rule (locked)
+comparator_policy: artifacts/demo_i/policy.json  # demo-v1 rule, evaluated on the same test risks
+split: test
+horizons: [6, 12, 24, 48]
+monitoring_hours: [1, 72]
+segments: [[1, 3], [4, 6], [7, 12], [13, 18], [19, 24], [25, 36], [37, 48], [49, 60], [61, 72]]
+calibration: {primary: platt, sensitivity: isotonic}
+seed: 20261110
+bootstrap:
+  unit: patient
+  overall_resamples: 1000      # snapshot metrics per horizon (Platt) and alert metrics
+  subgroup_resamples: 500      # subgroup AUROC (24 h) and alert metrics
+snapshot_metrics: [auroc, auprc, brier, calibration_slope, calibration_intercept, observed_over_expected]
+point_warning_metrics: [sensitivity, specificity, ppv, f1]   # 24 h warning rule of the policy, eligible rows
+alert_metrics: [event_detection_rate, lead_time_median_h, alert_ppv, alerts_per_patient_day,
+                false_alerts_per_patient_day, non_aki_patients_alerted, alerts_per_alerted_patient,
+                hours_to_first_alert_median]
+subgroups:
+  age_years: {bins: [18, 65, 80, 200], labels: ["18-64", "65-79", "80+"]}
+  gender_male: {levels: {1: male, 0: female}}
+  first_careunit: {levels: [MICU, SICU, CSRU, CCU, TSICU]}
+  source_system: {levels: [carevue, metavision]}           # 'both' (<0.2% of rows) reported in the overall only
+robustness:
+  isotonic_calibration: true
+  urine_output_endpoint: {labels: aki_uo_within_, eligible: eligible_uo_, onset: urine_output_aki_onset_time}
+  baseline_definitions:                                    # alternative creatinine-baseline onsets from notebook 01
+    - creatinine_aki_onset_time_alt_mdrd_if_missing
+    - creatinine_aki_onset_time_alt_min_with_history
+  # Feature-window and missingness variants need retraining and are a separate step.
+event_replay:
+  query_times: every input availability time within the monitoring window (labs 1 h after draw)
+  horizons: [12, 24]           # what the policy reads
+  exposure: hourly monitored rows / 24 (alert burden on the same denominator as the hourly grid)
+shap: {patients: 1500, top: 20}
+outputs: artifacts/reports/test_v1    # aggregate only
