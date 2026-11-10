@@ -156,3 +156,6 @@ backend ([STATIC-DEMO.md](STATIC-DEMO.md)).
 | Retraining sensitivity | `scripts/run_retrain_robustness.py`, `configs/robustness_retrain_v1.yaml` | `artifacts/reports/robustness_retrain_v1/` |
 | Summary of all of the above | `pipeline/03_evaluation_and_testing.ipynb` | - |
 | Static demo | `scripts/export_static_demo.py`, `pnpm build:static` | `demo-static/` |
+
+The sealed records hash their code and configuration files byte for byte; `.gitattributes` fixes those files' line
+endings so a fresh clone on any OS matches, and `python scripts/verify_sealed_hashes.py` checks all of them.
