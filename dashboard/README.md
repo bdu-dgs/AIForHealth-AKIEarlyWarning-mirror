@@ -68,6 +68,8 @@ After changing Python scoring code, stop the existing service with Ctrl+C in its
 
 For a presentation, run `Start-AKI-Demo.cmd`. It opens a fresh demo data folder with four synthetic (fictional) patients registered at ICU admission and a demo clock in the header. Each **+1 h** click moves the clock forward one hour, releases the observations recorded in that hour, and the model updates every patient's risk. Use only synthetic patients when presenting to people without PhysioNet access. To play another InputBatch file: `Start-AKI-Demo.cmd --demo path\to\file.json`.
 
+For a presentation on another computer without the model or Python, use the public static demo in `demo-static/` (the same four synthetic patients, pre-scored by the locked model, read-only); deployment to Vercel and an offline backup are described in [docs/STATIC-DEMO.md](../docs/STATIC-DEMO.md).
+
 To show a live upload during the demo, run `python scripts\make_demo_upload.py` in the repository folder at the moment you need it. It writes `demo_upload.json` with a new lab result for Demo D, timed to the current demo clock; upload it on the Data entry tab and the patient's risk updates within seconds.
 
 On the risk chart, the red dashed line comes from the selected model policy (21% for the original Demo I policy). Demo playback spans at least ICU hours 0-72; arbitrary model horizons remain supported. The observation chart opens on creatinine when available.

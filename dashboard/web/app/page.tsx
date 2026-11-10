@@ -8,6 +8,7 @@ import {
   ChevronRight,
   RefreshCw,
   FastForward,
+  RotateCcw,
   Users,
   X,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ import {
   alertOf,
   setServiceClock,
   setModelRunning,
+  STATIC_DEMO,
   type Clock,
   type Patient,
   type Health,
@@ -66,6 +68,11 @@ export default function App() {
     return () => window.removeEventListener('popstate', pop);
   }, []);
   useEffect(() => {
+    // The static demo has no server; its clock changes only through the header buttons.
+    if (STATIC_DEMO) {
+      setConnected(true);
+      return;
+    }
     const stream = new EventSource('/api/events');
     stream.onopen = () => {
       setConnected(true);
@@ -106,7 +113,9 @@ export default function App() {
   const advance = async (hours: number) => {
     setAdvancing(true);
     try {
-      setServiceClock(await post<Clock>('/demo/advance?hours=' + hours, {}));
+      setServiceClock(
+        await post<Clock>(hours > 0 ? '/demo/advance?hours=' + hours : '/demo/restart', {}),
+      );
       const h = await api<Health>('/health');
       setHealth(h);
       setViewRevision(h.revision);
@@ -150,8 +159,9 @@ export default function App() {
   useEffect(() => {
     setPage(0);
   }, [search, filter]);
-  const input = route === '/input';
-  const dataset = route === '/dataset';
+  // The static demo is read-only: no data entry or local dataset preview.
+  const input = !STATIC_DEMO && route === '/input';
+  const dataset = !STATIC_DEMO && route === '/dataset';
   const detailId = route.startsWith('/patients/')
     ? decodeURIComponent(route.slice(10))
     : '';
@@ -232,7 +242,9 @@ export default function App() {
         <div className="header-status">
           <span className={'connection ' + (!connected ? 'offline' : '')}>
             ●{' '}
-            {connected
+            {STATIC_DEMO
+              ? 'Static demo · synthetic patients'
+              : connected
               ? 'Local service connected'
               : health
                 ? 'Restoring live connection'
@@ -255,6 +267,28 @@ export default function App() {
                 <FastForward size={14} />
                 +1 h
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={advancing}
+                onClick={() => void advance(6)}
+                aria-label="Advance the demo clock by 6 hours"
+              >
+                <FastForward size={14} />
+                +6 h
+              </Button>
+              {STATIC_DEMO && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={advancing}
+                  onClick={() => void advance(0)}
+                  aria-label="Restart the demo at ICU hour 0"
+                >
+                  <RotateCcw size={14} />
+                  Restart
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -285,12 +319,15 @@ export default function App() {
                 Back to overview
               </Button>
             )}
-            <Button onClick={() => navigate(input ? '/' : '/input')}>
-              {input ? <Users size={16} /> : <Plus size={16} />}{' '}
-              {input ? 'Patient monitoring' : 'Enter data'}
-            </Button>
+            {!STATIC_DEMO && (
+              <Button onClick={() => navigate(input ? '/' : '/input')}>
+                {input ? <Users size={16} /> : <Plus size={16} />}{' '}
+                {input ? 'Patient monitoring' : 'Enter data'}
+              </Button>
+            )}
           </div>
         </div>
+        {!STATIC_DEMO && (
         <Tabs
           value={dataset ? 'dataset' : input ? 'input' : 'observe'}
           onValueChange={(v) => navigate(v === 'dataset' ? '/dataset' : v === 'input' ? '/input' : '/')}
@@ -301,6 +338,13 @@ export default function App() {
             <TabsTrigger value="dataset">Dataset preview</TabsTrigger>
           </TabsList>
         </Tabs>
+        )}
+        {STATIC_DEMO && (
+          <div className="notice" role="note">
+            Public demo: four synthetic patients replayed hour by hour with the locked AKI model and alert policy v3.
+            Read-only; no real patient data. Use +1 h / +6 h to move the ICU clock.
+          </div>
+        )}
         {error && (
           <div className="notice error" role="alert">
             <span>{error}</span>
@@ -473,7 +517,7 @@ export default function App() {
           </>
         )}
         <footer>
-          Local course project · Model and clinical validity not yet verified · {dataset ? 'Dataset times shown as in source files (no timezone provided)' : 'Times shown in the local timezone'}
+          {STATIC_DEMO ? 'Course project demo · synthetic patients · not for clinical use' : 'Local course project · Model and clinical validity not yet verified'} · {dataset ? 'Dataset times shown as in source files (no timezone provided)' : 'Times shown in the local timezone'}
         </footer>
       </main>
     </div>

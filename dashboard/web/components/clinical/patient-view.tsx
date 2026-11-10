@@ -32,6 +32,7 @@ import {
   type Observation,
   type Prediction,
   type Quality,
+  STATIC_DEMO,
 } from '@/lib/api';
 
 type ViewData = {
@@ -674,6 +675,7 @@ export function PatientView({
           </div>
         </section>
       </div>
+      {!STATIC_DEMO && (
       <div className="export-row">
         <Button variant="outline" onClick={() => void prepareExport('input')}>
           <Download size={15} />
@@ -690,6 +692,7 @@ export function PatientView({
           Files are saved on this computer and contain patient information; store them securely.
         </span>
       </div>
+      )}
       {exports && (
         <div className="panel form-body">
           <p>

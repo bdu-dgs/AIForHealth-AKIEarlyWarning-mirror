@@ -45,6 +45,19 @@ not read.
 - Jiaju's notebook re-executed into a separate directory: 7 of 12 CSV outputs byte-identical, the other 5 within
   5e-8 relative difference.
 
+## Static demo — 2026-11-09
+
+- `scripts/export_static_demo.py` replayed the four synthetic patients through the real backend and model worker for
+  ICU hours 0-72 (3,052 observations, 1,120 predictions); warning hours DEMO-002 55, DEMO-003 7, DEMO-001/004 0, the
+  same as the live demo.
+- `pnpm build:static` and the normal build both pass `tsc`; the 8 frontend tests pass; the normal bundle contains no
+  static-demo code.
+- Headless Chrome against `vite preview --mode static`: overview at `?hour=30` and the DEMO-003 detail page at
+  `?hour=40` render risks, the policy v3 status (24 h risk 21.7% shown as below threshold because the 12 h
+  confirmation is not met), drivers and data freshness. A deep link reload returns the page (SPA fallback);
+  `scripts/serve_static_demo.py` serves the same build offline.
+- Not tested: an actual Vercel deployment (needs the owner's account).
+
 ## Capacity-related test evidence
 
 Synthetic data was used to verify:

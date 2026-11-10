@@ -208,6 +208,17 @@ Use `web/lib/api.ts` for `/api` requests. Update TypeScript types when backend s
 
 Keep one horizontal card per patient: identity and reminders on the left, observation curves in the middle, and prediction risk or trajectories on the right. Risk plots use red above and green below. `data_confidence` may affect visual prominence but not the probability. Distinguish missing thresholds, unlocked thresholds, changed input, and ended windows.
 
+### Static demo build
+
+`pnpm build:static` (`vite build --mode static`) sets `VITE_STATIC_DEMO`, so `api()` hands every request to
+`web/lib/static-demo.ts` instead of `fetch`. That module answers the read routes the pages use (`/health`, `/patients`,
+`/patients/{id}/history`, `/current-predictions`, `/quality`) and the demo clock (`/demo/advance`, `/demo/restart`)
+from `public/static-demo/demo.json`, with the visibility rules of `api/storage.py`; writes return a read-only error. The
+page skips SSE and hides data entry, dataset preview and export. The local build tree-shakes this code away. The JSON
+comes from `scripts/export_static_demo.py`, which records the real backend and model worker; regenerate it whenever
+scoring, the policy or the synthetic patients change. Output goes to `../../demo-static` with a `vercel.json`
+([docs/STATIC-DEMO.md](../docs/STATIC-DEMO.md)).
+
 ## CSV preview boundaries
 
 Operation and current field mapping are in [README.md](README.md). Implementation must preserve three-ID matching, separate stays for the same patient, original timezone-free source strings, relative hours within one ICU stay, read-only behavior, and small-subset loading. Full MIMIC data requires independent offline extraction and pagination. Error responses must not echo source rows, raw values, or full local paths.

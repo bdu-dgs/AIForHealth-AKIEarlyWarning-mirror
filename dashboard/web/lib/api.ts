@@ -131,7 +131,14 @@ export function setModelRunning(running: boolean) {
 export function isModelRunning() {
   return modelRunning;
 }
+// Static build (VITE_STATIC_DEMO=1): requests are answered in the browser from the recorded synthetic demo.
+export const STATIC_DEMO =
+  typeof import.meta.env !== 'undefined' && import.meta.env.VITE_STATIC_DEMO === '1';
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  if (STATIC_DEMO) {
+    const { handle } = await import('./static-demo');
+    return handle(path, init) as Promise<T>;
+  }
   const response = await fetch('/api' + path, init);
   if (!response.ok) {
     let message = 'Local service request failed';
