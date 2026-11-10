@@ -1,6 +1,6 @@
 # Public static demo (Vercel)
 
-**Live site: https://demo-static-navy.vercel.app** (Vercel project `demo-static`, deployed 2026-11-10 with the CLI, not
+**Live site: https://aki-icu-demo.vercel.app** (Vercel project `demo-static`, deployed 2026-11-10 with the CLI, not
 connected to Git). After rebuilding, run `npx vercel deploy --prod` in `demo-static/` to update the same address.
 `demo-static/.vercel/` (local, not committed) links the folder to that project; the static build keeps it.
 
