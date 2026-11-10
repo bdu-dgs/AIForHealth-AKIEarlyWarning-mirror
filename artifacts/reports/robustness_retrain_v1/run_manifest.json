@@ -1,0 +1,27 @@
+{
+  "version": "robustness-retrain-v1",
+  "prespec_sha256": "cb47a884a4ec692597b8a8b9173447c5c022cfe025c280928cbc806bc1aad29d",
+  "finished_at": "2026-11-10T16:13:37.540810+00:00",
+  "variants": [
+    "reference_refit",
+    "windows_last_value_only",
+    "windows_short_only",
+    "windows_long_only",
+    "missing_median_impute",
+    "missing_median_impute_indicators",
+    "missing_no_measurement_process"
+  ],
+  "features_reference": 246,
+  "rows": {
+    "validation": 198524,
+    "test": 202797
+  },
+  "harness_check_passed": true,
+  "outputs": [
+    "harness_check.json",
+    "prespec.json",
+    "snapshot_metrics.csv",
+    "test_differences.csv",
+    "variants.csv"
+  ]
+}

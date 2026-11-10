@@ -28,3 +28,14 @@ For an existing matching run, restore its authorized local `lightgbm__no_dc` mod
 | `handoff/feature_v2/` | same script | Legacy versus v2 comparison and invariance checks (committed) | No |
 | `handoff/policy_v3/<run>/` | `pipeline/KeJin_alert_policy_and_checks.ipynb` (`configs/alert_policy_v3.yaml`) | Prespec, A1-A12 checks, selection grid, sealed choice, confirmation, candidate policy, figure (committed) | No |
 | `handoff/jiaju/` | `pipeline/Jiaju_stability.ipynb` | Stability tables and figures (committed) | No |
+
+## Notebook 03 (test evaluation and retraining sensitivity)
+
+| Path | Produced by | Contents | Patient-level? |
+|---|---|---|---|
+| `reports/test_v1/` | `scripts/evaluate_test.py` (`configs/evaluation_test_v1.yaml`) | Prespec record, snapshot, alert, subgroup, robustness, event-replay and SHAP tables for the test split (committed) | No |
+| `predictions/<run_id>_<split>_hourly_risks_v2.parquet` | same script | Hourly risks of the evaluated split with `patient_window_v2` features | Yes |
+| `feature_v2/admission_inputs_test/` | same script | Float64 admission baselines for test stays | Yes |
+| `reports/robustness_retrain_v1/` | `scripts/run_retrain_robustness.py` (`configs/robustness_retrain_v1.yaml`) | Prespec record, variant metrics, test differences, harness check (committed) | No |
+| `models/<run_id>/robustness-retrain-v1/` | same script | Retrained variant heads with their validation/test scores (resume cache) | Models trained on MIMIC; scores are patient-level |
+| `reports/dry_run_validation/` | `scripts/evaluate_test.py --split validation` | Dry run of the test code on validation | No |

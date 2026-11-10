@@ -1,0 +1,165 @@
+{
+  "created_at": "2026-11-10T04:55:13.111646+00:00",
+  "prespec_sha256": "cb47a884a4ec692597b8a8b9173447c5c022cfe025c280928cbc806bc1aad29d",
+  "specification": {
+    "config": {
+      "version": "robustness-retrain-v1",
+      "reference": {
+        "run_id": "aki_ml_v1_28e0b1fb83",
+        "family": "lightgbm",
+        "feature_set": "no_dc"
+      },
+      "procedure": {
+        "hyperparameters": "lightgbm/full selected configuration per horizon (training OOF), not re-tuned",
+        "folds": "notebook-02 patient folds (5, stratified by source system and any creatinine AKI, seed of configs/ml.yaml)",
+        "rounds": "minimum of the mean held-out log-loss curve over the 5 folds; final refit on all training patients",
+        "weights": "inverse patient rows x balanced classes, as notebook 02",
+        "calibration": "Platt on training out-of-fold scores",
+        "learned_preprocessing": "fitted on the current training partition only (fold or full training set)"
+      },
+      "feature_source": "stored notebook-01 snapshot features (legacy_prefix_v1, the engine the weights were trained on)",
+      "evaluation_splits": [
+        "validation",
+        "test"
+      ],
+      "horizons": [
+        6,
+        12,
+        24,
+        48
+      ],
+      "monitoring_hours": [
+        1,
+        72
+      ],
+      "metrics": [
+        "auroc",
+        "auprc",
+        "brier",
+        "calibration_slope",
+        "calibration_intercept",
+        "observed_over_expected"
+      ],
+      "comparison": {
+        "against": "reference",
+        "metric": [
+          "auroc",
+          "brier"
+        ],
+        "split": "test",
+        "bootstrap": {
+          "unit": "patient",
+          "resamples": 500
+        }
+      },
+      "seed": 20261111,
+      "harness_check": "reference_refit must reproduce the locked model's validation scores (max abs difference < 1e-5)",
+      "variants": [
+        {
+          "name": "reference_refit",
+          "description": "no change (checks that this procedure reproduces the locked model)"
+        },
+        {
+          "name": "windows_last_value_only",
+          "description": "drop every windowed vital-sign and laboratory summary (mean/min/max/std/slope/count)",
+          "drop": {
+            "groups": [
+              "vital_signs",
+              "laboratory"
+            ],
+            "statistics": [
+              "mean",
+              "min",
+              "max",
+              "std",
+              "slope",
+              "count"
+            ]
+          }
+        },
+        {
+          "name": "windows_short_only",
+          "description": "drop vital-sign and laboratory summaries over windows longer than 6 h (24 h and 48 h)",
+          "drop": {
+            "groups": [
+              "vital_signs",
+              "laboratory"
+            ],
+            "statistics": [
+              "mean",
+              "min",
+              "max",
+              "std",
+              "slope",
+              "count"
+            ],
+            "window_hours_above": 6
+          }
+        },
+        {
+          "name": "windows_long_only",
+          "description": "drop the 6 h vital-sign summaries (keep 24 h vitals and 48 h laboratory summaries)",
+          "drop": {
+            "groups": [
+              "vital_signs",
+              "laboratory"
+            ],
+            "statistics": [
+              "mean",
+              "min",
+              "max",
+              "std",
+              "slope",
+              "count"
+            ],
+            "window_hours_equal": 6
+          }
+        },
+        {
+          "name": "missing_median_impute",
+          "description": "training-partition median imputation of every feature, no indicators",
+          "impute": {
+            "method": "median",
+            "indicators": false
+          }
+        },
+        {
+          "name": "missing_median_impute_indicators",
+          "description": "median imputation plus a missing indicator for each feature missing in >= 1% of training-partition rows",
+          "impute": {
+            "method": "median",
+            "indicators": true,
+            "indicator_min_fraction": 0.01
+          }
+        },
+        {
+          "name": "missing_no_measurement_process",
+          "description": "drop measurement-process features (hours since latest value/charting, measurement counts)",
+          "drop": {
+            "name_patterns": [
+              "_hours_since_last",
+              "_count_"
+            ]
+          }
+        }
+      ],
+      "fit_sample_rows": 300000,
+      "outputs": "artifacts/reports/robustness_retrain_v1"
+    },
+    "input_sha256": {
+      "config": "25963f1d583100aab8f74b7434c7db307aa351bddcec8775d12ff51525fbb688",
+      "ml_config": "994cc4e8b8f0a1cad04a6a617d7c8ca2a3e77617548219508f10b0d1a3b63578",
+      "reference_pipeline": "605044df37b040285bf6f91676d4e05506f21cb84aba01119e17bf46d2043ff1",
+      "snapshots": "b27c11be7dc55d01e65b16b1866c5e5e8f0824bc1e3e695c9b103db6c548bd8a",
+      "cohort": "5000e0b45f9d00265299e8271631bce35089764efb8b696799c09dfc6f8bd1d9",
+      "feature_dictionary": "d38521cf3714ac5444b491833b986897a5e219c2d3eaca7c7e513b4d4c60dfec"
+    },
+    "source_sha256": {
+      "src/aki_robustness/__init__.py": "f0c7ca187f150d3c2c89e17244069e327b0540b1365d74f0ebcf9314956b0df6",
+      "src/aki_robustness/retrain.py": "dfca2c5eca8d327cfd4a139ebff723caf713f7620a282aaede094d00e81c5b2e",
+      "src/aki_ml/models.py": "c3738b69d9b10c8dcc0e322a415edb029a902b6ef840dce733a418d522049c30"
+    },
+    "commit_before_results": false,
+    "registration": "immutable local record; not public preregistration"
+  }
+}

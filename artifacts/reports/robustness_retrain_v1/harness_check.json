@@ -1,0 +1,26 @@
+{
+  "tolerance": 1e-05,
+  "passed": true,
+  "horizons": {
+    "6h": {
+      "max_abs_raw_difference_validation": 0.0,
+      "n_rounds": 151,
+      "locked_n_rounds": 151
+    },
+    "12h": {
+      "max_abs_raw_difference_validation": 0.0,
+      "n_rounds": 165,
+      "locked_n_rounds": 165
+    },
+    "24h": {
+      "max_abs_raw_difference_validation": 0.0,
+      "n_rounds": 209,
+      "locked_n_rounds": 209
+    },
+    "48h": {
+      "max_abs_raw_difference_validation": 0.0,
+      "n_rounds": 227,
+      "locked_n_rounds": 227
+    }
+  }
+}

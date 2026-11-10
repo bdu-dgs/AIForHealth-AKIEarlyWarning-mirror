@@ -2,13 +2,15 @@
 
 This project develops a reproducible, local-only dynamic acute kidney injury (AKI) early-warning research pipeline and an ICU-facing course-project website. It is a research and decision-support prototype, not a treatment recommendation or validated clinical product.
 
-Notebooks 01 and 02 and the Demo I evaluation are implemented and have been run on local MIMIC-III v1.4; the locked test-set evaluation (notebook 03) has not been done yet. The sections below describe the study design; results so far are under [Current status](#current-status). The design does not restrict the website to fixed sampling intervals or prediction horizons.
+Notebooks 01-03 have been run on local MIMIC-III v1.4, including the one locked test-set evaluation (2026-11-10). The sections below describe the study design; results are summarised under [Current status](#current-status) and in full in [docs/FINAL-REPORT.md](docs/FINAL-REPORT.md). The design does not restrict the website to fixed sampling intervals or prediction horizons.
 
 ## Documentation
 
 | Document | Scope |
 |---|---|
 | This README | Research objective, candidate study design, notebook ownership, privacy, and repository-wide status |
+| [docs/FINAL-REPORT.md](docs/FINAL-REPORT.md) | Final report: design, locked test results, subgroups, sensitivity analyses, limitations |
+| [docs/STATIC-DEMO.md](docs/STATIC-DEMO.md) | Public read-only demo with synthetic patients: Vercel deployment, offline backup, rebuild |
 | [docs/ALERT-POLICY.md](docs/ALERT-POLICY.md) | Locked alert policy v3: rule, selection/confirmation design, result and limits |
 | [docs/FEATURE-ENGINE-V2.md](docs/FEATURE-ENGINE-V2.md) | Batch-independent feature engine and its revalidation with the locked weights |
 | [dashboard/README.md](dashboard/README.md) | Website installation, startup, daily use, and local CSV preview |
@@ -100,7 +102,7 @@ The current scope does not include future creatinine or urine-output trajectory 
 | `pipeline/01_dataset_construction.ipynb` | Source validation, ID crosswalk, one-stay-per-patient cohort, pre-snapshot patient splits, KDIGO timelines, hourly snapshots, multi-horizon labels, and features |
 | `pipeline/02_ml_pipeline.ipynb` | Preprocessing, patient weighting, pooled LR, RF, LightGBM (primary) and XGBoost pipelines with 6h/12h/24h/48h heads, a LightGBM ablation without discharge-coded diagnoses (`no_dc`), Platt and isotonic calibration, and hourly plus event-driven risk outputs |
 | `pipeline/demo_i_evaluation.ipynb` | Demo I: monitoring window, alert policy, and threshold selected on training out-of-fold predictions and confirmed once on validation; writes the locked policy used by the website |
-| `pipeline/03_evaluation_and_testing.ipynb` | Planned: leakage tests, locked test evaluation, patient/event metrics, subgroup and urine-output robustness, stability, and SHAP summaries |
+| `pipeline/03_evaluation_and_testing.ipynb` | Entry point for the locked test evaluation (`src/aki_final`) and the retraining sensitivity analyses (`src/aki_robustness`): integrity and leakage checks, snapshot/patient/event metrics, event-driven replay, subgroups, robustness, SHAP |
 | `pipeline/KeJin_alert_policy_and_checks.ipynb` | A1-A12 artifact/leakage checks and the alert-policy study that produced the locked policy v3 |
 | `pipeline/Jiaju_stability.ipynb` | Calibration, TreeSHAP, feature-shift, risk-volatility and horizon-monotonicity stability on validation (complete) |
 
@@ -120,7 +122,7 @@ Notebooks exchange versioned local Parquet artifacts rather than in-memory varia
 | ML notebook | `artifacts/predictions/<run_id>.parquet` | One model, ICU stay, snapshot, and horizon |
 | ML notebook | `artifacts/predictions/<run_id>_event_replay.parquet` | One model, validation stay, event time, and horizon |
 | Demo I notebook | `artifacts/demo_i/policy.json` and aggregate tables/figures | Locked alert policy (threshold, monitoring window, model hashes) and validation summaries |
-| Evaluation notebook (planned) | `artifacts/reports/<run_id>/` | Aggregate metrics and figures |
+| Evaluation notebook | `artifacts/reports/test_v1/`, `artifacts/reports/robustness_retrain_v1/` | Aggregate test metrics, prespecification records |
 
 For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/default.yaml` (default `../Cleaned`, outside the repository); filtered source caches go to `artifacts/interim/`. Only `artifacts/demo_i/policy.json` (the locked alert policy) is committed from `artifacts/`; see [artifacts/README.md](artifacts/README.md). These planned Parquet and experiment artifacts are separate from the website's live JSON exchange contract. The live contract is defined only in [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md).
 
@@ -134,7 +136,10 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |-- .env.example
 |-- configs/
 |   |-- default.yaml           # dataset study design (notebook 01)
-|   `-- ml.yaml                # model training settings (notebook 02)
+|   |-- ml.yaml                # model training settings (notebook 02)
+|   |-- alert_policy_v3.yaml   # alert-policy study (validation)
+|   |-- evaluation_test_v1.yaml       # locked test evaluation protocol
+|   `-- robustness_retrain_v1.yaml    # retraining sensitivity analyses
 |-- pipeline/
 |   |-- 01_dataset_construction.ipynb
 |   |-- 02_ml_pipeline.ipynb
@@ -144,6 +149,9 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |   `-- Jiaju_stability.ipynb
 |-- src/aki_ml/                # shared code: feature engine, model containers, alerts, scoring
 |-- src/aki_eval/              # independent artifact checks, alert events and validation protocol
+|-- src/aki_final/             # notebook 03: locked test evaluation
+|-- src/aki_robustness/        # notebook 03: feature-window and missingness retraining analyses
+|-- demo-static/               # prebuilt public demo (synthetic patients) for Vercel
 |-- tests/                    # synthetic evaluation and protocol tests
 |-- dashboard/
 |   |-- app.py                 # preserved original placeholder
@@ -199,7 +207,9 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 - **Stability (`pipeline/Jiaju_stability.ipynb`):** calibration, TreeSHAP, feature-shift, risk-volatility and horizon-monotonicity analysis on validation; 22 of 36 horizon x ICU-segment cells meet the Demo I reliability criteria (`artifacts/handoff/jiaju/`).
 - **Feature engine v2:** the original feature arithmetic made a patient's features depend on which other patients were computed in the same batch. `patient_window_v2` removes this; with the locked weights, validation AUROC is unchanged to 4 decimals ([docs/FEATURE-ENGINE-V2.md](docs/FEATURE-ENGINE-V2.md)).
 - **Alert policy v3 (locked, `pipeline/KeJin_alert_policy_and_checks.ipynb`):** A1-A12 artifact and leakage checks pass. Selected on 70% of validation patients and confirmed on the other 30%: warn when the 24 h risk is at least 21% and the 12 h risk at least 10.5%. Versus demo-v1, false alerts fall from 0.42 to 0.23 per patient-day at the same PPV (34%) and detection from 76.9% to 71.9%; this missed the prespecified 5-point detection-loss limit by 0.08 points and was accepted by the project owner ([docs/ALERT-POLICY.md](docs/ALERT-POLICY.md)).
-- **Not done yet:** the test set has not been used; notebook 03's locked test, subgroup and urine-output evaluation is pending. There is no clinical validation.
+- **Locked test evaluation (notebook 03, 2026-11-10):** 4,959 test patients, opened once after the protocol and code were frozen. AUROC 6/12/24/48 h 0.866 / 0.841 / 0.817 / 0.792, observed/expected 0.98, calibration slope 1.00-1.07. Policy v3 versus demo-v1: 0.23 versus 0.42 false alerts per patient-day, 71.7% versus 76.6% of AKI events detected, PPV 33.5% versus 34.0%, median lead 11.6 versus 12.9 h. Lower discrimination in CSRU and CCU (0.76); results unchanged with alternative baseline definitions; the model does not predict urine-output AKI (AUROC 0.62). Retrained sensitivity analyses: feature-window lengths and missing-value handling change AUROC by at most 0.003; removing measurement-process features (time since last value, counts) costs 0.024 at 6 h and 0.004 at 24 h. Details: [docs/FINAL-REPORT.md](docs/FINAL-REPORT.md).
+- **Public demo:** `demo-static/` is a read-only build with four synthetic patients replayed by the locked model and policy v3, ready for Vercel ([docs/STATIC-DEMO.md](docs/STATIC-DEMO.md)).
+- **Not done:** external or prospective validation; there is no clinical validation.
 
 Local website changes do not become available from GitHub until they are explicitly committed and pushed. Windows EXE, installer, and portable runtime packaging have not been built.
 

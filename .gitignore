@@ -37,6 +37,7 @@ artifacts/demo_i/*
 !artifacts/reports/
 artifacts/reports/*
 !artifacts/reports/test_v1/
+!artifacts/reports/robustness_retrain_v1/
 # Collaborator hand-back outputs (aggregate tables and figures only).
 !artifacts/handoff/
 MIMIC.docx

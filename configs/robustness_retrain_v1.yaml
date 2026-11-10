@@ -1,0 +1,46 @@
+# Notebook 03, Part 15: feature-window and missingness sensitivity analyses that need retraining.
+# Written before any variant is trained or scored. These analyses do not change the locked system (model, policy v3);
+# they ask whether its discrimination depends on the feature-window and missing-data choices made in notebook 01/02.
+# The test split was already opened once for test-evaluation-v1; nothing here is used to revise the locked system.
+version: robustness-retrain-v1
+reference: {run_id: aki_ml_v1_28e0b1fb83, family: lightgbm, feature_set: no_dc}   # the locked model
+procedure:                                 # identical to the no_dc ablation of notebook 02
+  hyperparameters: lightgbm/full selected configuration per horizon (training OOF), not re-tuned
+  folds: notebook-02 patient folds (5, stratified by source system and any creatinine AKI, seed of configs/ml.yaml)
+  rounds: minimum of the mean held-out log-loss curve over the 5 folds; final refit on all training patients
+  weights: inverse patient rows x balanced classes, as notebook 02
+  calibration: Platt on training out-of-fold scores
+  learned_preprocessing: fitted on the current training partition only (fold or full training set)
+feature_source: stored notebook-01 snapshot features (legacy_prefix_v1, the engine the weights were trained on)
+evaluation_splits: [validation, test]
+horizons: [6, 12, 24, 48]
+monitoring_hours: [1, 72]
+metrics: [auroc, auprc, brier, calibration_slope, calibration_intercept, observed_over_expected]
+comparison: {against: reference, metric: [auroc, brier], split: test, bootstrap: {unit: patient, resamples: 500}}
+seed: 20261111
+harness_check: reference_refit must reproduce the locked model's validation scores (max abs difference < 1e-5)
+variants:
+  - name: reference_refit
+    description: no change (checks that this procedure reproduces the locked model)
+  # Feature windows: vital-sign and laboratory summaries only; creatinine, urine, fluids and static features unchanged.
+  - name: windows_last_value_only
+    description: drop every windowed vital-sign and laboratory summary (mean/min/max/std/slope/count)
+    drop: {groups: [vital_signs, laboratory], statistics: [mean, min, max, std, slope, count]}
+  - name: windows_short_only
+    description: drop vital-sign and laboratory summaries over windows longer than 6 h (24 h and 48 h)
+    drop: {groups: [vital_signs, laboratory], statistics: [mean, min, max, std, slope, count], window_hours_above: 6}
+  - name: windows_long_only
+    description: drop the 6 h vital-sign summaries (keep 24 h vitals and 48 h laboratory summaries)
+    drop: {groups: [vital_signs, laboratory], statistics: [mean, min, max, std, slope, count], window_hours_equal: 6}
+  # Missingness: primary handling is LightGBM native missing-value routing.
+  - name: missing_median_impute
+    description: training-partition median imputation of every feature, no indicators
+    impute: {method: median, indicators: false}
+  - name: missing_median_impute_indicators
+    description: median imputation plus a missing indicator for each feature missing in >= 1% of training-partition rows
+    impute: {method: median, indicators: true, indicator_min_fraction: 0.01}
+  - name: missing_no_measurement_process
+    description: drop measurement-process features (hours since latest value/charting, measurement counts)
+    drop: {name_patterns: ["_hours_since_last", "_count_"]}
+fit_sample_rows: 300000                    # rows (seeded) used to estimate imputation medians per partition
+outputs: artifacts/reports/robustness_retrain_v1   # aggregate only; fitted variant heads stay local under artifacts/models
