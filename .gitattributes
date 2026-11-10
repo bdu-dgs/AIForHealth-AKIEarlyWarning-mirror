@@ -1,0 +1,29 @@
+# Files whose exact bytes are hashed by sealed study records:
+#   artifacts/handoff/policy_v3/validation-policy-v3-66054ed84c02e348/prespec.json  (alert policy v3)
+#   artifacts/reports/test_v1/prespec.json                                        (locked test evaluation)
+#   artifacts/reports/robustness_retrain_v1/prespec.json                          (retraining sensitivity)
+#   ../Cleaned/dataset_manifest.json                                              (configs/default.yaml)
+# Re-running a study checks these hashes and refuses changed files. The hashes were taken on the line endings below
+# (Windows checkouts for most, LF for files created later), so every checkout on any OS reproduces those bytes.
+# Do not change these lines or the files; a change starts a new, labelled study. New .py files in src/aki_eval,
+# src/aki_final or src/aki_robustness also change the recorded file sets.
+# notebook 02's run manifest recorded configs/ml.yaml with LF endings (same content); that hash only names the run.
+
+src/aki_eval/*.py                   text eol=crlf
+src/aki_final/test_evaluation.py    text eol=crlf
+src/aki_final/__init__.py           text eol=lf
+src/aki_robustness/*.py             text eol=lf
+src/aki_ml/models.py                text eol=crlf
+src/aki_ml/features.py              text eol=crlf
+src/aki_ml/feature_windows.py       text eol=crlf
+src/aki_ml/admission_inputs.py      text eol=crlf
+src/aki_ml/alerts.py                text eol=crlf
+
+configs/default.yaml                text eol=crlf
+configs/ml.yaml                     text eol=crlf
+configs/alert_policy_v3.yaml        text eol=crlf
+configs/evaluation_test_v1.yaml     text eol=lf
+configs/robustness_retrain_v1.yaml  text eol=lf
+
+artifacts/demo_i/policy.json        text eol=crlf
+artifacts/policy/policy_v3.json     text eol=crlf
