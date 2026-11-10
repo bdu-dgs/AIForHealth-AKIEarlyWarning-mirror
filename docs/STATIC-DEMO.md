@@ -1,5 +1,9 @@
 # Public static demo (Vercel)
 
+**Live site: https://demo-static-navy.vercel.app** (Vercel project `demo-static`, deployed 2026-11-10 with the CLI, not
+connected to Git). After rebuilding, run `npx vercel deploy --prod` in `demo-static/` to update the same address.
+`demo-static/.vercel/` (local, not committed) links the folder to that project; the static build keeps it.
+
 `demo-static/` is a complete, prebuilt website that can be published on Vercel and opened from any computer. It shows
 the same workbench as `Start-AKI-Demo.cmd` with four synthetic patients, but needs no backend, model or Python: every
 API answer is computed in the browser from a recorded playback.

@@ -1,12 +1,19 @@
 import tailwindcss from '@tailwindcss/postcss';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
+import { rmSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 
 // `vite build --mode static` builds the public read-only demo (synthetic patients, no backend) into
 // ../../demo-static, ready to deploy as a static Vercel site; the default build is the local workbench.
+const STATIC_OUT = fileURLToPath(new URL('../../demo-static/', import.meta.url));
 const vercelConfig: Plugin = {
   name: 'vercel-config',
+  // Replace only the build output; keep the Vercel CLI link (.vercel/, .gitignore) of the deploy folder.
+  buildStart() {
+    for (const name of ['assets', 'static-demo', 'index.html', 'favicon.svg', 'vercel.json'])
+      rmSync(STATIC_OUT + name, { recursive: true, force: true });
+  },
   generateBundle() {
     this.emitFile({
       type: 'asset',
@@ -50,6 +57,6 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       proxy: { '/api': 'http://127.0.0.1:8765' },
     },
-    build: { outDir: staticDemo ? '../../demo-static' : 'dist', emptyOutDir: true },
+    build: staticDemo ? { outDir: STATIC_OUT, emptyOutDir: false } : { outDir: 'dist', emptyOutDir: true },
   };
 });
