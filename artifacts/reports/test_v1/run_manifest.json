@@ -1,0 +1,11 @@
+{
+  "version": "test-evaluation-v1",
+  "split": "test",
+  "dry_run": false,
+  "finished_at": "2026-11-10T03:42:51.649768+00:00",
+  "patients": 4959,
+  "origins": 202797,
+  "policy": "artifacts/policy/policy_v3.json",
+  "model_pipeline_sha256": "605044df37b040285bf6f91676d4e05506f21cb84aba01119e17bf46d2043ff1",
+  "prespec_sha256": "14ab07ff07ad5d469745a85e35eab658685fcd16db67c830cc098850e363ee53"
+}

@@ -1,0 +1,6 @@
+{
+  "event_times": 478698,
+  "updates_per_patient_median": 73.0,
+  "abs_risk_change_between_updates_median": 0.0018796548247337341,
+  "abs_risk_change_between_updates_p95": 0.030989676713943478
+}

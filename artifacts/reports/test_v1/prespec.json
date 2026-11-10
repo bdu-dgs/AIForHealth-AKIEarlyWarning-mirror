@@ -1,0 +1,184 @@
+{
+  "created_at": "2026-11-10T02:59:58.793677+00:00",
+  "prespec_sha256": "14ab07ff07ad5d469745a85e35eab658685fcd16db67c830cc098850e363ee53",
+  "specification": {
+    "config": {
+      "version": "test-evaluation-v1",
+      "policy": "artifacts/policy/policy_v3.json",
+      "comparator_policy": "artifacts/demo_i/policy.json",
+      "split": "test",
+      "horizons": [
+        6,
+        12,
+        24,
+        48
+      ],
+      "monitoring_hours": [
+        1,
+        72
+      ],
+      "segments": [
+        [
+          1,
+          3
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          7,
+          12
+        ],
+        [
+          13,
+          18
+        ],
+        [
+          19,
+          24
+        ],
+        [
+          25,
+          36
+        ],
+        [
+          37,
+          48
+        ],
+        [
+          49,
+          60
+        ],
+        [
+          61,
+          72
+        ]
+      ],
+      "calibration": {
+        "primary": "platt",
+        "sensitivity": "isotonic"
+      },
+      "seed": 20261110,
+      "bootstrap": {
+        "unit": "patient",
+        "overall_resamples": 1000,
+        "subgroup_resamples": 500
+      },
+      "snapshot_metrics": [
+        "auroc",
+        "auprc",
+        "brier",
+        "calibration_slope",
+        "calibration_intercept",
+        "observed_over_expected"
+      ],
+      "point_warning_metrics": [
+        "sensitivity",
+        "specificity",
+        "ppv",
+        "f1"
+      ],
+      "alert_metrics": [
+        "event_detection_rate",
+        "lead_time_median_h",
+        "alert_ppv",
+        "alerts_per_patient_day",
+        "false_alerts_per_patient_day",
+        "non_aki_patients_alerted",
+        "alerts_per_alerted_patient",
+        "hours_to_first_alert_median"
+      ],
+      "subgroups": {
+        "age_years": {
+          "bins": [
+            18,
+            65,
+            80,
+            200
+          ],
+          "labels": [
+            "18-64",
+            "65-79",
+            "80+"
+          ]
+        },
+        "gender_male": {
+          "levels": {
+            "1": "male",
+            "0": "female"
+          }
+        },
+        "first_careunit": {
+          "levels": [
+            "MICU",
+            "SICU",
+            "CSRU",
+            "CCU",
+            "TSICU"
+          ]
+        },
+        "source_system": {
+          "levels": [
+            "carevue",
+            "metavision"
+          ]
+        }
+      },
+      "robustness": {
+        "isotonic_calibration": true,
+        "urine_output_endpoint": {
+          "labels": "aki_uo_within_",
+          "eligible": "eligible_uo_",
+          "onset": "urine_output_aki_onset_time"
+        },
+        "baseline_definitions": [
+          "creatinine_aki_onset_time_alt_mdrd_if_missing",
+          "creatinine_aki_onset_time_alt_min_with_history"
+        ]
+      },
+      "event_replay": {
+        "query_times": "every input availability time within the monitoring window (labs 1 h after draw)",
+        "horizons": [
+          12,
+          24
+        ],
+        "exposure": "hourly monitored rows / 24 (alert burden on the same denominator as the hourly grid)"
+      },
+      "shap": {
+        "patients": 1500,
+        "top": 20
+      },
+      "outputs": "artifacts/reports/test_v1"
+    },
+    "input_sha256": {
+      "config": "be20503f609a0996de9ac5ea52c694fe3b1b7b92dcae6bb50fa9aff5d8442b16",
+      "policy": "aa0dedd15b4672c78685a4d4d58bef329f8af4bfba4c8ba0ac920043749ab0bc",
+      "comparator_policy": "4569c8c5d081edb2612e99cfc960861e894c3fbc9473d4d3e55c722c38df8e91",
+      "model": "605044df37b040285bf6f91676d4e05506f21cb84aba01119e17bf46d2043ff1",
+      "snapshots": "b27c11be7dc55d01e65b16b1866c5e5e8f0824bc1e3e695c9b103db6c548bd8a",
+      "events": "49d6b233ad824721bb4eb677155c52c34f4e16abf5b5db42b3f7eb3d913d903c",
+      "dataset_config": "2827bf11becb33c8c5d7070b4ad9c6eedf7a72b122aefd8cd56eccf81609ef12"
+    },
+    "source_sha256": {
+      "src/aki_eval/__init__.py": "3c2f74f61513229d15a259d1874b34d9a7b49c126794383aa50f6d04c1e760ad",
+      "src/aki_eval/checks.py": "e20b9480f5edc42fc825435e73ddcc8f3563c223885a74d67b2424344fddfc4c",
+      "src/aki_eval/data.py": "54f40a683b55e73a73d31606cf47730ff75a06d35c10759114fd6cccaa1dd9ff",
+      "src/aki_eval/policies.py": "c5db05f229229846c9af56d844e31b0388f5d7fbbec04497459720b1039f1c1b",
+      "src/aki_eval/protocol.py": "505ab8178403e7c816f0990807b929c7ad956ce8e6987d631a60b4094c4a8e11",
+      "src/aki_eval/replay.py": "e9d6edf5dadcb1a162fc682236b201dd5a80a66fb4bc4c79e9f55f6e744f8a72",
+      "src/aki_eval/reporting.py": "fdd74292d54de67e35351b8c8b2eb2864f3e5e4e832174fe900ded5a77f372e1",
+      "src/aki_eval/stability.py": "353ea40179409b9c9ba3b859af2d284a7ab573c81ed3c96ab4b3ff95f6d32471",
+      "src/aki_eval/study.py": "ce87eff1e18c57ef55c6ef62836b1a1e0645d2668cd44e609323edefaf6da915",
+      "src/aki_final/__init__.py": "a4e08cf065df2408f75e60dced745576d3463fd35876159e3ca5dbab647be168",
+      "src/aki_final/test_evaluation.py": "2b9fd3fe622fcf37a89afb3115d799bf222bd471d173316d7c709e48c554df20",
+      "src/aki_ml/features.py": "a6ef0d5527b8e7e15f6ac95716dfdc2bec32eedbcba48b208b6f2ed51704dcbf",
+      "src/aki_ml/feature_windows.py": "d09f7fbbecadc4132dc3ce4f88433f92993bcd21a62a40ae9b6c0e85cb4a7e73",
+      "src/aki_ml/admission_inputs.py": "405911f90938ef4f2669de458d23bf5f2375477cf1ea3b52ecc8449a384425bd",
+      "src/aki_ml/models.py": "c3738b69d9b10c8dcc0e322a415edb029a902b6ef840dce733a418d522049c30",
+      "src/aki_ml/alerts.py": "3ba3bd7a74ccd118a7140c6f3614de50f4bcea6eb488ff72d37c24f7b3c56e58"
+    },
+    "commit_before_results": false,
+    "registration": "immutable local record; not public preregistration"
+  }
+}
