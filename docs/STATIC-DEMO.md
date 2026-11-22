@@ -25,6 +25,14 @@ top-five drivers computed for the synthetic patients.
 - The header shows the demo clock. **+1 h** and **+6 h** advance it; **Restart** returns to ICU hour 0.
 - `?hour=N` in the address opens the demo at ICU hour N (for example `/?hour=30`).
 - Each visitor has an independent clock; reloading the page restarts at hour 0 (or at `?hour=`).
+- **Unit alert setting** (above the patients): choose locked policy v3 or a false-alert budget of 0.15, 0.20, 0.25,
+  0.30 or 0.40 false alerts per patient-day. The threshold changes to the one the alert-budget study certified for that
+  budget (28.5%, 24%, 20.5%, 18%, 13.5%), the panel shows its test-split results, and the warnings of the four patients
+  are recomputed in the browser. `?budget=0.15` preselects a budget, for example `/?hour=40&budget=0.15`.
+- Story for the budget: Demo B develops AKI, while Demo C's creatinine stays near baseline, so its warnings are false
+  alarms. At budget 0.15 Demo C's 7 warning hours drop to 1, but Demo B is warned from ICU hour 27 instead of 18; at
+  budget 0.40 Demo B is warned from hour 3, and Demo C for 18 hours. A stricter budget means fewer false alerts but
+  later warnings.
 - Story for a presentation: Demo B (sepsis) is warned from ICU hour 18 and stays warned through hour 72 (55 hours);
   Demo C (post cardiac surgery, chronic kidney disease, creatinine stays near baseline) has a 24 h risk of at least
   21% in 17 hours, but the 12 h confirmation rule of policy v3 shows a warning in only 7 of them; Demos A and D never

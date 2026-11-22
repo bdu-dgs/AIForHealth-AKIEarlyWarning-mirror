@@ -81,6 +81,13 @@ locked alert policy v3 (`artifacts/policy/policy_v3.json`): a 24 h warning requi
 12 h risk 10.5%. Use `Start-AKI-Demo.cmd --port 8766` for a fresh fictional-patient demo; restart an older service to
 load a changed policy.
 
+The **Unit alert setting** panel above the patients lets the viewer pick a false-alert budget (0.15-0.40 false alerts
+per patient-day) instead of policy v3. Each budget uses the same rule shape (24 h risk >= t and 12 h risk >= t / 2)
+with the threshold t that the alert-budget study certified on validation patients, and shows that threshold's test
+results ([docs/FINAL-ANALYSES.md](../docs/FINAL-ANALYSES.md), section 3.2). Warnings, threshold lines and the patient
+filter follow the setting at once. It is a display setting of this browser: stored predictions and exported files keep
+policy v3. `?budget=0.2` in the address preselects a budget.
+
 ## Local CSV dataset preview
 
 Create `icu_pre_admission_data` in the project root and place these files inside it:

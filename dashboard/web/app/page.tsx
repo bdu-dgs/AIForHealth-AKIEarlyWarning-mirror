@@ -19,6 +19,8 @@ import { PatientView } from '@/components/clinical/patient-view';
 import { InputPanel } from '@/components/clinical/input-panel';
 import { DatasetPreview } from '@/components/clinical/dataset-preview';
 import { Choice } from '@/components/clinical/choice';
+import { AlertBudgetPanel, useAlertSetting } from '@/components/clinical/alert-budget-panel';
+import { withAlertSetting } from '@/lib/alert-budget';
 import {
   api,
   post,
@@ -57,6 +59,7 @@ export default function App() {
   const [page, setPage] = useState(0);
   const [route, setRoute] = useState(window.location.pathname);
   const [refresh, setRefresh] = useState(0);
+  const alertSetting = useAlertSetting();
   const navigate = useCallback((path: string) => {
     window.history.pushState({}, '', path);
     setRoute(path);
@@ -173,7 +176,7 @@ export default function App() {
         .includes(search.toLowerCase()) &&
       (filter === 'all' ||
         (filter === 'warning'
-          ? alertOf(p.prediction, p.stale) === 'AKI warning'
+          ? alertOf(withAlertSetting(p.prediction, alertSetting), p.stale) === 'AKI warning'
           : !p.prediction || p.stale)),
   );
   const pages = Math.max(1, Math.ceil(filtered.length / 8));
@@ -342,9 +345,11 @@ export default function App() {
         {STATIC_DEMO && (
           <div className="notice" role="note">
             Public demo: four synthetic patients replayed hour by hour with the locked AKI model and alert policy v3.
-            Read-only; no real patient data. Use +1 h / +6 h to move the ICU clock.
+            Read-only; no real patient data. Use +1 h / +6 h to move the ICU clock, and the unit alert setting to see
+            how warnings change with the false-alert budget.
           </div>
         )}
+        {!input && !dataset && <AlertBudgetPanel />}
         {error && (
           <div className="notice error" role="alert">
             <span>{error}</span>

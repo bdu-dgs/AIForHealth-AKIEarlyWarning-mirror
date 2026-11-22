@@ -167,7 +167,7 @@ export function ClinicalChart({
               textAnchor="end"
               className="axis-text"
             >
-              {'Alert threshold ' + Math.round(threshold * 100) + '%'}
+              {'Alert threshold ' + +(threshold * 100).toFixed(1) + '%'}
             </text>
           </g>
         )}

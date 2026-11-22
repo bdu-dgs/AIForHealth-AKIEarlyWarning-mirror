@@ -14,6 +14,8 @@ import { DateTimeInput } from './form-controls';
 import { Slider } from '@/components/ui/slider';
 import { Choice } from './choice';
 import { ClinicalChart } from './chart';
+import { useAlertSetting } from './alert-budget-panel';
+import { withAlertSetting } from '@/lib/alert-budget';
 import {
   api,
   history,
@@ -121,6 +123,7 @@ export function PatientView({
   const [qualityKey, setQualityKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const setting = useAlertSetting();
   const admitted = +new Date(patient.icu_admitted_at);
   const end = replay ?? clock;
   const start = Math.max(
@@ -285,11 +288,18 @@ export function PatientView({
         +new Date(a.origin_time) - +new Date(b.origin_time) ||
         b.input_revision - a.input_revision,
     );
-  const current = data?.current.find((p) => groupKey(p) === groupId) ?? null;
+  // Warnings, the threshold line and the threshold text follow the unit alert setting.
+  const current = withAlertSetting(
+    data?.current.find((p) => groupKey(p) === groupId) ?? null,
+    setting,
+  );
   const threshold =
     current?.threshold?.locked
       ? current.threshold.value
-      : ([...predictions].reverse().find((p) => p.threshold?.locked)?.threshold?.value ?? null);
+      : (withAlertSetting(
+          [...predictions].reverse().find((p) => p.threshold?.locked),
+          setting,
+        )?.threshold?.value ?? null);
   const stale =
     !!current && current.input_fingerprint !== data?.inputFingerprint;
   // While the model worker is recalculating, keep the previous status instead of flashing "result pending".

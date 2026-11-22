@@ -144,3 +144,9 @@ Environment: Windows x64, Python 3.13.5, NumPy 2.1.3, pandas 2.2.3, and Node.js 
 - An isolated fresh launch with --no-browser, a custom port, and temporary data became healthy and printed the matching URL. The test server was stopped afterward.
 - Python compilation and git diff --check passed. Unsupported terminal link-click behavior is outside the launcher's control; copying the URL remains available.
 
+## Unit alert setting (alert budget) — 2026-11-22
+
+- Added a display setting that replaces the locked policy-v3 threshold with the threshold certified for a chosen false-alert budget (alert-budget-v1, method M1); the rule shape (24 h >= t, 12 h >= t / 2) is unchanged and other policies or unlocked thresholds are never replaced.
+- `tests/alert-budget.test.ts` (4 tests, synthetic predictions): the policy setting returns predictions unchanged; budgets move the main and confirmation thresholds together; the displayed rates match `artifacts/reports/alert_budget_v1/results.csv` and `budget_sweep.csv`. `pnpm test`: 12 of 12 passed; `tsc --noEmit` passed; static build passed.
+- Static demo checked in headless Chrome at ICU hours 30 and 40 with budgets 0.15 and 0.40 (overview and patient detail). With the policy setting, warning hours recomputed from `demo.json` equal the recorded ones (Demo B from hour 18 for 55 h, Demo C 7 h).
+- Not tested: clicking the budget selector in a browser (the selection path was checked through the `?budget=` address parameter, which uses the same store).
