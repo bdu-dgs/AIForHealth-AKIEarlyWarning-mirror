@@ -9,7 +9,9 @@ Notebooks 01-03 have been run on local MIMIC-III v1.4, including the one locked 
 | Document | Scope |
 |---|---|
 | This README | Research objective, candidate study design, notebook ownership, privacy, and repository-wide status |
+| [INSTALL.md](INSTALL.md) | Installation and step-by-step reproduction of every result and figure, with runtimes |
 | [docs/FINAL-REPORT.md](docs/FINAL-REPORT.md) | Final report: design, locked test results, subgroups, sensitivity analyses, limitations |
+| [docs/FINAL-ANALYSES.md](docs/FINAL-ANALYSES.md) | Secondary analyses for the course report: severity, baselines, decision curves, system transfer and recalibration, fairness, EDA, figures |
 | [docs/STATIC-DEMO.md](docs/STATIC-DEMO.md) | Public read-only demo with synthetic patients: Vercel deployment, offline backup, rebuild |
 | [docs/ALERT-POLICY.md](docs/ALERT-POLICY.md) | Locked alert policy v3: rule, selection/confirmation design, result and limits |
 | [docs/FEATURE-ENGINE-V2.md](docs/FEATURE-ENGINE-V2.md) | Batch-independent feature engine and its revalidation with the locked weights |
@@ -123,14 +125,17 @@ Notebooks exchange versioned local Parquet artifacts rather than in-memory varia
 | ML notebook | `artifacts/predictions/<run_id>_event_replay.parquet` | One model, validation stay, event time, and horizon |
 | Demo I notebook | `artifacts/demo_i/policy.json` and aggregate tables/figures | Locked alert policy (threshold, monitoring window, model hashes) and validation summaries |
 | Evaluation notebook | `artifacts/reports/test_v1/`, `artifacts/reports/robustness_retrain_v1/` | Aggregate test metrics, prespecification records |
+| Final-report scripts (`src/aki_report/`) | `artifacts/reports/{final_analyses_v1, system_shift_v1, system_recalibration_v1, fairness_structured_v1, eda_v1}/`, `artifacts/reports/figures/` | Aggregate tables, prespecification records, report figures (PDF and PNG) |
 
-For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/default.yaml` (default `../Cleaned`, outside the repository); filtered source caches go to `artifacts/interim/`. Only `artifacts/demo_i/policy.json` (the locked alert policy) is committed from `artifacts/`; see [artifacts/README.md](artifacts/README.md). These planned Parquet and experiment artifacts are separate from the website's live JSON exchange contract. The live contract is defined only in [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md).
+For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/default.yaml` (default `../Cleaned`, outside the repository); filtered source caches go to `artifacts/interim/`. From `artifacts/`, only the locked policies and aggregate, non-identifying reports and figures are committed; see [artifacts/README.md](artifacts/README.md). These planned Parquet and experiment artifacts are separate from the website's live JSON exchange contract. The live contract is defined only in [dashboard/DATA-CONTRACT.md](dashboard/DATA-CONTRACT.md).
 
 ## Repository layout
 
 ```text
 .
 |-- README.md
+|-- INSTALL.md                 # installation and full reproduction order
+|-- requirements-research.txt  # pinned research environment (notebooks and scripts)
 |-- pyproject.toml
 |-- .gitignore
 |-- .env.example
@@ -139,7 +144,11 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |   |-- ml.yaml                # model training settings (notebook 02)
 |   |-- alert_policy_v3.yaml   # alert-policy study (validation)
 |   |-- evaluation_test_v1.yaml       # locked test evaluation protocol
-|   `-- robustness_retrain_v1.yaml    # retraining sensitivity analyses
+|   |-- robustness_retrain_v1.yaml    # retraining sensitivity analyses
+|   |-- final_analyses_v1.yaml        # severity, baselines, trade-off, decision curves
+|   |-- system_shift_v1.yaml          # CareVue <-> MetaVision transfer
+|   |-- system_recalibration_v1.yaml  # local recalibration of a transported model
+|   `-- fairness_structured_v1.yaml   # fairness by insurance and recorded ethnicity
 |-- pipeline/
 |   |-- 01_dataset_construction.ipynb
 |   |-- 02_ml_pipeline.ipynb
@@ -151,6 +160,7 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |-- src/aki_eval/              # independent artifact checks, alert events and validation protocol
 |-- src/aki_final/             # notebook 03: locked test evaluation
 |-- src/aki_robustness/        # notebook 03: feature-window and missingness retraining analyses
+|-- src/aki_report/            # final-report secondary analyses, EDA and figures
 |-- demo-static/               # prebuilt public demo (synthetic patients) for Vercel
 |-- tests/                    # synthetic evaluation and protocol tests
 |-- dashboard/
@@ -163,14 +173,16 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 |   |-- api/                   # FastAPI, SQLite, file ingestion, demo playback
 |   |-- web/                   # React and TypeScript frontend
 |   `-- tests/                 # synthetic backend tests
-|-- docs/                      # alert policy and feature-engine documentation
-|-- scripts/                   # setup, synthetic demo patients, batch scoring, demo upload
+|-- docs/                      # final report, final analyses, alert policy, feature engine, static demo
+|-- scripts/                   # setup, scoring, test evaluation, final-report analyses and figures, hash check
 |-- filter/                    # separately added CSV/TSV cleaning tool
 |-- Setup-AKI.cmd
 |-- Start-AKI.cmd
 |-- Start-AKI-Demo.cmd         # demo playback with synthetic patients
 `-- artifacts/
-    `-- README.md              # artifact inventory; policy.json is the committed exception
+    |-- README.md              # artifact inventory (what is local, what is committed)
+    |-- policy/, demo_i/       # locked alert policies (committed)
+    `-- reports/               # aggregate result tables and figures (committed); models and predictions stay local
 ```
 
 ## Data and privacy
@@ -208,7 +220,8 @@ For the dataset notebook, `<output_root>` is `paths.output_root` in `configs/def
 - **Feature engine v2:** the original feature arithmetic made a patient's features depend on which other patients were computed in the same batch. `patient_window_v2` removes this; with the locked weights, validation AUROC is unchanged to 4 decimals ([docs/FEATURE-ENGINE-V2.md](docs/FEATURE-ENGINE-V2.md)).
 - **Alert policy v3 (locked, `pipeline/KeJin_alert_policy_and_checks.ipynb`):** A1-A12 artifact and leakage checks pass. Selected on 70% of validation patients and confirmed on the other 30%: warn when the 24 h risk is at least 21% and the 12 h risk at least 10.5%. Versus demo-v1, false alerts fall from 0.42 to 0.23 per patient-day at the same PPV (34%) and detection from 76.9% to 71.9%; this missed the prespecified 5-point detection-loss limit by 0.08 points and was accepted by the project owner ([docs/ALERT-POLICY.md](docs/ALERT-POLICY.md)).
 - **Locked test evaluation (notebook 03, 2026-11-10):** 4,959 test patients, opened once after the protocol and code were frozen. AUROC 6/12/24/48 h 0.866 / 0.841 / 0.817 / 0.792, observed/expected 0.98, calibration slope 1.00-1.07. Policy v3 versus demo-v1: 0.23 versus 0.42 false alerts per patient-day, 71.7% versus 76.6% of AKI events detected, PPV 33.5% versus 34.0%, median lead 11.6 versus 12.9 h. Lower discrimination in CSRU and CCU (0.76); results unchanged with alternative baseline definitions; the model does not predict urine-output AKI (AUROC 0.62). Retrained sensitivity analyses: feature-window lengths and missing-value handling change AUROC by at most 0.003; removing measurement-process features (time since last value, counts) costs 0.024 at 6 h and 0.004 at 24 h. Details: [docs/FINAL-REPORT.md](docs/FINAL-REPORT.md).
-- **Public demo:** `demo-static/` is a read-only build with four synthetic patients replayed by the locked model and policy v3, ready for Vercel ([docs/STATIC-DEMO.md](docs/STATIC-DEMO.md)).
+- **Public demo:** `demo-static/` is a read-only build with four synthetic patients replayed by the locked model and policy v3, deployed on Vercel ([docs/STATIC-DEMO.md](docs/STATIC-DEMO.md)).
+- **Final-report analyses (2026-11-21, secondary, nothing tuned on test):** policy v3 runs at 1.99 false alerts per true alert (the operating point of Tomasev et al.) and detects 71.7% of AKI events, 86.9% of stage-3 AKI and 40 of 41 AKI episodes that later needed RRT. 24 h AUROC: locked model 0.817, XGBoost 0.814, random forest 0.794, logistic regression 0.788, creatinine-only 0.703, creatinine-rise rule 0.618. Decision curves favour the model at all thresholds from 1% to 50% (12 h, 24 h). CareVue <-> MetaVision transfer loses 0.01-0.03 AUROC but shifts calibration (O/E 1.16 / 0.86); refitting Platt on about 500-1,000 local patients restores calibration and alert burden. AUROC is equal across insurance and ethnicity groups, but risk is underestimated for Medicaid, government-insured and Hispanic patients (fewer alerts). Details and figures: [docs/FINAL-ANALYSES.md](docs/FINAL-ANALYSES.md); reproduction: [INSTALL.md](INSTALL.md).
 - **Not done:** external or prospective validation; there is no clinical validation.
 
 Local website changes do not become available from GitHub until they are explicitly committed and pushed. Windows EXE, installer, and portable runtime packaging have not been built.

@@ -38,4 +38,16 @@ For an existing matching run, restore its authorized local `lightgbm__no_dc` mod
 | `feature_v2/admission_inputs_test/` | same script | Float64 admission baselines for test stays | Yes |
 | `reports/robustness_retrain_v1/` | `scripts/run_retrain_robustness.py` (`configs/robustness_retrain_v1.yaml`) | Prespec record, variant metrics, test differences, harness check (committed) | No |
 | `models/<run_id>/robustness-retrain-v1/` | same script | Retrained variant heads with their validation/test scores (resume cache) | Models trained on MIMIC; scores are patient-level |
+
+## Final-report analyses (see docs/FINAL-ANALYSES.md)
+
+| Path | Produced by | Contents | Patient-level? |
+|---|---|---|---|
+| `reports/final_analyses_v1/` | `scripts/run_final_analyses.py` | Prespec record, severity detection, operating points, baseline metrics and differences, alert trade-off, decision curves, ROC/PR/calibration points (committed) | No |
+| `reports/system_shift_v1/` | `scripts/run_system_shift.py` | Prespec record, CareVue/MetaVision transfer metrics, AUROC differences, policy-v3 alerts (committed) | No |
+| `models/<run_id>/system-shift-v1/` | same script | Single-system retrained heads with validation/test scores (resume cache) | Models trained on MIMIC; scores are patient-level |
+| `reports/system_recalibration_v1/` | `scripts/run_recalibration.py` | Prespec record, recalibration metrics, sample-size repeats and summary (committed) | No |
+| `reports/fairness_structured_v1/` | `scripts/run_fairness.py` | Prespec record, metrics by insurance and ethnicity, differences from reference groups (committed) | No |
+| `reports/eda_v1/` | `scripts/run_eda.py` | Cohort table, flow, onset timing, prevalence, measurement process, missingness, creatinine trajectory (training split; committed; cells under 10 removed) | No |
+| `reports/figures/` | `scripts/make_report_figures.py` | All report figures as PDF and 300 dpi PNG (committed) | No |
 | `reports/dry_run_validation/` | `scripts/evaluate_test.py --split validation` | Dry run of the test code on validation | No |
