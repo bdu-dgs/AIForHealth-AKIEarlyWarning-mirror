@@ -1,0 +1,16 @@
+{
+  "version": "sequence-model-v1",
+  "prespec_sha256": "95eb110c088f2cf19cccab20ab471934965dab3e7df680b10cd9791cb69b3d97",
+  "finished_at": "2026-11-22T17:33:22.403650+00:00",
+  "decision": "stop",
+  "patients": {
+    "fit": 19548,
+    "holdout": 3450,
+    "validation": 4950
+  },
+  "outputs": [
+    "prespec.json",
+    "validation_auroc_differences.csv",
+    "validation_metrics.csv"
+  ]
+}

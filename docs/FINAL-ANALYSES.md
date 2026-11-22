@@ -183,7 +183,30 @@ are shown for the test split, and for the validation and test splits pooled (sec
 - **Implication**: equal AUROC does not guarantee equal alerting. Group-level calibration should be monitored after
   deployment, and the same local recalibration as in section 7 is the remedy if it drifts.
 
-## 9. Figures (`artifacts/reports/figures/`)
+## 9. Does a sequence model beat the locked LightGBM? (`sequence_model_v1/`, validation only)
+
+This is a go / no-go study on the validation split; the test split was not loaded. A unidirectional GRU reads the same
+246 hourly inputs, plus missing-value indicators, as a sequence. It is trained on 19,548 training patients, with early
+stopping and Platt calibration on 3,450 held-out training patients. Three seeds are averaged. The rule fixed in advance
+was: go to a test evaluation only if the GRU or the GRU + LightGBM ensemble improves 24 h AUROC by >= 0.010 with a 95%
+CI above 0.
+
+| Validation AUROC | 6 h | 12 h | 24 h | 48 h | 24 h AUPRC |
+|---|---:|---:|---:|---:|---:|
+| LightGBM (locked) | 0.865 | 0.839 | 0.809 | 0.782 | 0.422 |
+| GRU (3 seeds) | 0.855 | 0.830 | 0.800 | 0.773 | 0.406 |
+| Ensemble (mean of both) | 0.873 | 0.848 | 0.817 | 0.790 | 0.441 |
+| Ensemble minus LightGBM (95% CI) | +0.008 (0.005-0.012) | +0.008 (0.005-0.012) | +0.009 (0.004-0.013) | +0.008 (0.003-0.013) | |
+
+- **The GRU alone is about 0.009 worse than LightGBM.** It overfits after 3-5 epochs. This agrees with published ICU
+  AKI benchmarks, where gradient-boosted trees match or beat recurrent networks on engineered hourly features.
+- **The ensemble is consistently better at every horizon** (+0.008-0.009 AUROC; 24 h AUPRC +0.019). The sequence
+  model therefore carries some complementary temporal information.
+- **Decision: stop.** The gain is below the prespecified 0.010 threshold, so the ensemble was not taken to the test
+  split, and the locked system stays LightGBM. In the report this is a negative result with a positive side-finding:
+  feature-engineered trees are close to the ceiling for these inputs, and the remaining headroom is small.
+
+## 10. Figures (`artifacts/reports/figures/`)
 
 `fig_pipeline` (system overview), `fig_cohort_flow`, `fig_eda`, `fig_missingness`, `fig_roc_pr`, `fig_calibration`,
 `fig_alert_tradeoff`, `fig_decision_curve`, `fig_severity`, `fig_shap`, `fig_patient_example` (synthetic demo

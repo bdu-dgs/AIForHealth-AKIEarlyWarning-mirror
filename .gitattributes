@@ -6,6 +6,7 @@
 #   artifacts/reports/system_shift_v1/prespec.json                                (CareVue/MetaVision transfer)
 #   artifacts/reports/system_recalibration_v1/prespec.json                        (local recalibration)
 #   artifacts/reports/fairness_structured_v1/prespec.json                         (fairness by insurance / ethnicity)
+#   artifacts/reports/sequence_model_v1/prespec.json                              (GRU go / no-go, validation)
 #   ../Cleaned/dataset_manifest.json                                              (configs/default.yaml)
 # Re-running a study checks these hashes and refuses changed files. The hashes were taken on the line endings below
 # (Windows checkouts for most, LF for files created later), so every checkout on any OS reproduces those bytes.
@@ -26,6 +27,7 @@ src/aki_report/final_analyses.py    text eol=crlf
 src/aki_report/system_shift.py      text eol=lf
 src/aki_report/fairness.py          text eol=lf
 src/aki_report/recalibration.py     text eol=lf
+src/aki_report/sequence.py          text eol=lf
 
 configs/default.yaml                text eol=crlf
 configs/ml.yaml                     text eol=crlf
@@ -36,6 +38,7 @@ configs/final_analyses_v1.yaml      text eol=lf
 configs/system_shift_v1.yaml        text eol=lf
 configs/fairness_structured_v1.yaml text eol=lf
 configs/system_recalibration_v1.yaml text eol=lf
+configs/sequence_model_v1.yaml      text eol=crlf
 
 artifacts/demo_i/policy.json        text eol=crlf
 artifacts/policy/policy_v3.json     text eol=crlf

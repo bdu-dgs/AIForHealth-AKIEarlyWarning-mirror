@@ -60,3 +60,4 @@ artifacts/reports/*
 !artifacts/reports/fairness_structured_v1/
 !artifacts/reports/eda_v1/
 !artifacts/reports/figures/
+!artifacts/reports/sequence_model_v1/

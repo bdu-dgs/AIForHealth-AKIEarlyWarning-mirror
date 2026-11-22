@@ -1,0 +1,37 @@
+# Can a sequence model beat the locked LightGBM? A go / no-go comparison on the VALIDATION split only.
+# Written before any sequence model is trained. The test split is not loaded. Validation patients are never used for
+# training, early stopping or calibration; they only compare the finished models. Nothing here changes the locked system.
+version: sequence-model-v1
+reference: {run_id: aki_ml_v1_28e0b1fb83, family: lightgbm, feature_set: no_dc}   # locked model, stored validation risks
+features: the 246 inputs of the locked model, stored notebook-01 hourly snapshots (legacy feature engine, as trained)
+preprocessing:                          # fitted on the GRU training patients only
+  winsorize_quantiles: [0.005, 0.995]
+  impute: training median
+  missing_indicators: one per feature with any missing value in training rows
+  scale: standard
+model:
+  type: GRU, unidirectional (step t sees only hourly rows <= t, each already an as-of feature vector)
+  input_projection: 128
+  hidden: 128
+  layers: 1
+  dropout: 0.2
+  heads: one logit per horizon (6, 12, 24, 48 h) at every hourly step
+training:
+  patients: training split; 85% fit, 15% internal holdout (seeded, stratified by any creatinine AKI)
+  loss: binary cross-entropy summed over horizons, masked to eligible (horizon, hour) cells
+  optimizer: {name: AdamW, lr: 0.001, weight_decay: 0.0001}
+  batch_patients: 64
+  max_epochs: 25
+  early_stopping: {metric: mean holdout AUROC over the 4 horizons, patience: 3}
+  calibration: Platt per horizon on the internal holdout
+  seeds: [1, 2, 3]                       # the GRU is reported as the mean of the three seeds' calibrated risks
+comparison:
+  split: validation
+  models: [lightgbm_locked, gru, ensemble]          # ensemble = mean of the GRU and LightGBM calibrated risks
+  metrics: [auroc, auprc, brier]
+  paired_bootstrap: {unit: patient, resamples: 500}
+decision_rule: >-
+  Go (one prespecified test evaluation) only if GRU or ensemble improves the 24 h validation AUROC over the locked
+  LightGBM by >= 0.010 with a 95% CI excluding 0. Otherwise stop: the sequence model does not add enough.
+seed: 20261122
+outputs: artifacts/reports/sequence_model_v1     # aggregate only; fitted networks stay local under artifacts/models/
