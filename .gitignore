@@ -1,60 +1,62 @@
-# Local data, generated artifacts, credentials, caches, and task-only context.
+# Never committed: MIMIC-derived data, model weights, predictions, local tool state, caches.
+# Everything under artifacts/ is local except the README, the locked policies and aggregate reports (see artifacts/README.md).
+
+# Local working notes and tool state
 AGENTS.md
 CONTEXT.md
 checkpoints/
-AIForHealth-AKIEarlyWarning-summary-site/
+.env
+.env.*
+!.env.example
+
+# Python / Node caches and builds
 .venv/
 __pycache__/
 .pytest_cache/
 *.pyc
 *.tsbuildinfo
 node_modules/
+.pnpm-store/
 dashboard/web/dist/
 dist/
 build/
 *.spec
-AKIWorkbench/
+.wrangler/
+*.log
+
+# Local data (MIMIC subsets, website databases)
+data/
 local_data/
 icu_pre_admission_data/
-.env
-.env.*
-!.env.example
+AKIWorkbench/
 *.db
 *.db-*
 *.sqlite*
-*.log
-.wrangler/
-data/
 models/
+
+# artifacts/: local by default
 artifacts/*
 !artifacts/README.md
-# Locked Demo I alert policy (aggregate numbers only); everything else in demo_i stays local.
+# locked alert policies (aggregate numbers and hashes only)
+!artifacts/policy/
 !artifacts/demo_i/
 artifacts/demo_i/*
 !artifacts/demo_i/policy.json
 !artifacts/demo_i/policy_feature_v2.json
-!artifacts/policy/
+# aggregate tables, records and figures of the validation-stage studies
+!artifacts/handoff/
+artifacts/handoff/*
+!artifacts/handoff/jiaju/
+!artifacts/handoff/feature_v2/
+!artifacts/handoff/policy_v3/
+# aggregate test-stage and final-report results
 !artifacts/reports/
 artifacts/reports/*
 !artifacts/reports/test_v1/
 !artifacts/reports/robustness_retrain_v1/
-# Collaborator hand-back outputs (aggregate tables and figures only).
-!artifacts/handoff/
-MIMIC.docx
-
-.pnpm-store/
-DEMO_I_PLAN.md
-# Jiaju aggregate validation results; patient-level artifacts remain local.
-!artifacts/handoff/
-artifacts/handoff/*
-!artifacts/handoff/jiaju/
-# Feature-engine v2 revalidation and alert policy v3 (aggregate tables, figures, records only).
-!artifacts/handoff/feature_v2/
-!artifacts/handoff/policy_v3/
-# Final-report analyses and figures (aggregate tables and figures only; see docs/FINAL-ANALYSES.md).
 !artifacts/reports/final_analyses_v1/
 !artifacts/reports/system_shift_v1/
+!artifacts/reports/system_recalibration_v1/
+!artifacts/reports/fairness_structured_v1/
 !artifacts/reports/eda_v1/
 !artifacts/reports/figures/
-!artifacts/reports/fairness_structured_v1/
-!artifacts/reports/system_recalibration_v1/

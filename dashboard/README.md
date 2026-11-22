@@ -10,7 +10,7 @@ This document explains how to use the course project's website. It supports pati
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Website architecture, backend and model integration, and development workflow |
 | [DATA-CONTRACT.md](DATA-CONTRACT.md) | Normative JSON fields, time, revisions, fingerprints, and threshold definitions |
 | [VALIDATION.md](VALIDATION.md) | Executed tests, environment, results, and unverified scope |
-| [HANDOFF-CHECK.md](HANDOFF-CHECK.md) | Historical differences between the original handoff summary and the actual repository |
+| [website hand-off check](../docs/history/2026-09_website-handoff-check.md) | Historical differences between the original handoff summary and the actual repository |
 
 ## Installation and startup
 

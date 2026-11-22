@@ -1,7 +1,7 @@
 # Alert policy v3
 
 The locked alert policy is `artifacts/policy/policy_v3.json`, used by the website and scoring scripts. It was selected
-and confirmed on validation patients with `pipeline/KeJin_alert_policy_and_checks.ipynb` and
+and confirmed on validation patients with `pipeline/05_alert_policy_v3_and_checks.ipynb` and
 `configs/alert_policy_v3.yaml`. The aggregate records of that run are in
 `artifacts/handoff/policy_v3/validation-policy-v3-66054ed84c02e348/`.
 
@@ -59,4 +59,4 @@ project owner accepted this trade-off on 2026-11-09 and locked the policy (`owne
 - The whole validation set was viewed in Demo I, and the confirmation patients were also used in an earlier
   collaborator study (v2, legacy-engine risks). The confirmation is an internal holdout, not an untouched test.
 - Metrics are on the hourly grid. Event-driven (minute-level) alerting is not validated.
-- This is a research threshold, not a clinical one. The locked test evaluation (notebook 03) is still pending.
+- This is a research threshold, not a clinical one. The locked test evaluation (notebook 06) is still pending.

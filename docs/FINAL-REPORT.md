@@ -149,13 +149,13 @@ backend ([STATIC-DEMO.md](STATIC-DEMO.md)).
 |---|---|---|
 | Dataset | `pipeline/01_dataset_construction.ipynb`, `configs/default.yaml` | `../Cleaned` (local) |
 | Models | `pipeline/02_ml_pipeline.ipynb`, `configs/ml.yaml` | `artifacts/models/aki_ml_v1_28e0b1fb83` (local) |
-| Window and threshold | `pipeline/demo_i_evaluation.ipynb` | `artifacts/demo_i/policy.json` |
-| Stability | `pipeline/Jiaju_stability.ipynb` | `artifacts/handoff/jiaju/` |
-| Alert policy and checks A1-A12 | `pipeline/KeJin_alert_policy_and_checks.ipynb`, `configs/alert_policy_v3.yaml` | `artifacts/policy/policy_v3.json` |
+| Window and threshold | `pipeline/03_alert_threshold_demo_i.ipynb` | `artifacts/demo_i/policy.json` |
+| Stability | `pipeline/04_stability_analysis.ipynb` | `artifacts/handoff/jiaju/` |
+| Alert policy and checks A1-A12 | `pipeline/05_alert_policy_v3_and_checks.ipynb`, `configs/alert_policy_v3.yaml` | `artifacts/policy/policy_v3.json` |
 | Locked test evaluation | `scripts/evaluate_test.py`, `configs/evaluation_test_v1.yaml` | `artifacts/reports/test_v1/` |
 | Retraining sensitivity | `scripts/run_retrain_robustness.py`, `configs/robustness_retrain_v1.yaml` | `artifacts/reports/robustness_retrain_v1/` |
 | Final-report secondary analyses (severity, baselines, decision curves, CareVue/MetaVision transfer and recalibration, fairness, EDA, figures) | `scripts/run_final_analyses.py`, `run_eda.py`, `run_system_shift.py`, `run_recalibration.py`, `run_fairness.py`, `make_report_figures.py` ([FINAL-ANALYSES.md](FINAL-ANALYSES.md)) | `artifacts/reports/{final_analyses_v1,system_shift_v1,system_recalibration_v1,fairness_structured_v1,eda_v1,figures}/` |
-| Summary of all of the above | `pipeline/03_evaluation_and_testing.ipynb` | - |
+| Summary of all of the above | `pipeline/06_test_evaluation_summary.ipynb` | - |
 | Static demo | `scripts/export_static_demo.py`, `pnpm build:static` | `demo-static/` |
 
 The sealed records hash their code and configuration files byte for byte; `.gitattributes` fixes those files' line

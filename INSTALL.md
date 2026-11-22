@@ -12,7 +12,7 @@ Patient data never leave the machine.
 
 - Windows 10/11, macOS or Linux, x64. Results were produced on Windows 11 with an i5-13500H and 16 GB of RAM, on CPU
   only.
-- Python **3.13** for the research pipeline. The website runs on Python 3.11 or later.
+- Python **3.13** for the research pipeline (`requirements-research.txt`). The website runs on Python 3.11 or later.
 - About **60 GB** of free disk: MIMIC-III is 40+ GB, `../Cleaned` about 0.5 GB, `artifacts/` 2-3 GB.
 - **Credentialed PhysioNet access to MIMIC-III v1.4.** The data are not in this repository and must never be
   committed or uploaded.
@@ -24,7 +24,8 @@ Download MIMIC-III v1.4 (uncompressed CSVs) to a folder next to the repository:
 ```text
 <parent>/
 |-- mimiciii/1.4/             # ADMISSIONS.csv, CHARTEVENTS.csv, LABEVENTS.csv, ... (from PhysioNet)
-|-- Cleaned/                  # written by notebook 01
+|-- Cleaned/                  # written by notebook 01 (path fixed in configs/default.yaml)
+|-- icu_pre_admission_data/   # optional small MIMIC subset for the website's read-only dataset preview
 `-- AIForHealth-AKIEarlyWarning/   # this repository
 ```
 
@@ -55,10 +56,10 @@ report.
 |---|---|---|---|---|
 | 1 | Cohort, labels, hourly features | run `pipeline/01_dataset_construction.ipynb` | `../Cleaned/` | ~25 min |
 | 2 | Train LR, RF, LightGBM, XGBoost (4 horizons) | run `pipeline/02_ml_pipeline.ipynb` | `artifacts/models/<run_id>/`, `artifacts/predictions/` | ~4.5 h |
-| 3 | Monitoring window and threshold (Demo I) | run `pipeline/demo_i_evaluation.ipynb` | `artifacts/demo_i/` | - |
+| 3 | Monitoring window and threshold (Demo I) | run `pipeline/03_alert_threshold_demo_i.ipynb` | `artifacts/demo_i/` | - |
 | 4 | Batch-independent features, validation rescoring | `python scripts/rescore_validation_feature_v2.py` | `artifacts/handoff/feature_v2/` | - |
-| 5 | Stability analysis | run `pipeline/Jiaju_stability.ipynb` | `artifacts/handoff/jiaju/` | - |
-| 6 | Alert policy v3 (selection + confirmation) | run `pipeline/KeJin_alert_policy_and_checks.ipynb` | `artifacts/handoff/policy_v3/`, `artifacts/policy/policy_v3.json` | - |
+| 5 | Stability analysis | run `pipeline/04_stability_analysis.ipynb` | `artifacts/handoff/jiaju/` | - |
+| 6 | Alert policy v3 (selection + confirmation) | run `pipeline/05_alert_policy_v3_and_checks.ipynb` | `artifacts/handoff/policy_v3/`, `artifacts/policy/policy_v3.json` | - |
 | 7 | Retraining sensitivity analyses | `python scripts/run_retrain_robustness.py` | `artifacts/reports/robustness_retrain_v1/` | ~10 min per variant |
 | 8 | Locked test evaluation (run once) | `python scripts/evaluate_test.py` | `artifacts/reports/test_v1/` | ~45 min |
 | 9 | Severity, baselines, decision curves | `python scripts/run_final_analyses.py` | `artifacts/reports/final_analyses_v1/` | ~11 min |
@@ -68,7 +69,8 @@ report.
 | 13 | Fairness by insurance and ethnicity | `python scripts/run_fairness.py` | `artifacts/reports/fairness_structured_v1/` | ~7 min |
 | 14 | All report figures | `python scripts/make_report_figures.py` | `artifacts/reports/figures/*.pdf, *.png` | ~1 min |
 
-`pipeline/03_evaluation_and_testing.ipynb` is a read-only summary over the outputs of steps 7-8.
+`pipeline/06_test_evaluation_summary.ipynb` summarises steps 7-8 and `pipeline/07_final_report_analyses.ipynb` summarises
+steps 9-14. Both only read the committed aggregate tables. Local run logs are kept in `artifacts/logs/`.
 
 **Sealed records.** Steps 6-13 first write a `prespec.json` that hashes their configuration and code. A rerun with
 changed code or configuration stops instead of overwriting; a new analysis needs a new version name. To check that the

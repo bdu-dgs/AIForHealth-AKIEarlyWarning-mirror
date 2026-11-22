@@ -8,13 +8,13 @@ Everything in this folder except this README, the policy files (`policy/`, `demo
 | `models/<run_id>/` | `pipeline/02_ml_pipeline.ipynb` | One folder per fitted model family (`lr__full`, `rf__full`, `lightgbm__full`, `xgboost__full`, `lightgbm__no_dc`): `pipeline.joblib`, `feature_order.json`, `metadata.json`, native boosted-tree files; `run_manifest.json`, `train.log`, aggregate `reports/`; `_heads/` resume checkpoints | Models trained on MIMIC |
 | `predictions/<run_id>.parquet` | notebook 02 | Hourly risk for every training out-of-fold and validation snapshot, model and horizon | Yes |
 | `predictions/<run_id>_event_replay.parquet` | notebook 02 | Event-driven replay risks for validation patients | Yes |
-| `02_ml_pipeline_full_run.ipynb`, `full_run_nbconvert.log` | notebook 02 full run | Executed copy of notebook 02 and its run log | Aggregates only |
-| `demo_i/` | `pipeline/demo_i_evaluation.ipynb` | `policy.json` (locked `demo-v1` threshold, monitoring window, alert policy, model hashes; committed), `policy_demo-v0.json`, aggregate validation tables (`*.csv`) and figures (`*.png`) | No |
+| `logs/` | notebook 02 full run and the analysis scripts | Executed copy of notebook 02 (`02_ml_pipeline_full_run.ipynb`) and run logs | Aggregates only |
+| `demo_i/` | `pipeline/03_alert_threshold_demo_i.ipynb` | `policy.json` (locked `demo-v1` threshold, monitoring window, alert policy, model hashes; committed), `policy_demo-v0.json`, aggregate validation tables (`*.csv`) and figures (`*.png`) | No |
 | `demo_i/policy_feature_v2.json` | feature-engine revalidation | `demo-v1` on batch-independent `patient_window_v2` features (committed) | No |
 | `policy/policy_v3.json` | alert policy v3 + owner decision | Locked policy used by the website and scoring scripts (committed) | No |
 | `demo_i/site_data/`, `demo_i/shots/`, `demo_i/patients_now.json` | demo runs and screenshots | Local website data, screenshots and time-shifted synthetic patients | No (synthetic) |
 
-The current run is `aki_ml_v1_28e0b1fb83`. The website's model worker and `scripts/score_dashboard.py` load `policy/policy_v3.json` and the model in `models/aki_ml_v1_28e0b1fb83/lightgbm__no_dc/`, so the live model runs only on a computer that holds this folder. To rebuild it, rerun notebook 01 (writes `../Cleaned` and `interim/`), notebook 02 (`models/`, `predictions/`) and `demo_i_evaluation.ipynb` (`demo_i/`).
+The current run is `aki_ml_v1_28e0b1fb83`. The website's model worker and `scripts/score_dashboard.py` load `policy/policy_v3.json` and the model in `models/aki_ml_v1_28e0b1fb83/lightgbm__no_dc/`, so the live model runs only on a computer that holds this folder. To rebuild it, rerun notebook 01 (writes `../Cleaned` and `interim/`), notebook 02 (`models/`, `predictions/`) and `03_alert_threshold_demo_i.ipynb` (`demo_i/`).
 
 For an existing matching run, restore its authorized local `lightgbm__no_dc` model directory at that path. The worker verifies `pipeline.joblib` against `pipeline_sha256` in the policy before loading it. `Setup-AKI.cmd` installs libraries but does not download or train weights. Restoring only `policy.json` is insufficient. Keep the fitted artifact and its provenance files together; do not replace the policy hash to make an unrelated model load.
 
@@ -26,10 +26,10 @@ For an existing matching run, restore its authorized local `lightgbm__no_dc` mod
 | `feature_v2/admission_inputs/` | `scripts/rescore_validation_feature_v2.py` | Float64 admission baselines for validation stays, rebuilt from LABEVENTS | Yes |
 | `predictions/<run_id>_validation_feature_v2.parquet` | same script | Validation risks for all horizons recomputed with `patient_window_v2` and the locked weights | Yes |
 | `handoff/feature_v2/` | same script | Legacy versus v2 comparison and invariance checks (committed) | No |
-| `handoff/policy_v3/<run>/` | `pipeline/KeJin_alert_policy_and_checks.ipynb` (`configs/alert_policy_v3.yaml`) | Prespec, A1-A12 checks, selection grid, sealed choice, confirmation, candidate policy, figure (committed) | No |
-| `handoff/jiaju/` | `pipeline/Jiaju_stability.ipynb` | Stability tables and figures (committed) | No |
+| `handoff/policy_v3/<run>/` | `pipeline/05_alert_policy_v3_and_checks.ipynb` (`configs/alert_policy_v3.yaml`) | Prespec, A1-A12 checks, selection grid, sealed choice, confirmation, candidate policy, figure (committed) | No |
+| `handoff/jiaju/` | `pipeline/04_stability_analysis.ipynb` | Stability tables and figures (committed) | No |
 
-## Notebook 03 (test evaluation and retraining sensitivity)
+## Notebook 06 (test evaluation and retraining sensitivity)
 
 | Path | Produced by | Contents | Patient-level? |
 |---|---|---|---|

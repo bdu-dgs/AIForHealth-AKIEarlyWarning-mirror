@@ -15,7 +15,7 @@ Maintain each fact fully in one primary document and use links plus a short summ
 | Module responsibilities, integration order, API inventory, and development workflow | This document |
 | JSON fields, types, time equations, revisions, and fingerprint algorithm | `DATA-CONTRACT.md` |
 | When checks run, their results, and what they cannot prove | `VALIDATION.md` |
-| Historical handoff differences | `HANDOFF-CHECK.md` |
+| Historical handoff differences | `../docs/history/2026-09_website-handoff-check.md` |
 
 When updating documentation:
 
@@ -23,7 +23,7 @@ When updating documentation:
 - Append new test results to `VALIDATION.md`; do not maintain pass counts in the root README.
 - Put page-operation changes in the website README; record implementation conventions here.
 - Put research-candidate changes in the root README; do not present candidates as website constraints.
-- Remove completed items from TODO lists and preserve historical differences in `HANDOFF-CHECK.md`.
+- Remove completed items from TODO lists and preserve historical differences in `docs/history/2026-09_website-handoff-check.md`.
 - Use evidence-consistent wording for planned, implemented, tested, and delivered work.
 
 ## System boundaries
@@ -262,7 +262,7 @@ Done (October 2026): modeling data, cohort, and outcome definitions (notebook 01
 
 Remaining:
 
-1. Evaluate the locked system once on the test set (notebook 03).
+1. Evaluate the locked system once on the test set (notebook 06).
 2. Compare prediction stability across data cutoffs and link it to the alert policy.
 3. Define and validate composite confidence from actual data density.
 4. Measure sustained load, model latency, failure recovery, and physician workflow.

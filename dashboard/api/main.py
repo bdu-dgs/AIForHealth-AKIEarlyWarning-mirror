@@ -144,7 +144,10 @@ def create_app(data_root=None, watch=True, dataset_root=None, demo_batch=None, d
     @app.get('/api/datasets/icu-preview')
     def dataset_preview():
         try:
-            return load_preview(dataset_root if dataset_root is not None else BASE / 'icu_pre_admission_data')
+            # The MIMIC subset lives next to the repository (or inside it); it is never committed.
+            default = next((p for p in [BASE / 'icu_pre_admission_data', BASE.parent / 'icu_pre_admission_data'] if p.is_dir()),
+                           BASE / 'icu_pre_admission_data')
+            return load_preview(dataset_root if dataset_root is not None else default)
         except (OSError, UnicodeError, csv.Error):
             raise HTTPException(422, 'Data files cannot be read right now; check that the files are complete and refresh later') from None
 
