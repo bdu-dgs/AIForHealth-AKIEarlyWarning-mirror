@@ -2,6 +2,10 @@
 #   artifacts/handoff/policy_v3/validation-policy-v3-66054ed84c02e348/prespec.json  (alert policy v3)
 #   artifacts/reports/test_v1/prespec.json                                        (locked test evaluation)
 #   artifacts/reports/robustness_retrain_v1/prespec.json                          (retraining sensitivity)
+#   artifacts/reports/final_analyses_v1/prespec.json                              (final-report analyses)
+#   artifacts/reports/system_shift_v1/prespec.json                                (CareVue/MetaVision transfer)
+#   artifacts/reports/system_recalibration_v1/prespec.json                        (local recalibration)
+#   artifacts/reports/fairness_structured_v1/prespec.json                         (fairness by insurance / ethnicity)
 #   ../Cleaned/dataset_manifest.json                                              (configs/default.yaml)
 # Re-running a study checks these hashes and refuses changed files. The hashes were taken on the line endings below
 # (Windows checkouts for most, LF for files created later), so every checkout on any OS reproduces those bytes.
@@ -18,12 +22,20 @@ src/aki_ml/features.py              text eol=crlf
 src/aki_ml/feature_windows.py       text eol=crlf
 src/aki_ml/admission_inputs.py      text eol=crlf
 src/aki_ml/alerts.py                text eol=crlf
+src/aki_report/final_analyses.py    text eol=crlf
+src/aki_report/system_shift.py      text eol=lf
+src/aki_report/fairness.py          text eol=lf
+src/aki_report/recalibration.py     text eol=lf
 
 configs/default.yaml                text eol=crlf
 configs/ml.yaml                     text eol=crlf
 configs/alert_policy_v3.yaml        text eol=crlf
 configs/evaluation_test_v1.yaml     text eol=lf
 configs/robustness_retrain_v1.yaml  text eol=lf
+configs/final_analyses_v1.yaml      text eol=lf
+configs/system_shift_v1.yaml        text eol=lf
+configs/fairness_structured_v1.yaml text eol=lf
+configs/system_recalibration_v1.yaml text eol=lf
 
 artifacts/demo_i/policy.json        text eol=crlf
 artifacts/policy/policy_v3.json     text eol=crlf

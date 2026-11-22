@@ -1,0 +1,12 @@
+{
+  "version": "system-recalibration-v1",
+  "prespec_sha256": "d42c17fe473766f3d387be431c29bda908fe28a1ce6c207ed22b9155adf12560",
+  "finished_at": "2026-11-22T00:06:53.370700+00:00",
+  "outputs": [
+    "alert_metrics_policy_v3.csv",
+    "prespec.json",
+    "sample_size_repeats.csv",
+    "sample_size_summary.csv",
+    "snapshot_metrics.csv"
+  ]
+}

@@ -1,0 +1,259 @@
+feature,group,statistic,missing_train,missing_carevue,missing_metavision
+hours_since_icu,time,hours since ICU admission,0.0,0.0,0.0
+heart_rate_last,vital_signs,latest value,0.0,0.0,0.0
+heart_rate_hours_since_last,vital_signs,hours since latest value,0.0,0.0,0.0
+heart_rate_mean_6h,vital_signs,mean,0.005158922069704568,0.00603931998236642,0.0038732960349270712
+heart_rate_min_6h,vital_signs,min,0.005158922069704568,0.00603931998236642,0.0038732960349270712
+heart_rate_max_6h,vital_signs,max,0.005158922069704568,0.00603931998236642,0.0038732960349270712
+heart_rate_mean_24h,vital_signs,mean,0.0003270264454675413,0.0005043349219278656,7.518446118667006e-05
+heart_rate_min_24h,vital_signs,min,0.0003270264454675413,0.0005043349219278656,7.518446118667006e-05
+heart_rate_max_24h,vital_signs,max,0.0003270264454675413,0.0005043349219278656,7.518446118667006e-05
+heart_rate_std_24h,vital_signs,std,0.005791670306211798,0.006342283766402224,0.005006248087981375
+heart_rate_slope_24h,vital_signs,slope,0.021937402664360083,0.017145573191152005,0.028787870931613252
+heart_rate_count_24h,vital_signs,count,0.0,0.0,0.0
+sbp_last,vital_signs,latest value,0.0004985289136117568,0.00016871635877442986,0.0009722128601724576
+sbp_hours_since_last,vital_signs,hours since latest value,0.0004985289136117568,0.00016871635877442986,0.0009722128601724576
+sbp_mean_6h,vital_signs,mean,0.0063605045794354696,0.00672869865262753,0.005812536620017733
+sbp_min_6h,vital_signs,min,0.0063605045794354696,0.00672869865262753,0.005812536620017733
+sbp_max_6h,vital_signs,max,0.0063605045794354696,0.00672869865262753,0.005812536620017733
+sbp_mean_24h,vital_signs,mean,0.000843664315342973,0.0006730512807022954,0.0010914709710202791
+sbp_min_24h,vital_signs,min,0.000843664315342973,0.0006730512807022954,0.0010914709710202791
+sbp_max_24h,vital_signs,max,0.000843664315342973,0.0006730512807022954,0.0010914709710202791
+sbp_std_24h,vital_signs,std,0.007424672068106719,0.006663389094392267,0.008513992087483602
+sbp_slope_24h,vital_signs,slope,0.02292061246620549,0.017611810870775967,0.03051192840365241
+sbp_count_24h,vital_signs,count,0.0,0.0,0.0
+dbp_last,vital_signs,latest value,0.0004963984481689714,0.00016690220437900588,0.0009696202925453311
+dbp_hours_since_last,vital_signs,hours since latest value,0.0004963984481689714,0.00016690220437900588,0.0009696202925453311
+dbp_mean_6h,vital_signs,mean,0.006366895975763825,0.006743211887790922,0.00580735148476348
+dbp_min_6h,vital_signs,min,0.006366895975763825,0.006743211887790922,0.00580735148476348
+dbp_max_6h,vital_signs,max,0.006366895975763825,0.006743211887790922,0.00580735148476348
+dbp_mean_24h,vital_signs,mean,0.0008415338499001877,0.0006712371263068715,0.0010888784033931526
+dbp_min_24h,vital_signs,min,0.0008415338499001877,0.0006712371263068715,0.0010888784033931526
+dbp_max_24h,vital_signs,max,0.0008415338499001877,0.0006712371263068715,0.0010888784033931526
+dbp_std_24h,vital_signs,std,0.007432128697156468,0.006672459866369387,0.008519177222737855
+dbp_slope_24h,vital_signs,slope,0.02293659095702638,0.017624509951543937,0.03053266894466942
+dbp_count_24h,vital_signs,count,0.0,0.0,0.0
+mbp_last,vital_signs,latest value,0.0006817489416912913,0.0005242906202775294,0.0009099912371214203
+mbp_hours_since_last,vital_signs,hours since latest value,0.0006817489416912913,0.0005242906202775294,0.0009099912371214203
+mbp_mean_6h,vital_signs,mean,0.008204422420166134,0.009642230611678437,0.006134015005781426
+mbp_min_6h,vital_signs,min,0.008204422420166134,0.009642230611678437,0.006134015005781426
+mbp_max_6h,vital_signs,max,0.008204422420166134,0.009642230611678437,0.006134015005781426
+mbp_mean_24h,vital_signs,mean,0.0011547122699896246,0.0012445099152608482,0.0010318419155963684
+mbp_min_24h,vital_signs,min,0.0011547122699896246,0.0012445099152608482,0.0010318419155963684
+mbp_max_24h,vital_signs,max,0.0011547122699896246,0.0012445099152608482,0.0010318419155963684
+mbp_std_24h,vital_signs,std,0.00815861741314625,0.007935111325584476,0.008482881275958084
+mbp_slope_24h,vital_signs,slope,0.023785581435976318,0.01903047960799752,0.03058711286483908
+mbp_count_24h,vital_signs,count,0.0,0.0,0.0
+resp_rate_last,vital_signs,latest value,0.0013709545124323311,0.0020064547613389185,0.0004692547405099062
+resp_rate_hours_since_last,vital_signs,hours since latest value,0.0013709545124323311,0.0020064547613389185,0.0004692547405099062
+resp_rate_mean_6h,vital_signs,mean,0.011449121289528123,0.01514456089299936,0.006172903520188324
+resp_rate_min_6h,vital_signs,min,0.011449121289528123,0.01514456089299936,0.006172903520188324
+resp_rate_max_6h,vital_signs,max,0.011449121289528123,0.01514456089299936,0.006172903520188324
+resp_rate_mean_24h,vital_signs,mean,0.0023147507035862127,0.003368884712302325,0.0008192513701719909
+resp_rate_min_24h,vital_signs,min,0.0023147507035862127,0.003368884712302325,0.0008192513701719909
+resp_rate_max_24h,vital_signs,max,0.0023147507035862127,0.003368884712302325,0.0008192513701719909
+resp_rate_std_24h,vital_signs,std,0.008035050417464704,0.009742009103426756,0.005615501480356115
+resp_rate_slope_24h,vital_signs,slope,0.02417758707744881,0.02165374686378059,0.027807880368559412
+resp_rate_count_24h,vital_signs,count,0.0,0.0,0.0
+temp_c_last,vital_signs,latest value,0.015544941103282835,0.0018341100937736407,0.03518373526773446
+temp_c_hours_since_last,vital_signs,hours since latest value,0.015544941103282835,0.0018341100937736407,0.03518373526773446
+temp_c_mean_6h,vital_signs,mean,0.05160732965330936,0.040925509006369494,0.06697379951156025
+temp_c_min_6h,vital_signs,min,0.05160732965330936,0.040925509006369494,0.06697379951156025
+temp_c_max_6h,vital_signs,max,0.05160732965330936,0.040925509006369494,0.06697379951156025
+temp_c_mean_24h,vital_signs,mean,0.01706289773126735,0.0027629571442307167,0.037545564376046746
+temp_c_min_24h,vital_signs,min,0.01706289773126735,0.0027629571442307167,0.037545564376046746
+temp_c_max_24h,vital_signs,max,0.01706289773126735,0.0027629571442307167,0.037545564376046746
+temp_c_std_24h,vital_signs,std,0.08064450840575141,0.06012833328193229,0.1100259775276238
+temp_c_slope_24h,vital_signs,slope,0.08560955812016251,0.0644877462941361,0.11585147698577718
+temp_c_count_24h,vital_signs,count,0.0,0.0,0.0
+spo2_last,vital_signs,latest value,0.0012079739060592567,0.0011392889603262576,0.0013092466516989095
+spo2_hours_since_last,vital_signs,hours since latest value,0.0012079739060592567,0.0011392889603262576,0.0013092466516989095
+spo2_mean_6h,vital_signs,mean,0.01354017312162188,0.01700588330270436,0.008599546819178778
+spo2_min_6h,vital_signs,min,0.01354017312162188,0.01700588330270436,0.008599546819178778
+spo2_max_6h,vital_signs,max,0.01354017312162188,0.01700588330270436,0.008599546819178778
+spo2_mean_24h,vital_signs,mean,0.0019941156544470272,0.0023348167069106585,0.0015140594942419073
+spo2_min_24h,vital_signs,min,0.0019941156544470272,0.0023348167069106585,0.0015140594942419073
+spo2_max_24h,vital_signs,max,0.0019941156544470272,0.0023348167069106585,0.0015140594942419073
+spo2_std_24h,vital_signs,std,0.008632645974165977,0.009736566640240484,0.007069931919174112
+spo2_slope_24h,vital_signs,slope,0.025150144552080294,0.021178438412179507,0.03084377705992461
+spo2_count_24h,vital_signs,count,0.0,0.0,0.0
+glucose_poc_last,vital_signs,latest value,0.40099300994288223,0.46833665625946763,0.30575964824042434
+glucose_poc_hours_since_last,vital_signs,hours since latest value,0.40099300994288223,0.46833665625946763,0.30575964824042434
+glucose_poc_min_24h,vital_signs,min,0.42775591683515096,0.49422463948216777,0.333777526586781
+glucose_poc_max_24h,vital_signs,max,0.42775591683515096,0.49422463948216777,0.333777526586781
+fio2_last,respiratory,latest value,0.4461844429152437,0.4373744831927666,0.45972964704784325
+fio2_max_24h,respiratory,max,0.5021698790534768,0.4963145453456962,0.5113865570183398
+arterial_line_24h,interventions,any arterial BP charted,0.0,0.0,0.0
+gcs_total_last,neurological,latest value,0.010584152319757298,0.007510599197055264,0.014977263181910101
+gcs_total_min_24h,neurological,min,0.011486404434776866,0.008526525658492691,0.015716144955641168
+gcs_eye_last,neurological,latest value,0.008664602955807755,0.0060955587686245625,0.012332844202241015
+gcs_motor_last,neurological,latest value,0.00952105006380744,0.006754096814163466,0.013470981390549572
+gcs_verbal_last,neurological,latest value,0.20250713173306972,0.22599465550115108,0.16834578629983563
+gcs_verbal_intubated_24h,neurological,verbal not assessable (ETT),0.0,0.0,0.0
+weight_kg,demographics_admission,latest value,0.09177192941341895,0.15270281792602242,0.004700325107980441
+height_cm,demographics_admission,latest value,0.5938107848421644,0.583753158896341,0.6085793247916872
+bmi,demographics_admission,weight / height^2,0.5943934671407662,0.5845205462056053,0.6089008031774509
+urine_ml_6h,urine_output,sum (missing if nothing charted),0.06275605531540476,0.06190620458944779,0.06400530957850036
+urine_ml_12h,urine_output,sum (missing if nothing charted),0.0413075944701639,0.04272333601223466,0.039295547524357176
+urine_ml_24h,urine_output,sum (missing if nothing charted),0.033632592712529906,0.03413331494990213,0.0329230162968801
+urine_ml_kg_h_6h,urine_output,sum / hours / weight,0.14376380807915104,0.19812380152425252,0.0661960292234223
+urine_ml_kg_h_24h,urine_output,sum / hours / weight,0.1185944893380857,0.17700885851591286,0.03514484675332756
+urine_hours_since_last,urine_output,hours since latest charting,0.029476054633655813,0.02795793338787891,0.03165265815958809
+urine_ml_since_icu,urine_output,sum since ICU admission (missing if nothing charted),0.029476054633655813,0.02795793338787891,0.03165265815958809
+gu_irrigation,urine_output,bladder irrigation charted,0.0,0.0,0.0
+fluid_in_ml_24h,fluids_medications,sum,0.0,0.0,0.0
+fluid_in_ml_since_icu,fluids_medications,sum since ICU admission,0.0,0.0,0.0
+fluid_balance_ml_24h,fluids_medications,input minus urine,0.033632592712529906,0.03413331494990213,0.0329230162968801
+vasopressor_2h,fluids_medications,any administration/charting,0.0,0.0,0.0
+vasopressor_24h,fluids_medications,any administration/charting,0.0,0.0,0.0
+inotrope_2h,fluids_medications,any administration/charting,0.0,0.0,0.0
+inotrope_24h,fluids_medications,any administration/charting,0.0,0.0,0.0
+loop_diuretic_24h,fluids_medications,any administration/charting,0.0,0.0,0.0
+mech_vent_8h,interventions,any administration/charting,0.0,0.0,0.0
+bun_last,laboratory,latest value,0.00043354971760680555,0.0005896001785127925,0.0002125905454243774
+bun_hours_since_last,laboratory,hours since latest value,0.00043354971760680555,0.0005896001785127925,0.0002125905454243774
+bun_delta_prev,laboratory,latest minus previous value,0.14388417937666842,0.13903135040210732,0.15127113590758015
+bun_min_48h,laboratory,min,0.005040681237629985,0.00752692658661408,0.0015088743589876542
+bun_max_48h,laboratory,max,0.005040681237629985,0.00752692658661408,0.0015088743589876542
+sodium_last,laboratory,latest value,0.020524904075793438,0.022861973691132957,0.017258722693781467
+sodium_hours_since_last,laboratory,hours since latest value,0.020524904075793438,0.022861973691132957,0.017258722693781467
+sodium_delta_prev,laboratory,latest minus previous value,0.1904220665088702,0.19427053758837198,0.18535821506904007
+sodium_min_48h,laboratory,min,0.03289332120388341,0.04049918272344486,0.02214052753566077
+sodium_max_48h,laboratory,max,0.03289332120388341,0.04049918272344486,0.02214052753566077
+potassium_last,laboratory,latest value,0.01965886987330122,0.022678744097195135,0.01541281454326736
+potassium_hours_since_last,laboratory,hours since latest value,0.01965886987330122,0.022678744097195135,0.01541281454326736
+potassium_delta_prev,laboratory,latest minus previous value,0.17638762540452213,0.1767022664230862,0.1763101540503684
+potassium_min_48h,laboratory,min,0.032186006676878695,0.04145705624422872,0.019052779491753043
+potassium_max_48h,laboratory,max,0.032186006676878695,0.04145705624422872,0.019052779491753043
+chloride_last,laboratory,latest value,0.01238333038618947,0.013491866238768116,0.010834340113761868
+chloride_hours_since_last,laboratory,hours since latest value,0.01238333038618947,0.013491866238768116,0.010834340113761868
+chloride_delta_prev,laboratory,latest minus previous value,0.17310670862263278,0.17389032711017904,0.17235389585137328
+chloride_min_48h,laboratory,min,0.018269806404605213,0.022578965605446817,0.012172105009359169
+chloride_max_48h,laboratory,max,0.018269806404605213,0.022578965605446817,0.012172105009359169
+bicarbonate_last,laboratory,latest value,0.012623007748502816,0.013569874877771348,0.0113061874218989
+bicarbonate_hours_since_last,laboratory,hours since latest value,0.012623007748502816,0.013569874877771348,0.0113061874218989
+bicarbonate_delta_prev,laboratory,latest minus previous value,0.17730905170852676,0.17404453023379007,0.18236120689208177
+bicarbonate_min_48h,laboratory,min,0.018528657955903628,0.02264427516368208,0.012708766508174365
+bicarbonate_max_48h,laboratory,max,0.018528657955903628,0.02264427516368208,0.012708766508174365
+anion_gap_last,laboratory,latest value,0.024477982704881534,0.02845138338343423,0.018892040298871197
+anion_gap_hours_since_last,laboratory,hours since latest value,0.024477982704881534,0.02845138338343423,0.018892040298871197
+anion_gap_delta_prev,laboratory,latest minus previous value,0.2039888704485269,0.20843001264465613,0.19814216603840112
+anion_gap_min_48h,laboratory,min,0.04014009940751756,0.051329684464126,0.024300136369057188
+anion_gap_max_48h,laboratory,max,0.04014009940751756,0.051329684464126,0.024300136369057188
+glucose_last,laboratory,latest value,0.029726384323183086,0.028384259670803543,0.03176154599992741
+glucose_hours_since_last,laboratory,hours since latest value,0.029726384323183086,0.028384259670803543,0.03176154599992741
+glucose_delta_prev,laboratory,latest minus previous value,0.2109927755916835,0.20562532994933067,0.21917825976490596
+glucose_min_48h,laboratory,min,0.04634294954418692,0.05114826902458361,0.039637766451137875
+glucose_max_48h,laboratory,max,0.04634294954418692,0.05114826902458361,0.039637766451137875
+calcium_last,laboratory,latest value,0.14699572415585632,0.1645655735176998,0.12226808186291539
+calcium_hours_since_last,laboratory,hours since latest value,0.14699572415585632,0.1645655735176998,0.12226808186291539
+calcium_delta_prev,laboratory,latest minus previous value,0.39660425113074455,0.41392653763191173,0.3726427078850352
+calcium_min_48h,laboratory,min,0.16868066666524636,0.19093067934639646,0.13736719572330044
+calcium_max_48h,laboratory,max,0.16868066666524636,0.19093067934639646,0.13736719572330044
+magnesium_last,laboratory,latest value,0.09033386523953889,0.0900074561745652,0.09103023452366756
+magnesium_hours_since_last,laboratory,hours since latest value,0.09033386523953889,0.0900074561745652,0.09103023452366756
+magnesium_delta_prev,laboratory,latest minus previous value,0.31721778256895783,0.30781664704356326,0.3312549582855869
+magnesium_min_48h,laboratory,min,0.09859261452849603,0.09852672521547619,0.09895571375979342
+magnesium_max_48h,laboratory,max,0.09859261452849603,0.09852672521547619,0.09895571375979342
+phosphate_last,laboratory,latest value,0.1485786599798458,0.16490482038964407,0.1257265670775022
+phosphate_hours_since_last,laboratory,hours since latest value,0.1485786599798458,0.16490482038964407,0.1257265670775022
+phosphate_delta_prev,laboratory,latest minus previous value,0.39831394964857975,0.41494427824774455,0.3753493484877553
+phosphate_min_48h,laboratory,min,0.16753234579158507,0.18750374169344056,0.13946976806890007
+phosphate_max_48h,laboratory,max,0.16753234579158507,0.18750374169344056,0.13946976806890007
+hemoglobin_last,laboratory,latest value,0.005047072633958341,0.007098786149294022,0.0021336831571251535
+hemoglobin_hours_since_last,laboratory,hours since latest value,0.005047072633958341,0.007098786149294022,0.0021336831571251535
+hemoglobin_delta_prev,laboratory,latest minus previous value,0.15017331336377057,0.1507344604069874,0.14979855749537227
+hemoglobin_min_48h,laboratory,min,0.01115405182570236,0.016474336064845135,0.0035984838664516565
+hemoglobin_max_48h,laboratory,max,0.01115405182570236,0.016474336064845135,0.0035984838664516565
+platelets_last,laboratory,latest value,0.0022668152311235436,0.002534373690407296,0.0018899818001752576
+platelets_hours_since_last,laboratory,hours since latest value,0.0022668152311235436,0.002534373690407296,0.0018899818001752576
+platelets_delta_prev,laboratory,latest minus previous value,0.132914412811767,0.1252056797545812,0.1442660181790842
+platelets_min_48h,laboratory,min,0.0056286896998387235,0.007265688353673028,0.0033107088598406087
+platelets_max_48h,laboratory,max,0.0056286896998387235,0.007265688353673028,0.0033107088598406087
+wbc_last,laboratory,latest value,0.004648675596157493,0.006529141669130893,0.0019781290994975603
+wbc_hours_since_last,laboratory,hours since latest value,0.004648675596157493,0.006529141669130893,0.0019781290994975603
+wbc_delta_prev,laboratory,latest minus previous value,0.14934988847013406,0.1493357473681155,0.1497830020896095
+wbc_min_48h,laboratory,min,0.010644870584876677,0.015721461990744184,0.0034351521059426834
+wbc_max_48h,laboratory,max,0.010644870584876677,0.015721461990744184,0.0034351521059426834
+inr_last,laboratory,latest value,0.059972602214405785,0.05631679489714651,0.06542862920579283
+inr_hours_since_last,laboratory,hours since latest value,0.059972602214405785,0.05631679489714651,0.06542862920579283
+inr_delta_prev,laboratory,latest minus previous value,0.3155879765052271,0.2985408756197605,0.3406789416101919
+inr_min_48h,laboratory,min,0.10487535711926985,0.1032489691067648,0.10734785516880208
+inr_max_48h,laboratory,max,0.10487535711926985,0.1032489691067648,0.10734785516880208
+ptt_last,laboratory,latest value,0.0646468433958767,0.06009749265721009,0.07131635028699723
+ptt_hours_since_last,laboratory,hours since latest value,0.0646468433958767,0.06009749265721009,0.07131635028699723
+ptt_delta_prev,laboratory,latest minus previous value,0.3197296013260017,0.3014888765123245,0.346519996474108
+ptt_min_48h,laboratory,min,0.10909687439414889,0.1056926350774009,0.11404445734966996
+ptt_max_48h,laboratory,max,0.10909687439414889,0.1056926350774009,0.11404445734966996
+lactate_last,laboratory,latest value,0.3823333283622473,0.44741038530825206,0.29055942424258135
+lactate_hours_since_last,laboratory,hours since latest value,0.3823333283622473,0.44741038530825206,0.29055942424258135
+lactate_delta_prev,laboratory,latest minus previous value,0.6020247943568231,0.6527527071718966,0.5305715574590764
+lactate_min_48h,laboratory,min,0.4441839358644683,0.5072139849534034,0.3550910250493884
+lactate_max_48h,laboratory,max,0.4441839358644683,0.5072139849534034,0.3550910250493884
+bilirubin_last,laboratory,latest value,0.4390069048385001,0.4434246881015056,0.4328395356192866
+bilirubin_hours_since_last,laboratory,hours since latest value,0.4390069048385001,0.4434246881015056,0.4328395356192866
+bilirubin_delta_prev,laboratory,latest minus previous value,0.7972095163630398,0.806469637404961,0.7847935538398519
+bilirubin_min_48h,laboratory,min,0.5585142986188193,0.5773201674101676,0.5321374683058607
+bilirubin_max_48h,laboratory,max,0.5585142986188193,0.5773201674101676,0.5321374683058607
+albumin_last,laboratory,latest value,0.5106278268613343,0.5033443936279641,0.5210775748085389
+albumin_hours_since_last,laboratory,hours since latest value,0.5106278268613343,0.5033443936279641,0.5210775748085389
+albumin_delta_prev,laboratory,latest minus previous value,0.8748074591856083,0.8677916842790823,0.8850377737103272
+albumin_min_48h,laboratory,min,0.6296004738155144,0.6333285560600921,0.6242617663681758
+albumin_max_48h,laboratory,max,0.6296004738155144,0.6333285560600921,0.6242617663681758
+ph_last,laboratory,latest value,0.3242451228319851,0.2885213008938339,0.37565527146775624
+ph_hours_since_last,laboratory,hours since latest value,0.3242451228319851,0.2885213008938339,0.37565527146775624
+ph_delta_prev,laboratory,latest minus previous value,0.47557847462935227,0.4348636935094998,0.5345926298487496
+ph_min_48h,laboratory,min,0.3498405346616075,0.31268039497769495,0.4033750045369933
+ph_max_48h,laboratory,max,0.3498405346616075,0.31268039497769495,0.4033750045369933
+creatine_kinase_last,laboratory,latest value,0.5121756100055179,0.48162533720594825,0.5554187255974572
+creatine_kinase_hours_since_last,laboratory,hours since latest value,0.5121756100055179,0.48162533720594825,0.5554187255974572
+creatine_kinase_delta_prev,laboratory,latest minus previous value,0.6901323232086514,0.6499879358732704,0.7471961381112626
+creatine_kinase_min_48h,laboratory,min,0.5812421039624527,0.5544636361822209,0.6189703358412104
+creatine_kinase_max_48h,laboratory,max,0.5812421039624527,0.5544636361822209,0.6189703358412104
+creatinine_last,creatinine,latest value,0.0,0.0,0.0
+creatinine_hours_since_last,creatinine,hours since latest value,0.0,0.0,0.0
+creatinine_delta_prev,creatinine,latest minus previous value,0.1426985753577584,0.13770883184784324,0.15027558993876355
+creatinine_min_48h,creatinine,min,0.004616718614515713,0.0069536537976601035,0.0012962838135632767
+creatinine_max_48h,creatinine,max,0.004616718614515713,0.0069536537976601035,0.0012962838135632767
+creatinine_count_48h,creatinine,count,0.0,0.0,0.0
+creatinine_slope_48h,creatinine,slope,0.17338686482835905,0.17784336953780788,0.1675498680383078
+creatinine_min_7d,creatinine,min,0.0,0.0,0.0
+creatinine_rise_from_48h_min,creatinine,latest minus 48 h minimum,0.004616718614515713,0.0069536537976601035,0.0012962838135632767
+creatinine_ratio_to_7d_min,creatinine,latest / 7 d minimum,0.0,0.0,0.0
+creatinine_ratio_to_baseline,creatinine,latest / pre-ICU baseline,0.15408591314944575,0.13358707306143996,0.18356156570344137
+bun_creatinine_ratio,laboratory,BUN / creatinine,0.00043354971760680555,0.0005896001785127925,0.0002125905454243774
+surgical_service,demographics_admission,current service is surgical,0.0,0.0,0.0
+rx_vancomycin_iv_24h,fluids_medications,order active in past 24 h,0.0,0.0,0.0
+rx_aminoglycoside_24h,fluids_medications,order active in past 24 h,0.0,0.0,0.0
+rx_nsaid_24h,fluids_medications,order active in past 24 h,0.0,0.0,0.0
+rx_acei_arb_24h,fluids_medications,order active in past 24 h,0.0,0.0,0.0
+rx_loop_diuretic_24h,fluids_medications,order active in past 24 h,0.0,0.0,0.0
+rx_calcineurin_inhibitor_24h,fluids_medications,order active in past 24 h,0.0,0.0,0.0
+rx_other_nephrotoxic_antimicrobial_24h,fluids_medications,order active in past 24 h,0.0,0.0,0.0
+rx_piperacillin_tazobactam_24h,fluids_medications,order active in past 24 h,0.0,0.0,0.0
+age_years,demographics_admission,age at ICU admission (>89 set to 91.4),0.0,0.0,0.0
+age_over_89,demographics_admission,age shifted by MIMIC (>89),0.0,0.0,0.0
+gender_male,demographics_admission,sex recorded as male,0.0,0.0,0.0
+pre_icu_hours,demographics_admission,hospital admission to ICU admission,0.0,0.0,0.0
+baseline_cr_admission,creatinine,"pre-ICU 7-day minimum, else 8-365 d median",0.15408591314944575,0.13358707306143996,0.18356156570344137
+baseline_cr_available,creatinine,pre-ICU baseline exists,0.0,0.0,0.0
+admission_type_urgent,demographics_admission,indicator (reference: EMERGENCY),0.0,0.0,0.0
+admission_type_elective,demographics_admission,indicator (reference: EMERGENCY),0.0,0.0,0.0
+admission_location_group_transfer,demographics_admission,indicator (reference: emergency_room/other),0.0,0.0,0.0
+admission_location_group_referral,demographics_admission,indicator (reference: emergency_room/other),0.0,0.0,0.0
+first_careunit_sicu,demographics_admission,indicator (reference: MICU),0.0,0.0,0.0
+first_careunit_csru,demographics_admission,indicator (reference: MICU),0.0,0.0,0.0
+first_careunit_ccu,demographics_admission,indicator (reference: MICU),0.0,0.0,0.0
+first_careunit_tsicu,demographics_admission,indicator (reference: MICU),0.0,0.0,0.0
+ckd_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+chf_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+hypertension_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+diabetes_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+chronic_pulmonary_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+liver_disease_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+metastatic_cancer_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+solid_tumor_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+lymphoma_myeloma_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+obesity_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+peripheral_vascular_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0
+rheumatic_vascular_dc,comorbidity_discharge_coded,"discharge-coded ICD-9, index and earlier admissions (proxy for history known at admission)",0.0,0.0,0.0

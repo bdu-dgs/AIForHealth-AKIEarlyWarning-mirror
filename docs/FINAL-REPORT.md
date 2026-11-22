@@ -154,6 +154,7 @@ backend ([STATIC-DEMO.md](STATIC-DEMO.md)).
 | Alert policy and checks A1-A12 | `pipeline/KeJin_alert_policy_and_checks.ipynb`, `configs/alert_policy_v3.yaml` | `artifacts/policy/policy_v3.json` |
 | Locked test evaluation | `scripts/evaluate_test.py`, `configs/evaluation_test_v1.yaml` | `artifacts/reports/test_v1/` |
 | Retraining sensitivity | `scripts/run_retrain_robustness.py`, `configs/robustness_retrain_v1.yaml` | `artifacts/reports/robustness_retrain_v1/` |
+| Final-report secondary analyses (severity, baselines, decision curves, CareVue/MetaVision transfer and recalibration, fairness, EDA, figures) | `scripts/run_final_analyses.py`, `run_eda.py`, `run_system_shift.py`, `run_recalibration.py`, `run_fairness.py`, `make_report_figures.py` ([FINAL-ANALYSES.md](FINAL-ANALYSES.md)) | `artifacts/reports/{final_analyses_v1,system_shift_v1,system_recalibration_v1,fairness_structured_v1,eda_v1,figures}/` |
 | Summary of all of the above | `pipeline/03_evaluation_and_testing.ipynb` | - |
 | Static demo | `scripts/export_static_demo.py`, `pnpm build:static` | `demo-static/` |
 

@@ -1,0 +1,19 @@
+{
+  "version": "system-shift-v1",
+  "prespec_sha256": "d3ac0d922d5d6b6fea5b17e516751e0d18a74f057f25a88ca6b875b4e34abe9e",
+  "finished_at": "2026-11-21T17:13:29.994916+00:00",
+  "size_matched_training_patients": 9810,
+  "rows": {
+    "validation": 198524,
+    "test": 202797
+  },
+  "alert_rows": 6,
+  "outputs": [
+    "alert_metrics_policy_v3.csv",
+    "auroc_differences.csv",
+    "prespec.json",
+    "snapshot_metrics.csv",
+    "training_sets.csv",
+    "variants.csv"
+  ]
+}

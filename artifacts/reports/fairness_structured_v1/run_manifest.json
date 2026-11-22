@@ -1,0 +1,10 @@
+{
+  "version": "fairness-structured-v1",
+  "prespec_sha256": "e5788a708f294b0bc3dda5fbe66f85105e5feeeb98929b8cad8e14cbaec3e1ac",
+  "finished_at": "2026-11-22T00:10:18.781492+00:00",
+  "outputs": [
+    "fairness_by_group.csv",
+    "fairness_differences.csv",
+    "prespec.json"
+  ]
+}

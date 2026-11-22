@@ -1,0 +1,15 @@
+step,stays,patients,removed
+MIMIC-III ICU stays,61532,46476,
+Adult stays (age >= 18 at ICU admission),53332,38512,
+Earliest adult ICU stay per patient,38512,38512,
+Exclude: Missing ICU discharge time,38510,38510,2.0
+Exclude: Death recorded before ICU admission,38442,38442,68.0
+Exclude: ICU admission after hospital discharge,38438,38438,4.0
+Exclude: No charted ICU data (HAS_CHARTEVENTS_DATA = 0),38095,38095,343.0
+Exclude: ESKD / chronic dialysis (ICD-9),36982,36982,1113.0
+Exclude: Chronic dialysis in ICU admission history,36943,36943,39.0
+Exclude: Kidney transplant recipient (ICD-9),36694,36694,249.0
+Exclude: Pre-ICU 7-day minimum creatinine >= 4.0 mg/dL,36135,36135,559.0
+Exclude: Follow-up < 7 h (ICU discharge or death),35732,35732,403.0
+Modeling table: No at-risk snapshot (creatinine AKI or RRT at or before hour 1),33208,33208,2524.0
+Modeling table: All candidate snapshots fail the coverage rule,32907,32907,301.0

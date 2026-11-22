@@ -1,0 +1,9 @@
+variant,horizon_h,n_rounds,n_inputs,minutes
+train_carevue,6,81,246,2.4
+train_carevue,12,104,246,2.5
+train_carevue,24,115,246,2.2
+train_carevue,48,140,246,1.9
+train_metavision,6,82,246,2.3
+train_metavision,12,92,246,1.9
+train_metavision,24,106,246,1.7
+train_metavision,48,136,246,1.6

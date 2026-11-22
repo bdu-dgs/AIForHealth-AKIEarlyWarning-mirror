@@ -1,0 +1,37 @@
+# Plan item 6 (innovation A): does the model transfer between the two MIMIC-III charting systems?
+# CareVue (2001-2008) and MetaVision (2008-2012) differ in era, documentation software, item definitions and charting
+# density, so a model trained on one and tested on the other is a pseudo-external (temporal + system) validation.
+# Written before any variant is trained or scored. The locked system (model, policy v3) is not changed; the test split
+# was already opened once for test-evaluation-v1, and nothing here is used to revise the locked system.
+version: system-shift-v1
+reference: {run_id: aki_ml_v1_28e0b1fb83, family: lightgbm, feature_set: no_dc}   # locked model, trained on both
+procedure:                                 # identical to robustness-retrain-v1 / the notebook-02 no_dc ablation
+  hyperparameters: lightgbm/full selected configuration per horizon (training OOF), not re-tuned
+  folds: 5 patient folds over the variant's training patients, stratified by any creatinine AKI, notebook-02 seed
+  rounds: minimum of the mean held-out log-loss curve over the 5 folds; final refit on all of the variant's patients
+  weights: inverse patient rows x balanced classes, as notebook 02
+  calibration: Platt on the variant's training out-of-fold scores (the source system only)
+feature_source: stored notebook-01 snapshot features (legacy_prefix_v1, the engine the weights were trained on)
+size_matching: >-
+  both variants use the same number of training patients (the smaller system's count, MetaVision); CareVue
+  training patients are subsampled with the seed below, so a transfer gap is not a sample-size effect
+variants:
+  - {name: train_carevue, train_system: carevue}
+  - {name: train_metavision, train_system: metavision}
+evaluation:
+  splits: [validation, test]               # validation is reported as a check; the comparison is on test
+  target_systems: [carevue, metavision]    # 'both' (<0.2% of patients) is not used for training or evaluation
+  comparison: >-
+    on each target system: AUROC(cross-system model) - AUROC(within-system model), and each variant minus the locked
+    model; paired patient bootstrap
+  alerts: >-
+    policy v3 rule and threshold (24 h >= 0.21 and 12 h >= 0.105, 12 h cooldown) applied unchanged to each model's
+    risks on each target system: does the alert burden move when a model is transported without recalibration?
+horizons: [6, 12, 24, 48]
+monitoring_hours: [1, 72]
+evaluation_splits: [validation, test]
+metrics: [auroc, auprc, brier, calibration_slope, calibration_intercept, observed_over_expected]
+bootstrap: {unit: patient, resamples: 500}
+seed: 20261121
+fit_sample_rows: 300000
+outputs: artifacts/reports/system_shift_v1   # aggregate only; fitted heads stay local under artifacts/models

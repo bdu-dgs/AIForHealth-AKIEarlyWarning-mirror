@@ -1,0 +1,21 @@
+{
+  "version": "final-analyses-v1",
+  "prespec_sha256": "2842119159a0b0774dc0aa1abfd117a48daec0fe03a692957a0b640b3e2cdd14",
+  "finished_at": "2026-11-21T16:51:21.558401+00:00",
+  "split": "test",
+  "patients": 4959,
+  "origins": 202797,
+  "outputs": [
+    "alert_tradeoff_24h.csv",
+    "baseline_auroc_differences.csv",
+    "baseline_metrics.csv",
+    "calibration_bins.csv",
+    "creatinine_lr_refit_check.csv",
+    "decision_curves.csv",
+    "operating_points.csv",
+    "pr_points.csv",
+    "prespec.json",
+    "roc_points.csv",
+    "severity_detection.csv"
+  ]
+}

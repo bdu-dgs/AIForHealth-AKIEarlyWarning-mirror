@@ -1,0 +1,22 @@
+# Follow-up to system-shift-v1: can a transported model be fixed by recalibrating on a little local data?
+# Written before any recalibration is fitted or scored. Uses the frozen system-shift-v1 heads unchanged (no retraining):
+# only the Platt calibration of the cross-system model is refitted, on TARGET-system VALIDATION patients, and judged on
+# target-system TEST patients. The locked system is not changed; nothing here selects anything for it.
+version: system-recalibration-v1
+source_study: system-shift-v1           # heads under artifacts/models/aki_ml_v1_28e0b1fb83/system-shift-v1/
+pairs:                                  # target system: (cross-system model, within-system model)
+  metavision: {cross: train_carevue, within: train_metavision}
+  carevue: {cross: train_metavision, within: train_carevue}
+recalibration:
+  method: Platt (logistic on the logit of the raw score), per horizon, on eligible hourly rows
+  data: target-system validation patients (never used to train either model)
+  sample_sizes: [50, 100, 250, 500, 1000, all]   # validation patients drawn at random
+  repeats: 20                                     # random draws per sample size (all: one fit)
+evaluation:
+  split: test, target-system patients only
+  horizons: [6, 12, 24, 48]
+  metrics: [auroc, observed_over_expected, calibration_slope, calibration_intercept, brier]
+  alerts: policy v3 rule and threshold unchanged (24 h >= 0.21 and 12 h >= 0.105, 12 h cooldown)
+  compared: [cross model with source calibration, cross model recalibrated, within-system model]
+seed: 20261124
+outputs: artifacts/reports/system_recalibration_v1   # aggregate only

@@ -1,0 +1,90 @@
+{
+  "created_at": "2026-11-21T16:52:04.161126+00:00",
+  "prespec_sha256": "d3ac0d922d5d6b6fea5b17e516751e0d18a74f057f25a88ca6b875b4e34abe9e",
+  "specification": {
+    "config": {
+      "version": "system-shift-v1",
+      "reference": {
+        "run_id": "aki_ml_v1_28e0b1fb83",
+        "family": "lightgbm",
+        "feature_set": "no_dc"
+      },
+      "procedure": {
+        "hyperparameters": "lightgbm/full selected configuration per horizon (training OOF), not re-tuned",
+        "folds": "5 patient folds over the variant's training patients, stratified by any creatinine AKI, notebook-02 seed",
+        "rounds": "minimum of the mean held-out log-loss curve over the 5 folds; final refit on all of the variant's patients",
+        "weights": "inverse patient rows x balanced classes, as notebook 02",
+        "calibration": "Platt on the variant's training out-of-fold scores (the source system only)"
+      },
+      "feature_source": "stored notebook-01 snapshot features (legacy_prefix_v1, the engine the weights were trained on)",
+      "size_matching": "both variants use the same number of training patients (the smaller system's count, MetaVision); CareVue training patients are subsampled with the seed below, so a transfer gap is not a sample-size effect",
+      "variants": [
+        {
+          "name": "train_carevue",
+          "train_system": "carevue"
+        },
+        {
+          "name": "train_metavision",
+          "train_system": "metavision"
+        }
+      ],
+      "evaluation": {
+        "splits": [
+          "validation",
+          "test"
+        ],
+        "target_systems": [
+          "carevue",
+          "metavision"
+        ],
+        "comparison": "on each target system: AUROC(cross-system model) - AUROC(within-system model), and each variant minus the locked model; paired patient bootstrap",
+        "alerts": "policy v3 rule and threshold (24 h >= 0.21 and 12 h >= 0.105, 12 h cooldown) applied unchanged to each model's risks on each target system: does the alert burden move when a model is transported without recalibration?"
+      },
+      "horizons": [
+        6,
+        12,
+        24,
+        48
+      ],
+      "monitoring_hours": [
+        1,
+        72
+      ],
+      "evaluation_splits": [
+        "validation",
+        "test"
+      ],
+      "metrics": [
+        "auroc",
+        "auprc",
+        "brier",
+        "calibration_slope",
+        "calibration_intercept",
+        "observed_over_expected"
+      ],
+      "bootstrap": {
+        "unit": "patient",
+        "resamples": 500
+      },
+      "seed": 20261121,
+      "fit_sample_rows": 300000,
+      "outputs": "artifacts/reports/system_shift_v1"
+    },
+    "input_sha256": {
+      "config": "02c15530f99cc62d21e268d85320152878d980aa977720f1c245265140a7298f",
+      "ml_config": "994cc4e8b8f0a1cad04a6a617d7c8ca2a3e77617548219508f10b0d1a3b63578",
+      "reference_pipeline": "605044df37b040285bf6f91676d4e05506f21cb84aba01119e17bf46d2043ff1",
+      "snapshots": "b27c11be7dc55d01e65b16b1866c5e5e8f0824bc1e3e695c9b103db6c548bd8a",
+      "cohort": "5000e0b45f9d00265299e8271631bce35089764efb8b696799c09dfc6f8bd1d9",
+      "feature_dictionary": "d38521cf3714ac5444b491833b986897a5e219c2d3eaca7c7e513b4d4c60dfec"
+    },
+    "source_sha256": {
+      "src/aki_robustness/__init__.py": "f0c7ca187f150d3c2c89e17244069e327b0540b1365d74f0ebcf9314956b0df6",
+      "src/aki_robustness/retrain.py": "dfca2c5eca8d327cfd4a139ebff723caf713f7620a282aaede094d00e81c5b2e",
+      "src/aki_report/system_shift.py": "f783bcb2adc4b480882e858934a505a77901ba45f53d19436427eda7e615526b",
+      "src/aki_ml/models.py": "c3738b69d9b10c8dcc0e322a415edb029a902b6ef840dce733a418d522049c30"
+    },
+    "commit_before_results": false,
+    "registration": "immutable local record; not public preregistration"
+  }
+}

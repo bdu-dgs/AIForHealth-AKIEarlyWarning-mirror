@@ -1,0 +1,112 @@
+{
+  "created_at": "2026-11-21T16:40:05.028157+00:00",
+  "prespec_sha256": "2842119159a0b0774dc0aa1abfd117a48daec0fe03a692957a0b640b3e2cdd14",
+  "specification": {
+    "config": {
+      "version": "final-analyses-v1",
+      "split": "test",
+      "evaluation_config": "configs/evaluation_test_v1.yaml",
+      "horizons": [
+        6,
+        12,
+        24,
+        48
+      ],
+      "seed": 20261120,
+      "bootstrap": {
+        "unit": "patient",
+        "resamples": 500
+      },
+      "severity": {
+        "stage_column": "cr_aki_max_stage",
+        "rrt": "rrt_start_hours at or after cr_aki_onset_hours (AKI that went on to renal replacement therapy)",
+        "lookahead_hours": [
+          24,
+          48
+        ],
+        "interval": "wilson"
+      },
+      "literature_operating_point": {
+        "false_alerts_per_true_alert": "(1 - alert PPV) / alert PPV"
+      },
+      "baselines": {
+        "primary": "locked system (lightgbm no_dc, feature engine v2 risks of test-evaluation-v1)",
+        "frozen_run": "aki_ml_v1_28e0b1fb83",
+        "frozen_pipelines": [
+          "lightgbm__no_dc",
+          "lightgbm__full",
+          "xgboost__full",
+          "rf__full",
+          "lr__full"
+        ],
+        "creatinine_lr": {
+          "features": "creatinine group + hours_since_icu",
+          "model": "LRPreprocessor + LogisticRegression(C=0.001, newton-cholesky), notebook-02 training weights",
+          "calibration": "Platt on 5-fold training out-of-fold scores (notebook-02 folds)"
+        },
+        "creatinine_rise_score": "creatinine_rise_from_48h_min, missing -> 0 (a ranking score, not a probability)",
+        "paired_comparison": {
+          "metric": "auroc",
+          "against": "primary",
+          "bootstrap": "patient",
+          "resamples": 500
+        }
+      },
+      "alert_tradeoff": {
+        "horizon_h": 24,
+        "rule": {
+          "sustain_hours": 1,
+          "cooldown_hours": 12
+        },
+        "thresholds": "score quantiles 0.50 to 0.995 of each model's eligible test scores (40 points)",
+        "marked_points": [
+          "policy_v3",
+          "demo_v1"
+        ]
+      },
+      "decision_curve": {
+        "horizons": [
+          12,
+          24,
+          48
+        ],
+        "thresholds": {
+          "start": 0.01,
+          "stop": 0.5,
+          "step": 0.01
+        },
+        "unit": "eligible hourly origins (snapshot level), net benefit = TP/N - FP/N * pt / (1 - pt)",
+        "references": [
+          "treat_all",
+          "treat_none"
+        ]
+      },
+      "curves": {
+        "roc_fpr_grid": 101,
+        "pr_recall_grid": 101,
+        "calibration_bins": 10
+      },
+      "outputs": "artifacts/reports/final_analyses_v1"
+    },
+    "input_sha256": {
+      "config": "7454cd80d54c000c64749fa14cbe24ffbc5b68920d46c3d1e1b25b8058c34f4c",
+      "evaluation_config": "be20503f609a0996de9ac5ea52c694fe3b1b7b92dcae6bb50fa9aff5d8442b16",
+      "policy": "aa0dedd15b4672c78685a4d4d58bef329f8af4bfba4c8ba0ac920043749ab0bc",
+      "snapshots": "b27c11be7dc55d01e65b16b1866c5e5e8f0824bc1e3e695c9b103db6c548bd8a",
+      "cohort": "5000e0b45f9d00265299e8271631bce35089764efb8b696799c09dfc6f8bd1d9",
+      "risks_v2": "929ec0d9e478acef8dde9a9677c04db9b4801dcdcb507fdc30b89b4c86dcba47",
+      "pipeline_lightgbm__no_dc": "605044df37b040285bf6f91676d4e05506f21cb84aba01119e17bf46d2043ff1",
+      "pipeline_lightgbm__full": "ccce1d3e2a3a93b430cf88ab766c90e31252c79a71ac3726c876f27522b4f486",
+      "pipeline_xgboost__full": "ab34d95d42b4ce4a11e533a6d5096feba89fd1cb1edd6c54c2fc85e4d44e3751",
+      "pipeline_rf__full": "53f564836746455a13c102d42373123f4cd47cb7c321eb63298aee346ddaeb8e",
+      "pipeline_lr__full": "3e0603d4c5ac28f8d37572cd39fdf7e0c8f9763c2deb0a79df709aa2d0cbd4da"
+    },
+    "source_sha256": {
+      "src/aki_report/final_analyses.py": "e2484adc239fb90157a897cec62338da5bef2d2738e407302f02eb925e189caf",
+      "src/aki_final/test_evaluation.py": "2b9fd3fe622fcf37a89afb3115d799bf222bd471d173316d7c709e48c554df20",
+      "src/aki_ml/models.py": "c3738b69d9b10c8dcc0e322a415edb029a902b6ef840dce733a418d522049c30"
+    },
+    "commit_before_results": false,
+    "registration": "immutable local record; not public preregistration"
+  }
+}

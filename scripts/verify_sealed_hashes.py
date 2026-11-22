@@ -1,7 +1,7 @@
 """Check that the repository files hashed by the sealed study records still have their recorded bytes.
 
 Covers the code and repository inputs of every prespec.json under artifacts/ (alert policy v3, locked test evaluation,
-retraining sensitivity). Local-only inputs (dataset, model, predictions) are reported as skipped when absent.
+retraining sensitivity, final-report analyses, system shift, recalibration, fairness). Local-only inputs (dataset, model, predictions) are reported as skipped when absent.
 Usage: python scripts/verify_sealed_hashes.py   (exit code 1 on any mismatch)
 """
 import hashlib
@@ -23,6 +23,16 @@ RECORD_INPUTS = {
         {"config": "configs/evaluation_test_v1.yaml", "policy": "artifacts/policy/policy_v3.json"},
     "artifacts/reports/robustness_retrain_v1/prespec.json":
         {"config": "configs/robustness_retrain_v1.yaml"},
+    "artifacts/reports/final_analyses_v1/prespec.json":
+        {"config": "configs/final_analyses_v1.yaml", "evaluation_config": "configs/evaluation_test_v1.yaml",
+         "policy": "artifacts/policy/policy_v3.json"},
+    "artifacts/reports/system_shift_v1/prespec.json":
+        {"config": "configs/system_shift_v1.yaml"},
+    "artifacts/reports/system_recalibration_v1/prespec.json":
+        {"config": "configs/system_recalibration_v1.yaml", "policy": "artifacts/policy/policy_v3.json"},
+    "artifacts/reports/fairness_structured_v1/prespec.json":
+        {"config": "configs/fairness_structured_v1.yaml", "evaluation_config": "configs/evaluation_test_v1.yaml",
+         "policy": "artifacts/policy/policy_v3.json"},
 }
 
 

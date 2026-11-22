@@ -1,0 +1,27 @@
+# Fairness audit of the locked AKI system by recorded social and demographic variables (replaces the dropped
+# note-based SRF idea). Written before any group metric is computed. Descriptive and secondary: the locked model and
+# policy v3 are unchanged, and the test split was opened once for test-evaluation-v1; nothing here selects anything.
+version: fairness-structured-v1
+evaluation_config: configs/evaluation_test_v1.yaml
+splits:
+  primary: test
+  secondary: [validation, test]   # pooled for power; validation patients were never used to train the model
+variables:                          # MIMIC-III ADMISSIONS fields of the index admission (cohort.parquet)
+  insurance:
+    levels: [Medicare, Private, Medicaid, Government, Self Pay]
+    reference: Private
+    note: payer as a proxy for socioeconomic position (Medicaid / self-pay = lower)
+  ethnicity_group:
+    levels: [WHITE, BLACK, HISPANIC, ASIAN, OTHER, UNKNOWN]
+    reference: WHITE
+    note: recorded ethnicity; UNKNOWN (declined / not recorded) is kept as its own group
+  # age and sex were already reported by test-evaluation-v1 (subgroups_snapshot.csv)
+metrics:
+  snapshot_24h: [auroc, observed_over_expected, calibration_slope, brier]
+  alerts_policy_v3: [event_detection_rate, false_alerts_per_patient_day, alert_ppv, non_aki_patients_alerted,
+                     lead_time_median_h]
+  intervals: patient bootstrap, 500 resamples (AUROC on hourly rows clustered by patient; alert metrics on patients)
+  difference: group minus reference group, independent patient bootstrap of each group, 500 resamples
+min_group: {patients: 100, aki_events: 20}      # smaller groups: counts only
+seed: 20261123
+outputs: artifacts/reports/fairness_structured_v1   # aggregate only

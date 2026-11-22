@@ -1,0 +1,47 @@
+# Final-report secondary analyses (plan items 2-5). Written before any of these analyses is run.
+# The test split was opened once for test-evaluation-v1 (2026-11-10). Everything here is post-hoc and descriptive:
+# models, thresholds and the alert policy stay exactly as locked; nothing in this file selects or tunes anything.
+version: final-analyses-v1
+split: test
+evaluation_config: configs/evaluation_test_v1.yaml   # locked system, hourly frame and policy v3 rules are reused
+horizons: [6, 12, 24, 48]
+seed: 20261120
+bootstrap: {unit: patient, resamples: 500}
+
+severity:                                  # item 2: which AKI events does policy v3 catch?
+  stage_column: cr_aki_max_stage           # maximum creatinine KDIGO stage during the stay (notebook 01)
+  rrt: rrt_start_hours at or after cr_aki_onset_hours (AKI that went on to renal replacement therapy)
+  lookahead_hours: [24, 48]                # an event counts as caught by any alert 0 < hours to onset <= lookahead
+  interval: wilson                         # patient-level binomial interval per stratum
+
+literature_operating_point:                # item 3: express policy v3 in the units used by Tomasev et al. (2019)
+  false_alerts_per_true_alert: (1 - alert PPV) / alert PPV
+
+baselines:                                 # item 4: all frozen except creatinine_lr, which is refitted by its recipe
+  primary: locked system (lightgbm no_dc, feature engine v2 risks of test-evaluation-v1)
+  frozen_run: aki_ml_v1_28e0b1fb83         # notebook-02 pipelines, scored on the stored notebook-01 test features
+  frozen_pipelines: [lightgbm__no_dc, lightgbm__full, xgboost__full, rf__full, lr__full]
+  creatinine_lr:                           # notebook 02, cell 5.5 (only a validation score was stored there)
+    features: creatinine group + hours_since_icu
+    model: LRPreprocessor + LogisticRegression(C=0.001, newton-cholesky), notebook-02 training weights
+    calibration: Platt on 5-fold training out-of-fold scores (notebook-02 folds)
+  creatinine_rise_score: creatinine_rise_from_48h_min, missing -> 0 (a ranking score, not a probability)
+  paired_comparison: {metric: auroc, against: primary, bootstrap: patient, resamples: 500}
+
+alert_tradeoff:                            # trade-off curves; no operating point is chosen from them
+  horizon_h: 24
+  rule: {sustain_hours: 1, cooldown_hours: 12}         # same cooldown as policy v3, no 12 h confirmation
+  thresholds: score quantiles 0.50 to 0.995 of each model's eligible test scores (40 points)
+  marked_points: [policy_v3, demo_v1]
+
+decision_curve:                            # item 5
+  horizons: [12, 24, 48]
+  thresholds: {start: 0.01, stop: 0.50, step: 0.01}
+  unit: eligible hourly origins (snapshot level), net benefit = TP/N - FP/N * pt / (1 - pt)
+  references: [treat_all, treat_none]
+
+curves:                                    # inputs for ROC / PR / calibration figures (aggregate points only)
+  roc_fpr_grid: 101
+  pr_recall_grid: 101
+  calibration_bins: 10                     # equal-count bins of predicted risk
+outputs: artifacts/reports/final_analyses_v1   # aggregate tables only

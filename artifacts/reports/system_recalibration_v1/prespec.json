@@ -1,0 +1,76 @@
+{
+  "created_at": "2026-11-21T23:57:54.917405+00:00",
+  "prespec_sha256": "d42c17fe473766f3d387be431c29bda908fe28a1ce6c207ed22b9155adf12560",
+  "specification": {
+    "config": {
+      "version": "system-recalibration-v1",
+      "source_study": "system-shift-v1",
+      "pairs": {
+        "metavision": {
+          "cross": "train_carevue",
+          "within": "train_metavision"
+        },
+        "carevue": {
+          "cross": "train_metavision",
+          "within": "train_carevue"
+        }
+      },
+      "recalibration": {
+        "method": "Platt (logistic on the logit of the raw score), per horizon, on eligible hourly rows",
+        "data": "target-system validation patients (never used to train either model)",
+        "sample_sizes": [
+          50,
+          100,
+          250,
+          500,
+          1000,
+          "all"
+        ],
+        "repeats": 20
+      },
+      "evaluation": {
+        "split": "test, target-system patients only",
+        "horizons": [
+          6,
+          12,
+          24,
+          48
+        ],
+        "metrics": [
+          "auroc",
+          "observed_over_expected",
+          "calibration_slope",
+          "calibration_intercept",
+          "brier"
+        ],
+        "alerts": "policy v3 rule and threshold unchanged (24 h >= 0.21 and 12 h >= 0.105, 12 h cooldown)",
+        "compared": [
+          "cross model with source calibration",
+          "cross model recalibrated",
+          "within-system model"
+        ]
+      },
+      "seed": 20261124,
+      "outputs": "artifacts/reports/system_recalibration_v1"
+    },
+    "input_sha256": {
+      "config": "9ae3bf6adad282ea087cd92342933e95531b3a11bc383e9830546cacf9144431",
+      "snapshots": "b27c11be7dc55d01e65b16b1866c5e5e8f0824bc1e3e695c9b103db6c548bd8a",
+      "policy": "aa0dedd15b4672c78685a4d4d58bef329f8af4bfba4c8ba0ac920043749ab0bc",
+      "head_train_carevue_6h": "2606bfe37f17c360c9c475be1c22af262db4b99bddde3c5e2d2a664765e33a4d",
+      "head_train_carevue_12h": "9710b03ecb29452c1ecf79ddc39fdfaff18b83388314929d126c1c92f71ef851",
+      "head_train_carevue_24h": "3b9042bebcd0f3aa4502a451d371cedc3f4ddafb73944f7f413865da2244c595",
+      "head_train_carevue_48h": "e67fb5bf85914147e58da33e442be8e626c098ed1d352cb0e18b137df7c84d19",
+      "head_train_metavision_6h": "8bdb6b7b132f7bb813ab3a233d2a48f772acc52051dc7d8adac90bd11540563d",
+      "head_train_metavision_12h": "76f7833f186163ec81c322117f400c0390bd6f530652abe75cec7d2fd27c5feb",
+      "head_train_metavision_24h": "7a69f3eec9cbe7e912950965c7bea470772c8d897702fa799e7c3e90c5610a6a",
+      "head_train_metavision_48h": "dc4cae4efa097c37fe1e7b0051b8224392a123a1a9c65a4dceb5bdb6467968f1"
+    },
+    "source_sha256": {
+      "src/aki_report/recalibration.py": "8183263c7066fd5a4d92a6add4f382110f5801508b36653b53dae8fed5f106bf",
+      "src/aki_ml/models.py": "c3738b69d9b10c8dcc0e322a415edb029a902b6ef840dce733a418d522049c30"
+    },
+    "commit_before_results": false,
+    "registration": "immutable local record; not public preregistration"
+  }
+}
