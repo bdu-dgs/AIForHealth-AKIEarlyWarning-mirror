@@ -1,58 +1,51 @@
-# Final-report analyses (secondary, after the locked test evaluation)
+# Final-report analyses
 
-These analyses were added on 2026-11-21 for the final report. The model and alert policy v3 were **not changed**. The
-test split had already been opened once (test-evaluation-v1), so everything below that uses test data is **secondary
-or post-hoc**. Nothing here chose or tuned a model, threshold or rule. Each study froze its configuration and code
-hashes (`prespec.json`) before it ran. All outputs are aggregate tables.
+**Thesis.** AKI risk prediction is already good and stable enough; what keeps it from clinical use is the reliability of
+the alerts. When an early-warning system moves to a new setting or is applied to different patient groups, the model
+still ranks patients correctly, but its probabilities drift, and a fixed alert threshold silently changes the alert
+burden and the share of AKI events caught. We show this on MIMIC-III and give an alerting method that guarantees a
+stated false-alert budget using local calibration data.
 
-| Item | Code / settings | Output |
+The analyses below follow that story in three parts. All of them use the locked model; the test split had already been
+opened once (test-evaluation-v1), so everything here that uses test data is secondary and prespecified. Nothing here
+chose or tuned the model. Each study froze its configuration and code hashes (`prespec.json`) before it ran. All
+outputs are aggregate tables.
+
+| Study | Code / settings | Output |
 |---|---|---|
-| Severity, literature operating point, baselines, alert trade-off, decision curves, ROC/PR/calibration points | `scripts/run_final_analyses.py`, `configs/final_analyses_v1.yaml`, `src/aki_report/final_analyses.py` | `artifacts/reports/final_analyses_v1/` |
-| CareVue <-> MetaVision transfer (innovation A) | `scripts/run_system_shift.py`, `configs/system_shift_v1.yaml`, `src/aki_report/system_shift.py` | `artifacts/reports/system_shift_v1/` |
-| Exploratory data analysis (training split only) | `scripts/run_eda.py`, `src/aki_report/eda.py` | `artifacts/reports/eda_v1/` |
-| Recalibrating a transported model on local data | `scripts/run_recalibration.py`, `configs/system_recalibration_v1.yaml`, `src/aki_report/recalibration.py` | `artifacts/reports/system_recalibration_v1/` |
-| Fairness by insurance and recorded ethnicity | `scripts/run_fairness.py`, `configs/fairness_structured_v1.yaml`, `src/aki_report/fairness.py` | `artifacts/reports/fairness_structured_v1/` |
-| All figures (PDF for LaTeX, PNG for slides) | `scripts/make_report_figures.py`, `src/aki_report/figures.py` | `artifacts/reports/figures/` |
+| Severity, literature operating point, baselines, alert trade-off, decision curves, ROC/PR/calibration points | `scripts/run_final_analyses.py`, `configs/final_analyses_v1.yaml` | `artifacts/reports/final_analyses_v1/` |
+| Exploratory data analysis (training split only) | `scripts/run_eda.py` | `artifacts/reports/eda_v1/` |
+| Sequence model (GRU) go / no-go, validation only | `scripts/run_sequence_model.py`, `configs/sequence_model_v1.yaml` | `artifacts/reports/sequence_model_v1/` |
+| CareVue <-> MetaVision transfer | `scripts/run_system_shift.py`, `configs/system_shift_v1.yaml` | `artifacts/reports/system_shift_v1/` |
+| Fairness by insurance and recorded ethnicity | `scripts/run_fairness.py`, `configs/fairness_structured_v1.yaml` | `artifacts/reports/fairness_structured_v1/` |
+| Local recalibration of a moved model | `scripts/run_recalibration.py`, `configs/system_recalibration_v1.yaml` | `artifacts/reports/system_recalibration_v1/` |
+| Alert-budget control (the method) | `scripts/run_alert_budget.py`, `configs/alert_budget_v1.yaml` | `artifacts/reports/alert_budget_v1/` |
+| Fixes for its limitations, validation only | `scripts/run_alert_budget_dev.py`, `configs/alert_budget_v2_dev.yaml` | `artifacts/reports/alert_budget_v2_dev/` |
+| All figures (PDF for LaTeX, PNG for slides) | `scripts/make_report_figures.py` | `artifacts/reports/figures/` |
 
-Run order: `run_final_analyses.py`, `run_eda.py`, `run_system_shift.py` (about 25 min on 16 threads),
-`run_recalibration.py` (needs the system-shift heads), `run_fairness.py`, then `make_report_figures.py`. Use the Python environment that trained notebook 02, which has xgboost installed
-(`.venv` does not, because the dashboard does not need it).
+Code for all of them is in `src/aki_report/`. The run order and runtimes are in `INSTALL.md`. Use the research
+environment (`requirements-research.txt`, with xgboost), not the website's `.venv`.
 
-## 1. Which AKI events does policy v3 catch? (`severity_detection.csv`, `fig_severity`)
+# Part 1. Prediction: how good can AKI risk prediction get?
 
-Test split, 959 creatinine-AKI events in the monitored window. An event counts as detected when an alert comes 0-24 h
-(or 0-48 h) before onset. Intervals are 95% Wilson intervals over patients.
+Establishes that the risk model is accurate, calibrated and close to its ceiling, so better alerting has to come from somewhere other than a better model.
 
-| Events (maximum KDIGO stage in the stay) | n | Detected, 24 h | Detected, 48 h | Median lead (h) |
-|---|---:|---|---:|---:|
-| All | 959 | 71.7% (68.8-74.5) | 76.6% | 11.6 |
-| Stage 1 | 693 | 68.1% (64.5-71.5) | 73.2% | 12.0 |
-| Stage 2 | 144 | 76.4% (68.8-82.6) | 79.9% | 11.3 |
-| Stage 3 | 122 | 86.9% (79.8-91.8) | 92.6% | 9.5 |
-| Stage 2-3 | 266 | 81.2% (76.1-85.4) | 85.7% | 10.9 |
-| Went on to renal replacement therapy | 41 | 97.6% (87.4-99.6) | 97.6% | 10.7 |
+## 1.1 What the data look like: exploratory analysis (training split only, `eda_v1/`, `fig_eda`, `fig_missingness`, `fig_cohort_flow`)
 
-The more severe the AKI, the more often it is caught: policy v3 warns before 40 of the 41 AKI episodes that later
-needed dialysis.
+- **Cohort** (`table1_by_split.csv`): the three splits match closely. Median age 65, 57% male, 81% emergency
+  admissions, 23% creatinine AKI (stage 1/2/3: 16.6 / 3.7 / 2.7%), 0.9% RRT, 52% urine-output AKI, 80% with a pre-ICU
+  baseline creatinine.
+- **AKI is early.** Median onset is 31 h after ICU admission; 41% of training AKI starts within 24 h. At-risk
+  prevalence is highest in the first ~36 ICU hours and roughly halves after hour 40.
+- **Creatinine rises before onset.** The median latest creatinine in patients who will develop AKI is 0.9-1.0 mg/dL
+  from 48 h before onset, against 0.8 in patients who never develop AKI. This rise is the model's top input (SHAP).
+- **Measurement behaviour carries signal.** Before AKI, pH, lactate and PTT were measured more recently (median pH 3.5
+  h vs 5.6 h; lactate 9.1 h vs 13.8 h). This explains why removing measurement-process features costs 0.024 AUROC at
+  6 h.
+- **Missingness** is highest for respiratory inputs (about 47%) and laboratory summaries (about 19%). It is similar in
+  CareVue and MetaVision, except urine output, which is charted more completely in MetaVision.
 
-## 2. Comparison with published systems (`operating_points.csv`)
-
-Policy v3 has an alert PPV of 33.5%, which is **1.99 false alerts per true alert**. That is the operating point
-Tomasev et al. (Nature 2019) reported, so the two can be put side by side:
-
-| System | Setting | Endpoint and horizon | Result |
-|---|---|---|---|
-| Tomasev et al., Nature 2019 | US VA, all inpatients, 703k adults | any-stage AKI, up to 48 h ahead, 2 false : 1 true | 55.8% of all AKI episodes; 90.2% of AKI that needed dialysis |
-| This project, policy v3 | MIMIC-III ICU, ICU hours 1-72 | creatinine KDIGO any stage, 24 h (48 h) lookahead, 1.99 false : 1 true | 71.7% (76.6%) of AKI events; 97.6% of AKI that needed RRT |
-| Koyner et al., Crit Care Med 2018 | U Chicago, ward + ICU, gradient boosting | KDIGO stage 2 within 24 h / 48 h | AUROC 0.90 / 0.87 |
-| "Continuous and early prediction of future moderate and severe AKI in critically ill patients", PLOS ONE 2023 (PMC10368244) | ICU, multi-centre, US + EU | KDIGO stage 2-3, at least 14 h ahead | AUROC 0.884 internal; 0.877 / 0.911 external |
-| This project, locked model | MIMIC-III ICU | any stage (stage 1 included), 24 h / 48 h | AUROC 0.817 / 0.792 |
-
-**This is a comparison of reported numbers, not a head-to-head test.** The populations, AKI definitions, event
-windows and alert counting all differ. Our ICU-only, 72 h window gives more creatinine measurements per patient than a
-general ward. Stage-1 AKI is the hardest endpoint, which is why AUROCs from stage 2-3 models are higher.
-
-## 3. Baselines on the test split (`baseline_metrics.csv`, `baseline_auroc_differences.csv`, `fig_roc_pr`)
+## 1.2 How well does the model predict? Baselines on the test split (`baseline_metrics.csv`, `baseline_auroc_differences.csv`, `fig_roc_pr`)
 
 All notebook-02 pipelines are frozen and scored on the stored notebook-01 test features. The creatinine-only LR was
 refitted with its notebook-02 recipe; its validation AUROC matched notebook 02 to four decimals at every horizon
@@ -72,7 +65,68 @@ At the other horizons the ranking is the same (6 h AUROC 0.866 vs 0.819 LR vs 0.
 boosted-tree families are equivalent. Both beat the linear and bagged models, and every multivariable model beats
 creatinine alone by about 0.1 AUROC, so the model adds clearly more than a creatinine-trend rule.
 
-## 4. Clinical utility
+## 1.3 Is there headroom? A sequence model against the locked LightGBM (`sequence_model_v1/`, validation only)
+
+This is a go / no-go study on the validation split; the test split was not loaded. A unidirectional GRU reads the same
+246 hourly inputs, plus missing-value indicators, as a sequence. It is trained on 19,548 training patients, with early
+stopping and Platt calibration on 3,450 held-out training patients. Three seeds are averaged. The rule fixed in advance
+was: go to a test evaluation only if the GRU or the GRU + LightGBM ensemble improves 24 h AUROC by >= 0.010 with a 95%
+CI above 0.
+
+| Validation AUROC | 6 h | 12 h | 24 h | 48 h | 24 h AUPRC |
+|---|---:|---:|---:|---:|---:|
+| LightGBM (locked) | 0.865 | 0.839 | 0.809 | 0.782 | 0.422 |
+| GRU (3 seeds) | 0.855 | 0.830 | 0.800 | 0.773 | 0.406 |
+| Ensemble (mean of both) | 0.873 | 0.848 | 0.817 | 0.790 | 0.441 |
+| Ensemble minus LightGBM (95% CI) | +0.008 (0.005-0.012) | +0.008 (0.005-0.012) | +0.009 (0.004-0.013) | +0.008 (0.003-0.013) | |
+
+- **The GRU alone is about 0.009 worse than LightGBM.** It overfits after 3-5 epochs. This agrees with published ICU
+  AKI benchmarks, where gradient-boosted trees match or beat recurrent networks on engineered hourly features.
+- **The ensemble is consistently better at every horizon** (+0.008-0.009 AUROC; 24 h AUPRC +0.019). The sequence
+  model therefore carries some complementary temporal information.
+- **Decision: stop.** The gain is below the prespecified 0.010 threshold, so the ensemble was not taken to the test
+  split, and the locked system stays LightGBM. In the report this is a negative result with a positive side-finding:
+  feature-engineered trees are close to the ceiling for these inputs, and the remaining headroom is small.
+
+# Part 2. From prediction to alerts: what goes wrong?
+
+Turns the risks into alerts replayed hour by hour, and shows the core problem: when the system moves to another charting system or is used on different patient groups, the ranking holds but the probabilities drift. A fixed threshold then silently changes how many alerts are raised and how many AKI events are caught.
+
+## 2.1 Which AKI events does policy v3 catch? (`severity_detection.csv`, `fig_severity`)
+
+Test split, 959 creatinine-AKI events in the monitored window. An event counts as detected when an alert comes 0-24 h
+(or 0-48 h) before onset. Intervals are 95% Wilson intervals over patients.
+
+| Events (maximum KDIGO stage in the stay) | n | Detected, 24 h | Detected, 48 h | Median lead (h) |
+|---|---:|---|---:|---:|
+| All | 959 | 71.7% (68.8-74.5) | 76.6% | 11.6 |
+| Stage 1 | 693 | 68.1% (64.5-71.5) | 73.2% | 12.0 |
+| Stage 2 | 144 | 76.4% (68.8-82.6) | 79.9% | 11.3 |
+| Stage 3 | 122 | 86.9% (79.8-91.8) | 92.6% | 9.5 |
+| Stage 2-3 | 266 | 81.2% (76.1-85.4) | 85.7% | 10.9 |
+| Went on to renal replacement therapy | 41 | 97.6% (87.4-99.6) | 97.6% | 10.7 |
+
+The more severe the AKI, the more often it is caught: policy v3 warns before 40 of the 41 AKI episodes that later
+needed dialysis.
+
+## 2.2 Comparison with published systems (`operating_points.csv`)
+
+Policy v3 has an alert PPV of 33.5%, which is **1.99 false alerts per true alert**. That is the operating point
+Tomasev et al. (Nature 2019) reported, so the two can be put side by side:
+
+| System | Setting | Endpoint and horizon | Result |
+|---|---|---|---|
+| Tomasev et al., Nature 2019 | US VA, all inpatients, 703k adults | any-stage AKI, up to 48 h ahead, 2 false : 1 true | 55.8% of all AKI episodes; 90.2% of AKI that needed dialysis |
+| This project, policy v3 | MIMIC-III ICU, ICU hours 1-72 | creatinine KDIGO any stage, 24 h (48 h) lookahead, 1.99 false : 1 true | 71.7% (76.6%) of AKI events; 97.6% of AKI that needed RRT |
+| Koyner et al., Crit Care Med 2018 | U Chicago, ward + ICU, gradient boosting | KDIGO stage 2 within 24 h / 48 h | AUROC 0.90 / 0.87 |
+| "Continuous and early prediction of future moderate and severe AKI in critically ill patients", PLOS ONE 2023 (PMC10368244) | ICU, multi-centre, US + EU | KDIGO stage 2-3, at least 14 h ahead | AUROC 0.884 internal; 0.877 / 0.911 external |
+| This project, locked model | MIMIC-III ICU | any stage (stage 1 included), 24 h / 48 h | AUROC 0.817 / 0.792 |
+
+**This is a comparison of reported numbers, not a head-to-head test.** The populations, AKI definitions, event
+windows and alert counting all differ. Our ICU-only, 72 h window gives more creatinine measurements per patient than a
+general ward. Stage-1 AKI is the hardest endpoint, which is why AUROCs from stage 2-3 models are higher.
+
+## 2.3 The alert trade-off and clinical utility (`alert_tradeoff_24h.csv`, `decision_curves.csv`)
 
 - **Alert trade-off** (`alert_tradeoff_24h.csv`, `fig_alert_tradeoff`). Each model's 24 h risk is swept over 40
   thresholds with a 12 h cooldown. At policy v3's burden of 0.23 false alerts per patient-day (interpolated), the
@@ -84,7 +138,7 @@ creatinine alone by about 0.1 AUROC, so the model adds clearly more than a creat
   24 h net benefit is 0.036, against 0.035 for XGBoost, 0.030 for all-feature LR and 0.017 for creatinine-only LR. That
   is equivalent to finding about 36 true AKI origins per 1,000 eligible origins with no unnecessary alerts.
 
-## 5. Innovation A: does the model transfer between charting systems? (`system_shift_v1/`, `fig_system_shift`)
+## 2.4 What breaks when the system moves? Ranking holds, probabilities drift (`system_shift_v1/`, `fig_system_shift`)
 
 CareVue (2001-2008) and MetaVision (2008-2012) differ in era, software, item definitions and charting density. Two
 models were retrained with the locked procedure, each on **9,810 training patients from one system** (CareVue
@@ -111,46 +165,7 @@ subsampled, so size is matched). Each was tested on both systems' test patients.
   threshold re-checked, on local data** before use. This matches the external-validation literature, where calibration
   drifts more than AUROC.
 
-## 6. Exploratory data analysis (training split only, `eda_v1/`, `fig_eda`, `fig_missingness`, `fig_cohort_flow`)
-
-- **Cohort** (`table1_by_split.csv`): the three splits match closely. Median age 65, 57% male, 81% emergency
-  admissions, 23% creatinine AKI (stage 1/2/3: 16.6 / 3.7 / 2.7%), 0.9% RRT, 52% urine-output AKI, 80% with a pre-ICU
-  baseline creatinine.
-- **AKI is early.** Median onset is 31 h after ICU admission; 41% of training AKI starts within 24 h. At-risk
-  prevalence is highest in the first ~36 ICU hours and roughly halves after hour 40.
-- **Creatinine rises before onset.** The median latest creatinine in patients who will develop AKI is 0.9-1.0 mg/dL
-  from 48 h before onset, against 0.8 in patients who never develop AKI. This rise is the model's top input (SHAP).
-- **Measurement behaviour carries signal.** Before AKI, pH, lactate and PTT were measured more recently (median pH 3.5
-  h vs 5.6 h; lactate 9.1 h vs 13.8 h). This explains why removing measurement-process features costs 0.024 AUROC at
-  6 h.
-- **Missingness** is highest for respiratory inputs (about 47%) and laboratory summaries (about 19%). It is similar in
-  CareVue and MetaVision, except urine output, which is charted more completely in MetaVision.
-
-## 7. Can local recalibration fix a transported model? (`system_recalibration_v1/`, `fig_recalibration`)
-
-This follow-up to section 5 retrains nothing. It keeps the cross-system model and only refits its Platt calibration on
-the **target system's validation patients**. It is then judged on the target system's test patients, with policy v3
-unchanged.
-
-| Test system | Model | O/E 24 h | Slope 24 h | Events detected | False alerts / patient-day |
-|---|---|---:|---:|---:|---:|
-| MetaVision | CareVue model, source calibration | 1.16 | 1.13 | 67.4% | 0.19 |
-| MetaVision | CareVue model, recalibrated on 2,111 MetaVision patients | 1.01 | 1.16 | 71.2% | 0.22 |
-| MetaVision | MetaVision model (within system) | 1.01 | 1.09 | 75.8% | 0.21 |
-| CareVue | MetaVision model, source calibration | 0.86 | 0.98 | 67.0% | 0.26 |
-| CareVue | MetaVision model, recalibrated on 2,831 CareVue patients | 0.93 | 1.02 | 64.9% | 0.24 |
-| CareVue | CareVue model (within system) | 0.93 | 1.01 | 64.9% | 0.24 |
-
-- **Recalibration fixes calibration and the alert burden.** After recalibration, O/E and the alert numbers match a
-  model trained on the target system. AUROC cannot change, because recalibration is monotone. On MetaVision it recovers
-  about half of the lost detection (67.4% -> 71.2%, within-system 75.8%). The rest is a discrimination gap that only
-  local retraining closes.
-- **How much local data is needed** (`sample_size_summary.csv`, 20 random draws per size). With 50-100 patients the
-  recalibrated O/E varies widely (10th-90th percentile 0.64-1.60), and detection swings between 39% and 84%. With 500
-  patients it narrows to about 0.82-1.18; with 1,000 patients to about 0.88-1.05. Practical rule: about **500-1,000 local
-  ICU patients** before trusting the recalibrated risks and threshold.
-
-## 8. Fairness by insurance and recorded ethnicity (`fairness_structured_v1/`, `fig_fairness`)
+## 2.5 What differs between patient groups? Fairness by insurance and recorded ethnicity (`fairness_structured_v1/`, `fig_fairness`)
 
 These are recorded variables of the index admission, used as structured proxies for social position. They replace the
 note-based social-risk idea, which was dropped because the external NLP model was not reliable on these notes. Groups
@@ -181,32 +196,37 @@ are shown for the test split, and for the validation and test splits pooled (sec
   but -11.8 (-24.5 to +1.7) pooled. That is one of 16 comparisons and not robust, so treat it as a signal to monitor,
   not a finding.
 - **Implication**: equal AUROC does not guarantee equal alerting. Group-level calibration should be monitored after
-  deployment, and the same local recalibration as in section 7 is the remedy if it drifts.
+  deployment, and the same local recalibration as in section 3.1 is the remedy if it drifts.
 
-## 9. Does a sequence model beat the locked LightGBM? (`sequence_model_v1/`, validation only)
+# Part 3. Reliable alerting: can the alert burden be guaranteed?
 
-This is a go / no-go study on the validation split; the test split was not loaded. A unidirectional GRU reads the same
-246 hourly inputs, plus missing-value indicators, as a sequence. It is trained on 19,548 training patients, with early
-stopping and Platt calibration on 3,450 held-out training patients. Three seeds are averaged. The rule fixed in advance
-was: go to a test evaluation only if the GRU or the GRU + LightGBM ensemble improves 24 h AUROC by >= 0.010 with a 95%
-CI above 0.
+Repairs the problem at the alerting step: local recalibration, then a threshold certified to meet a stated false-alert budget, with its data requirements and its limits.
 
-| Validation AUROC | 6 h | 12 h | 24 h | 48 h | 24 h AUPRC |
-|---|---:|---:|---:|---:|---:|
-| LightGBM (locked) | 0.865 | 0.839 | 0.809 | 0.782 | 0.422 |
-| GRU (3 seeds) | 0.855 | 0.830 | 0.800 | 0.773 | 0.406 |
-| Ensemble (mean of both) | 0.873 | 0.848 | 0.817 | 0.790 | 0.441 |
-| Ensemble minus LightGBM (95% CI) | +0.008 (0.005-0.012) | +0.008 (0.005-0.012) | +0.009 (0.004-0.013) | +0.008 (0.003-0.013) | |
+## 3.1 Does local recalibration repair a moved model? (`system_recalibration_v1/`, `fig_recalibration`)
 
-- **The GRU alone is about 0.009 worse than LightGBM.** It overfits after 3-5 epochs. This agrees with published ICU
-  AKI benchmarks, where gradient-boosted trees match or beat recurrent networks on engineered hourly features.
-- **The ensemble is consistently better at every horizon** (+0.008-0.009 AUROC; 24 h AUPRC +0.019). The sequence
-  model therefore carries some complementary temporal information.
-- **Decision: stop.** The gain is below the prespecified 0.010 threshold, so the ensemble was not taken to the test
-  split, and the locked system stays LightGBM. In the report this is a negative result with a positive side-finding:
-  feature-engineered trees are close to the ceiling for these inputs, and the remaining headroom is small.
+This follow-up to section 2.4 retrains nothing. It keeps the cross-system model and only refits its Platt calibration on
+the **target system's validation patients**. It is then judged on the target system's test patients, with policy v3
+unchanged.
 
-## 10. Alert-budget control: a guaranteed alert burden, stable across systems and groups (`alert_budget_v1/`, `fig_alert_budget`)
+| Test system | Model | O/E 24 h | Slope 24 h | Events detected | False alerts / patient-day |
+|---|---|---:|---:|---:|---:|
+| MetaVision | CareVue model, source calibration | 1.16 | 1.13 | 67.4% | 0.19 |
+| MetaVision | CareVue model, recalibrated on 2,111 MetaVision patients | 1.01 | 1.16 | 71.2% | 0.22 |
+| MetaVision | MetaVision model (within system) | 1.01 | 1.09 | 75.8% | 0.21 |
+| CareVue | MetaVision model, source calibration | 0.86 | 0.98 | 67.0% | 0.26 |
+| CareVue | MetaVision model, recalibrated on 2,831 CareVue patients | 0.93 | 1.02 | 64.9% | 0.24 |
+| CareVue | CareVue model (within system) | 0.93 | 1.01 | 64.9% | 0.24 |
+
+- **Recalibration fixes calibration and the alert burden.** After recalibration, O/E and the alert numbers match a
+  model trained on the target system. AUROC cannot change, because recalibration is monotone. On MetaVision it recovers
+  about half of the lost detection (67.4% -> 71.2%, within-system 75.8%). The rest is a discrimination gap that only
+  local retraining closes.
+- **How much local data is needed** (`sample_size_summary.csv`, 20 random draws per size). With 50-100 patients the
+  recalibrated O/E varies widely (10th-90th percentile 0.64-1.60), and detection swings between 39% and 84%. With 500
+  patients it narrows to about 0.82-1.18; with 1,000 patients to about 0.88-1.05. Practical rule: about **500-1,000 local
+  ICU patients** before trusting the recalibrated risks and threshold.
+
+## 3.2 Alert-budget control: a guaranteed alert burden (`alert_budget_v1/`, `fig_alert_budget`)
 
 This is the method contribution. It adds a layer on top of the unchanged risk model that turns a stated **false-alert
 budget** (here 0.25 false alerts per patient-day) into an alert threshold, in three steps fitted on calibration
@@ -240,7 +260,7 @@ test false-alert rate stays within budget (target >= 95%).
   certified on the source system keeps it only 65% of the time and overshoots larger budgets (0.305 for 0.30, 0.423 for
   0.40). Certified on local CareVue patients, it keeps every budget from 0.15 to 0.40 and holds in 97.6% of redraws
   (`budget_sweep.csv`). The price is about 3 points of detection: the guarantee makes the threshold more cautious.
-- **Group recalibration closes the largest detection gap at the same burden (not confirmed on validation; see 10b).** Hispanic patients were under-predicted
+- **Group recalibration closes the largest detection gap at the same burden (not confirmed on validation; see 3.3).** Hispanic patients were under-predicted
   (O/E 1.18 -> 1.00 after recalibration). Their detection rises from 53.6% (fixed) to 67.9% (step 1) and 75.0% (step 3),
   while total false alerts fall slightly (0.227 -> 0.224) and overall detection rises (71.7% -> 72.6%). Among the three
   groups with >= 50 events (White, Unknown, Black) detection spans 70.8-72.7% fixed and 71.6-76.4% with step 3.
@@ -251,7 +271,7 @@ test false-alert rate stays within budget (target >= 95%).
   (0.205-0.21) confirms that policy v3 was already close to the most sensitive threshold for this budget, so the gain
   there is the guarantee, not more detection.
 
-### 10b. Can the limitations be fixed? Validation-only check (`alert_budget_v2_dev/`)
+## 3.3 Can the limitations be fixed? Validation-only check (`alert_budget_v2_dev/`)
 
 Three fixes were tested on validation patients only; the test split was not loaded. Validation was split at random into
 a fitting half and an evaluation half, 20 times, and results are averaged. The adoption rule was fixed in advance.
@@ -267,16 +287,16 @@ a fitting half and an evaluation half, 20 times, and results are averaged. The a
 - In validation, the groups are already well calibrated (Medicaid O/E 1.04, Government 1.01, White 1.02). The
   under-prediction seen on test (Medicaid 1.16, Hispanic 1.18) is not a stable feature of the model.
 - Learning group offsets or group thresholds from a few hundred patients mostly adds noise. The Hispanic detection gain
-  seen on test in section 10 (54% -> 75%) is therefore **not confirmed**, and should be reported as unconfirmed.
+  seen on test in section 3.2 (54% -> 75%) is therefore **not confirmed**, and should be reported as unconfirmed.
 - The robust part of the method is step 2, the budget-certified threshold fitted on enough local patients. Its
   coverage falls when the local sample shrinks (86-90% with 60% of the local validation patients, against 98% with all
-  of them in section 10).
+  of them in section 3.2).
 - For fairness, the defensible recommendation is to **monitor** group calibration and alert rates after deployment.
   Correcting them needs thousands of patients per group.
 
 None of the fixes meets the adoption rule, so there is no further test evaluation.
 
-## 11. Figures (`artifacts/reports/figures/`)
+## Figures (`artifacts/reports/figures/`)
 
 `fig_pipeline` (system overview), `fig_cohort_flow`, `fig_eda`, `fig_missingness`, `fig_roc_pr`, `fig_calibration`,
 `fig_alert_tradeoff`, `fig_decision_curve`, `fig_severity`, `fig_shap`, `fig_patient_example` (synthetic demo

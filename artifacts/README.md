@@ -39,7 +39,7 @@ For an existing matching run, restore its authorized local `lightgbm__no_dc` mod
 | `reports/robustness_retrain_v1/` | `scripts/run_retrain_robustness.py` (`configs/robustness_retrain_v1.yaml`) | Prespec record, variant metrics, test differences, harness check (committed) | No |
 | `models/<run_id>/robustness-retrain-v1/` | same script | Retrained variant heads with their validation/test scores (resume cache) | Models trained on MIMIC; scores are patient-level |
 
-## Final-report analyses (see docs/FINAL-ANALYSES.md)
+## Report analyses: prediction, alert failure modes, alert-budget control (see docs/FINAL-ANALYSES.md)
 
 | Path | Produced by | Contents | Patient-level? |
 |---|---|---|---|

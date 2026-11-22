@@ -1,6 +1,6 @@
 [project]
 name = "aki-early-warning"
 version = "1.0.0"
-description = "Dynamic ICU acute kidney injury early warning on MIMIC-III: research pipeline and local website (course project)"
+description = "Reliable ICU acute kidney injury early warning on MIMIC-III: hourly risk prediction and alert-budget control that keeps the false-alert burden under a stated limit (course project)"
 requires-python = ">=3.11"
 # Dependencies: requirements-research.txt (research pipeline) and dashboard/requirements*.txt (website).

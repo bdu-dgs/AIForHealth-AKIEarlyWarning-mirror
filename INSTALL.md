@@ -72,8 +72,8 @@ report.
 | 13d | Validation-only fixes for the alert-budget limitations | `python scripts/run_alert_budget_dev.py` | `artifacts/reports/alert_budget_v2_dev/` | ~20 min |
 | 14 | All report figures | `python scripts/make_report_figures.py` | `artifacts/reports/figures/*.pdf, *.png` | ~1 min |
 
-`pipeline/06_test_evaluation_summary.ipynb` summarises steps 7-8 and `pipeline/07_final_report_analyses.ipynb` summarises
-steps 9-14. Both only read the committed aggregate tables. Local run logs are kept in `artifacts/logs/`.
+`pipeline/06_test_evaluation_summary.ipynb` summarises steps 7-8. `pipeline/07_results_prediction.ipynb` (Part 1) and
+`pipeline/08_results_alert_reliability.ipynb` (Parts 2-3) summarise steps 9-14. Both only read the committed aggregate tables. Local run logs are kept in `artifacts/logs/`.
 
 **Sealed records.** Steps 6-13 first write a `prespec.json` that hashes their configuration and code. A rerun with
 changed code or configuration stops instead of overwriting; a new analysis needs a new version name. To check that the
