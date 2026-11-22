@@ -1,0 +1,133 @@
+{
+  "created_at": "2026-11-22T18:11:10.123108+00:00",
+  "prespec_sha256": "7ae9614d6e9c6496ef7d2623bc8d4c911702ef21488de9e4f79564c70215f030",
+  "specification": {
+    "config": {
+      "version": "alert-budget-v1",
+      "evaluation_config": "configs/evaluation_test_v1.yaml",
+      "alert_rule": {
+        "horizon_h": 24,
+        "confirm": {
+          "horizon_h": 12,
+          "ratio": 0.5
+        },
+        "cooldown_hours": 12
+      },
+      "threshold_grid": {
+        "start": 0.02,
+        "stop": 0.6,
+        "step": 0.005
+      },
+      "budget": {
+        "primary": 0.25,
+        "sweep": [
+          0.15,
+          0.2,
+          0.25,
+          0.3,
+          0.4
+        ],
+        "delta": 0.05,
+        "test": "Learn-then-Test fixed-sequence testing (Angelopoulos et al.): thresholds ordered from high to low; for each, H0 \"false-alert rate > budget\" is tested with a one-sided, patient-clustered z-test of the ratio estimator (sum of false alerts / sum of patient-days, delta method); stop at the first threshold not rejected and use the lowest rejected threshold (the most sensitive one that still provably meets the budget)"
+      },
+      "groups": {
+        "recalibration": "step 1, per horizon: logistic recalibration on the calibration set, logit(p_new) = a + b * logit(p) + insurance offsets + ethnicity offsets (references Private, WHITE; L2, C = 1); patients keep the same model ranking within a group",
+        "variables": {
+          "insurance": [
+            "Medicare",
+            "Private",
+            "Medicaid",
+            "Government",
+            "Self Pay"
+          ],
+          "ethnicity_group": [
+            "WHITE",
+            "BLACK",
+            "HISPANIC",
+            "ASIAN",
+            "OTHER",
+            "UNKNOWN"
+          ]
+        },
+        "parity": {
+          "variable": "ethnicity_group",
+          "detection_targets": {
+            "start": 0.4,
+            "stop": 0.95,
+            "step": 0.01
+          },
+          "rule": "for a common detection target r, each ethnicity group with >= 100 calibration patients and >= 20 AKI events gets the highest threshold whose calibration detection is >= r; smaller groups use the step-2 threshold; r is the largest target whose total false-alert rate passes the same fixed-sequence budget test"
+        }
+      },
+      "methods": {
+        "M0_fixed": "locked policy v3 threshold 0.21 on the risks of the setting",
+        "M1_budget": "step 2 only (budget threshold on the setting's risks)",
+        "M2_group_budget": "step 1 + step 2",
+        "M3_group_budget_parity": "step 1 + step 2 + step 3"
+      },
+      "settings": {
+        "in_distribution": {
+          "model": "locked LightGBM no_dc",
+          "calibrate": "validation (all)",
+          "evaluate": "test (all)",
+          "methods": [
+            "M0",
+            "M1",
+            "M2",
+            "M3"
+          ]
+        },
+        "system_shift": {
+          "pairs": {
+            "metavision": "train_carevue",
+            "carevue": "train_metavision"
+          },
+          "variants": {
+            "M0_fixed": "source calibration, threshold 0.21",
+            "M1_naive": "source calibration, budget threshold chosen on SOURCE-system validation patients (no local data)",
+            "M1_local": "source calibration, budget threshold chosen on TARGET-system validation patients",
+            "M2_local": "step 1 (with the target-system offsets) + step 2 on target-system validation patients"
+          },
+          "evaluate": "target-system test patients"
+        }
+      },
+      "metrics": [
+        "false_alerts_per_patient_day",
+        "budget_met",
+        "event_detection_rate",
+        "alert_ppv",
+        "alerts_per_patient_day",
+        "lead_time_median_h",
+        "non_aki_patients_alerted",
+        "detection_by_group",
+        "false_alerts_by_group",
+        "detection_gap"
+      ],
+      "coverage": {
+        "resamples": 500
+      },
+      "seed": 20261123,
+      "outputs": "artifacts/reports/alert_budget_v1"
+    },
+    "input_sha256": {
+      "config": "00460234e82e1f0657b57dfa7b93c5918e894200690ecce6a7e759924e19ac72",
+      "evaluation_config": "be20503f609a0996de9ac5ea52c694fe3b1b7b92dcae6bb50fa9aff5d8442b16",
+      "cohort": "5000e0b45f9d00265299e8271631bce35089764efb8b696799c09dfc6f8bd1d9",
+      "policy": "aa0dedd15b4672c78685a4d4d58bef329f8af4bfba4c8ba0ac920043749ab0bc",
+      "head_train_carevue_6h": "2606bfe37f17c360c9c475be1c22af262db4b99bddde3c5e2d2a664765e33a4d",
+      "head_train_carevue_12h": "9710b03ecb29452c1ecf79ddc39fdfaff18b83388314929d126c1c92f71ef851",
+      "head_train_carevue_24h": "3b9042bebcd0f3aa4502a451d371cedc3f4ddafb73944f7f413865da2244c595",
+      "head_train_carevue_48h": "e67fb5bf85914147e58da33e442be8e626c098ed1d352cb0e18b137df7c84d19",
+      "head_train_metavision_6h": "8bdb6b7b132f7bb813ab3a233d2a48f772acc52051dc7d8adac90bd11540563d",
+      "head_train_metavision_12h": "76f7833f186163ec81c322117f400c0390bd6f530652abe75cec7d2fd27c5feb",
+      "head_train_metavision_24h": "7a69f3eec9cbe7e912950965c7bea470772c8d897702fa799e7c3e90c5610a6a",
+      "head_train_metavision_48h": "dc4cae4efa097c37fe1e7b0051b8224392a123a1a9c65a4dceb5bdb6467968f1"
+    },
+    "source_sha256": {
+      "src/aki_report/budget.py": "9c0ba76833b1767313246888531755efdbab0326dd0efe73b124c5989e41b002",
+      "src/aki_final/test_evaluation.py": "2b9fd3fe622fcf37a89afb3115d799bf222bd471d173316d7c709e48c554df20"
+    },
+    "commit_before_results": false,
+    "registration": "immutable local record; not public preregistration"
+  }
+}

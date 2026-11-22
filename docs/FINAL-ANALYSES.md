@@ -206,9 +206,54 @@ CI above 0.
   split, and the locked system stays LightGBM. In the report this is a negative result with a positive side-finding:
   feature-engineered trees are close to the ceiling for these inputs, and the remaining headroom is small.
 
-## 10. Figures (`artifacts/reports/figures/`)
+## 10. Alert-budget control: a guaranteed alert burden, stable across systems and groups (`alert_budget_v1/`, `fig_alert_budget`)
+
+This is the method contribution. It adds a layer on top of the unchanged risk model that turns a stated **false-alert
+budget** (here 0.25 false alerts per patient-day) into an alert threshold, in three steps fitted on calibration
+patients:
+
+1. **Group recalibration.** Logistic recalibration per horizon with insurance and ethnicity offsets.
+2. **Certified threshold.** Learn-then-Test fixed-sequence testing over a 0.5%-step threshold grid with a
+   patient-clustered test. It returns the most sensitive threshold whose false-alert rate is provably within budget
+   (delta = 0.05).
+3. **Detection parity.** Per-ethnicity thresholds that reach a common detection rate under the same certified budget.
+
+The rule shape stays policy v3 (24 h and 12 h confirmation, 12 h cooldown). Calibration is on validation patients and
+evaluation on test patients: a prespecified second test look for this new layer, with the model unchanged. The
+coverage column refits the threshold on 500 bootstrap redraws of the calibration patients and reports how often the
+test false-alert rate stays within budget (target >= 95%).
+
+| Setting | Method | Threshold | False alerts / pt-day (test) | Within 0.25? | Events detected | PPV | Coverage |
+|---|---|---:|---:|---|---:|---:|---:|
+| Same system | M0 fixed (policy v3) | 0.21 | 0.227 | yes | 71.7% | 33.5% | - |
+| Same system | M1 certified threshold | 0.205 | 0.234 | yes | 72.1% | 33.0% | 99.2% |
+| Same system | M2 + group recalibration | 0.21 | 0.231 | yes | 72.1% | 33.3% | 100% |
+| Same system | M3 + detection parity | per group | 0.224 | yes | 72.6% | 34.2% | 99.8% |
+| MetaVision model -> CareVue | M0 fixed | 0.21 | **0.258** | **no** | 67.0% | 29.7% | - |
+| MetaVision model -> CareVue | M1, no local data (threshold certified on the source system) | 0.215 | 0.250 | borderline | 66.1% | 30.1% | **64.6%** |
+| MetaVision model -> CareVue | M1, local data (2,831 patients) | 0.225 | 0.233 | yes | 63.8% | 30.9% | 97.6% |
+| CareVue model -> MetaVision | M0 fixed | 0.21 | 0.190 | yes | 67.4% | 36.5% | - |
+| CareVue model -> MetaVision | M2, local data (2,111 patients) | 0.225 | 0.202 | yes | 69.4% | 35.8% | 100% |
+
+- **The budget is met when the method sees local data, and fails when it does not.** On the same system the
+  guarantee holds in 99-100% of redraws. Moved to CareVue, the fixed threshold breaks the budget (0.258). A threshold
+  certified on the source system keeps it only 65% of the time and overshoots larger budgets (0.305 for 0.30, 0.423 for
+  0.40). Certified on local CareVue patients, it keeps every budget from 0.15 to 0.40 and holds in 97.6% of redraws
+  (`budget_sweep.csv`). The price is about 3 points of detection: the guarantee makes the threshold more cautious.
+- **Group recalibration closes the largest detection gap at the same burden.** Hispanic patients were under-predicted
+  (O/E 1.18 -> 1.00 after recalibration). Their detection rises from 53.6% (fixed) to 67.9% (step 1) and 75.0% (step 3),
+  while total false alerts fall slightly (0.227 -> 0.224) and overall detection rises (71.7% -> 72.6%). Among the three
+  groups with >= 50 events (White, Unknown, Black) detection spans 70.8-72.7% fixed and 71.6-76.4% with step 3.
+- **Limits.** Groups with fewer than 30 test events (Asian 23, Hispanic 28, Other 37) are noisy: Asian detection fell
+  (69.6% -> 60.9%) and Other rose to 91.9%. Exact parity is not achieved at this sample size. The insurance offsets
+  learned on validation did not carry over to test (Medicaid O/E 1.16 -> 1.18). Recalibration with local data on the
+  CareVue shift reached 90.4% coverage, below the 95% target. Within the same system, the certified threshold
+  (0.205-0.21) confirms that policy v3 was already close to the most sensitive threshold for this budget, so the gain
+  there is the guarantee, not more detection.
+
+## 11. Figures (`artifacts/reports/figures/`)
 
 `fig_pipeline` (system overview), `fig_cohort_flow`, `fig_eda`, `fig_missingness`, `fig_roc_pr`, `fig_calibration`,
 `fig_alert_tradeoff`, `fig_decision_curve`, `fig_severity`, `fig_shap`, `fig_patient_example` (synthetic demo
-patient), `fig_subgroups`, `fig_retrain_sensitivity`, `fig_system_shift`, `fig_recalibration`, `fig_fairness`. Each is a PDF (vector, for LaTeX) and a
+patient), `fig_subgroups`, `fig_retrain_sensitivity`, `fig_system_shift`, `fig_recalibration`, `fig_fairness`, `fig_alert_budget`. Each is a PDF (vector, for LaTeX) and a
 300 dpi PNG.

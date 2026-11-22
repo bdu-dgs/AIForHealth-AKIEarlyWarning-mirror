@@ -17,6 +17,7 @@ tests and the website import some of them as the `scripts` package.
 | | `run_recalibration.py` | Recalibrate the transported model on local data (needs `run_system_shift.py`) |
 | | `run_fairness.py` | Performance and alerts by insurance and recorded ethnicity |
 | | `run_sequence_model.py` | GRU sequence model versus LightGBM, validation only (go / no-go) |
+| | `run_alert_budget.py` | Alert-budget control: group recalibration, budget-certified threshold, detection parity |
 | | `make_report_figures.py` | Draw every report figure from the aggregate tables |
 | Integrity | `verify_sealed_hashes.py` | Check that committed code and configuration match all sealed study records |
 | Website and demo | `score_dashboard.py` | Batch hourly scoring of website patients with the locked model |

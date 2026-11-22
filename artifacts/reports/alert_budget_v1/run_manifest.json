@@ -1,0 +1,14 @@
+{
+  "version": "alert-budget-v1",
+  "prespec_sha256": "7ae9614d6e9c6496ef7d2623bc8d4c911702ef21488de9e4f79564c70215f030",
+  "finished_at": "2026-11-22T18:14:22.826049+00:00",
+  "grid_size": 117,
+  "outputs": [
+    "budget_sweep.csv",
+    "calibration_by_group.csv",
+    "coverage.csv",
+    "prespec.json",
+    "results.csv",
+    "results_by_group.csv"
+  ]
+}

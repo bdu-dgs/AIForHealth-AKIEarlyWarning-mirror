@@ -30,6 +30,9 @@ RECORD_INPUTS = {
         {"config": "configs/system_shift_v1.yaml"},
     "artifacts/reports/system_recalibration_v1/prespec.json":
         {"config": "configs/system_recalibration_v1.yaml", "policy": "artifacts/policy/policy_v3.json"},
+    "artifacts/reports/alert_budget_v1/prespec.json":
+        {"config": "configs/alert_budget_v1.yaml", "evaluation_config": "configs/evaluation_test_v1.yaml",
+         "policy": "artifacts/policy/policy_v3.json"},
     "artifacts/reports/sequence_model_v1/prespec.json":
         {"config": "configs/sequence_model_v1.yaml"},
     "artifacts/reports/fairness_structured_v1/prespec.json":

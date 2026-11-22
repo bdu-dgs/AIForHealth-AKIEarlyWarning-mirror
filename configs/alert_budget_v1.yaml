@@ -1,0 +1,55 @@
+# Alert-budget control: an alerting layer on top of the risk model that is calibrated per patient group and picks its
+# threshold to meet a stated false-alert budget with a statistical guarantee. Written before any part is fitted or
+# evaluated. The locked risk model is not changed. The test split was opened once for test-evaluation-v1; this is a
+# second, prespecified look at test for a NEW alerting layer, reported as such. Validation patients are the
+# calibration set; test patients only evaluate.
+version: alert-budget-v1
+evaluation_config: configs/evaluation_test_v1.yaml   # locked model, v2-feature hourly risks, policy v3 rule shape
+alert_rule:                     # same shape as policy v3; only the threshold t changes
+  horizon_h: 24                 # warn when 24 h risk >= t ...
+  confirm: {horizon_h: 12, ratio: 0.5}   # ... and 12 h risk >= t / 2
+  cooldown_hours: 12
+threshold_grid: {start: 0.02, stop: 0.60, step: 0.005}
+budget:
+  primary: 0.25                 # false alerts per patient-day (policy v3 runs at 0.23 on test)
+  sweep: [0.15, 0.20, 0.25, 0.30, 0.40]
+  delta: 0.05                   # guarantee: P(false alerts per patient-day on new patients <= budget) >= 0.95
+  test: >-
+    Learn-then-Test fixed-sequence testing (Angelopoulos et al.): thresholds ordered from high to low; for each, H0
+    "false-alert rate > budget" is tested with a one-sided, patient-clustered z-test of the ratio estimator
+    (sum of false alerts / sum of patient-days, delta method); stop at the first threshold not rejected and use the
+    lowest rejected threshold (the most sensitive one that still provably meets the budget)
+groups:
+  recalibration: >-
+    step 1, per horizon: logistic recalibration on the calibration set, logit(p_new) = a + b * logit(p) + insurance
+    offsets + ethnicity offsets (references Private, WHITE; L2, C = 1); patients keep the same model ranking within
+    a group
+  variables: {insurance: [Medicare, Private, Medicaid, Government, Self Pay], ethnicity_group: [WHITE, BLACK, HISPANIC, ASIAN, OTHER, UNKNOWN]}
+  parity:                       # step 3: equal detection across ethnicity groups under the same total budget
+    variable: ethnicity_group
+    detection_targets: {start: 0.40, stop: 0.95, step: 0.01}
+    rule: >-
+      for a common detection target r, each ethnicity group with >= 100 calibration patients and >= 20 AKI events
+      gets the highest threshold whose calibration detection is >= r; smaller groups use the step-2 threshold;
+      r is the largest target whose total false-alert rate passes the same fixed-sequence budget test
+methods:
+  M0_fixed: locked policy v3 threshold 0.21 on the risks of the setting
+  M1_budget: step 2 only (budget threshold on the setting's risks)
+  M2_group_budget: step 1 + step 2
+  M3_group_budget_parity: step 1 + step 2 + step 3
+settings:
+  in_distribution: {model: locked LightGBM no_dc, calibrate: validation (all), evaluate: test (all), methods: [M0, M1, M2, M3]}
+  system_shift:                 # frozen system-shift-v1 heads; no retraining
+    pairs: {metavision: train_carevue, carevue: train_metavision}   # target system: model trained on the other system
+    variants:
+      M0_fixed: source calibration, threshold 0.21
+      M1_naive: source calibration, budget threshold chosen on SOURCE-system validation patients (no local data)
+      M1_local: source calibration, budget threshold chosen on TARGET-system validation patients
+      M2_local: step 1 (with the target-system offsets) + step 2 on target-system validation patients
+    evaluate: target-system test patients
+metrics: [false_alerts_per_patient_day, budget_met, event_detection_rate, alert_ppv, alerts_per_patient_day,
+          lead_time_median_h, non_aki_patients_alerted, detection_by_group, false_alerts_by_group, detection_gap]
+coverage:                       # does the guarantee hold? redraw the calibration patients and refit the threshold
+  resamples: 500                # patient bootstrap of the calibration set; report P(test false-alert rate <= budget)
+seed: 20261123
+outputs: artifacts/reports/alert_budget_v1   # aggregate only

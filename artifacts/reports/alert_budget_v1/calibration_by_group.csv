@@ -1,0 +1,67 @@
+setting,method,variable,level,observed_over_expected_24h
+in_distribution,pooled Platt,insurance,Government,1.4523643256120067
+in_distribution,pooled Platt,insurance,Medicaid,1.1639999294574868
+in_distribution,pooled Platt,insurance,Medicare,0.9751620919432281
+in_distribution,pooled Platt,insurance,Private,0.9064054711302971
+in_distribution,pooled Platt,insurance,Self Pay,1.0795698767721573
+in_distribution,pooled Platt,ethnicity_group,ASIAN,1.061825173389506
+in_distribution,pooled Platt,ethnicity_group,BLACK,1.0679791371897613
+in_distribution,pooled Platt,ethnicity_group,HISPANIC,1.1763485302103351
+in_distribution,pooled Platt,ethnicity_group,OTHER,1.375703661046361
+in_distribution,pooled Platt,ethnicity_group,UNKNOWN,1.0450118565952362
+in_distribution,pooled Platt,ethnicity_group,WHITE,0.9290796195029974
+in_distribution,group recalibrated,insurance,Government,1.382777348778488
+in_distribution,group recalibrated,insurance,Medicaid,1.17572462935997
+in_distribution,group recalibrated,insurance,Medicare,0.9651028860848393
+in_distribution,group recalibrated,insurance,Private,0.8930672089569949
+in_distribution,group recalibrated,insurance,Self Pay,1.0086483489660985
+in_distribution,group recalibrated,ethnicity_group,ASIAN,0.9894094876409988
+in_distribution,group recalibrated,ethnicity_group,BLACK,1.0415796349179383
+in_distribution,group recalibrated,ethnicity_group,HISPANIC,1.0044664319382706
+in_distribution,group recalibrated,ethnicity_group,OTHER,1.4486186777728498
+in_distribution,group recalibrated,ethnicity_group,UNKNOWN,1.053634327795127
+in_distribution,group recalibrated,ethnicity_group,WHITE,0.9190942895429939
+shift_to_metavision,source calibration,insurance,Government,1.8908440168301712
+shift_to_metavision,source calibration,insurance,Medicaid,1.3819231204688391
+shift_to_metavision,source calibration,insurance,Medicare,1.1287261433521292
+shift_to_metavision,source calibration,insurance,Private,1.1020186789483257
+shift_to_metavision,source calibration,insurance,Self Pay,0.05536520131950421
+shift_to_metavision,source calibration,ethnicity_group,ASIAN,0.9243759779393994
+shift_to_metavision,source calibration,ethnicity_group,BLACK,1.3476164409815996
+shift_to_metavision,source calibration,ethnicity_group,HISPANIC,1.4876473789274587
+shift_to_metavision,source calibration,ethnicity_group,OTHER,1.4883093818333633
+shift_to_metavision,source calibration,ethnicity_group,UNKNOWN,1.2941609766013256
+shift_to_metavision,source calibration,ethnicity_group,WHITE,1.1051002232897416
+shift_to_metavision,local group recalibration,insurance,Government,1.6077978150981047
+shift_to_metavision,local group recalibration,insurance,Medicaid,1.5349294663270117
+shift_to_metavision,local group recalibration,insurance,Medicare,0.9975901663892761
+shift_to_metavision,local group recalibration,insurance,Private,0.8890363683142462
+shift_to_metavision,local group recalibration,insurance,Self Pay,0.08699851013879414
+shift_to_metavision,local group recalibration,ethnicity_group,ASIAN,0.8404486856451685
+shift_to_metavision,local group recalibration,ethnicity_group,BLACK,1.2958864032471382
+shift_to_metavision,local group recalibration,ethnicity_group,HISPANIC,1.2029536726993169
+shift_to_metavision,local group recalibration,ethnicity_group,OTHER,1.5663289943464789
+shift_to_metavision,local group recalibration,ethnicity_group,UNKNOWN,1.004713459940112
+shift_to_metavision,local group recalibration,ethnicity_group,WHITE,0.9712027594856553
+shift_to_carevue,source calibration,insurance,Government,1.1804210976449128
+shift_to_carevue,source calibration,insurance,Medicaid,0.9165695961902849
+shift_to_carevue,source calibration,insurance,Medicare,0.8830245897144345
+shift_to_carevue,source calibration,insurance,Private,0.7737338378282819
+shift_to_carevue,source calibration,insurance,Self Pay,1.1072459302695383
+shift_to_carevue,source calibration,ethnicity_group,ASIAN,1.1485501825794202
+shift_to_carevue,source calibration,ethnicity_group,BLACK,0.7907370861698165
+shift_to_carevue,source calibration,ethnicity_group,HISPANIC,1.0040140346977755
+shift_to_carevue,source calibration,ethnicity_group,OTHER,1.3573404499441062
+shift_to_carevue,source calibration,ethnicity_group,UNKNOWN,0.9525257092206942
+shift_to_carevue,source calibration,ethnicity_group,WHITE,0.8034837634253392
+shift_to_carevue,local group recalibration,insurance,Government,1.1891985035030492
+shift_to_carevue,local group recalibration,insurance,Medicaid,0.9090418133400147
+shift_to_carevue,local group recalibration,insurance,Medicare,0.9480132945338182
+shift_to_carevue,local group recalibration,insurance,Private,0.8890704189282607
+shift_to_carevue,local group recalibration,insurance,Self Pay,0.9424371400037626
+shift_to_carevue,local group recalibration,ethnicity_group,ASIAN,1.176384640338018
+shift_to_carevue,local group recalibration,ethnicity_group,BLACK,0.8890227688281432
+shift_to_carevue,local group recalibration,ethnicity_group,HISPANIC,0.9405451023467599
+shift_to_carevue,local group recalibration,ethnicity_group,OTHER,1.3159017587587696
+shift_to_carevue,local group recalibration,ethnicity_group,UNKNOWN,1.0996956991002762
+shift_to_carevue,local group recalibration,ethnicity_group,WHITE,0.8641250330486161

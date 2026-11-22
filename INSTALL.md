@@ -68,6 +68,7 @@ report.
 | 12 | Local recalibration (needs step 11) | `python scripts/run_recalibration.py` | `artifacts/reports/system_recalibration_v1/` | ~5 min |
 | 13 | Fairness by insurance and ethnicity | `python scripts/run_fairness.py` | `artifacts/reports/fairness_structured_v1/` | ~7 min |
 | 13b | GRU go / no-go on validation | `python scripts/run_sequence_model.py` | `artifacts/reports/sequence_model_v1/` | ~11 min |
+| 13c | Alert-budget control (group recalibration, certified threshold, parity) | `python scripts/run_alert_budget.py` | `artifacts/reports/alert_budget_v1/` | ~4 min |
 | 14 | All report figures | `python scripts/make_report_figures.py` | `artifacts/reports/figures/*.pdf, *.png` | ~1 min |
 
 `pipeline/06_test_evaluation_summary.ipynb` summarises steps 7-8 and `pipeline/07_final_report_analyses.ipynb` summarises

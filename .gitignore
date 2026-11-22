@@ -61,3 +61,4 @@ artifacts/reports/*
 !artifacts/reports/eda_v1/
 !artifacts/reports/figures/
 !artifacts/reports/sequence_model_v1/
+!artifacts/reports/alert_budget_v1/

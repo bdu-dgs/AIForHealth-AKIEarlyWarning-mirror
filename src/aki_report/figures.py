@@ -501,11 +501,57 @@ class Figures:
         fig.legend(handles, labels, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.12))
         self.save(fig, "fig_recalibration")
 
+    def alert_budget(self):
+        d = self.root / "artifacts" / "reports" / "alert_budget_v1"
+        sw, cov = pd.read_csv(d / "budget_sweep.csv"), pd.read_csv(d / "coverage.csv")
+        grp = pd.read_csv(d / "results_by_group.csv")
+        fig, axes = plt.subplots(1, 3, figsize=(WIDTH, 2.35), gridspec_kw={"width_ratios": [1, 1, 1.15]})
+        ax = axes[0]
+        lim = [0.1, 0.45]
+        ax.plot(lim, lim, color=INK2, lw=.8, ls=":")
+        ax.text(0.40, 0.355, "budget", fontsize=6, color=INK2, rotation=38)
+        for (setting, method), col, lab in [(("shift_to_carevue", "M1_naive"), SERIES[1], "no local data"),
+                                            (("shift_to_carevue", "M1_local"), SERIES[0], "local calibration"),
+                                            (("in_distribution", "M1_budget"), REFERENCE_GRAY, "same system")]:
+            x = sw[(sw["setting"] == setting) & (sw["method"] == method)].sort_values("budget")
+            ax.plot(x["budget"], x["false_alerts_per_patient_day"], marker="o", ms=3, color=col, lw=1.2, label=lab)
+        ax.set(xlim=lim, ylim=lim, title="a  Budget kept? (to CV)", xlabel="false-alert budget / patient-day",
+               ylabel="achieved on test")
+        ax.legend(loc="upper left", fontsize=5.6, handlelength=1.2)
+        ax = axes[1]
+        order = [("in_distribution", "M1_budget", "same|system"), ("shift_to_carevue", "M1_naive", "CV|naive"),
+                 ("shift_to_carevue", "M1_local", "CV|local"), ("shift_to_metavision", "M1_naive", "MV|naive"),
+                 ("shift_to_metavision", "M1_local", "MV|local")]
+        vals = [cov[(cov["setting"] == s_) & (cov["method"] == m_)]["coverage"].iloc[0] * 100 for s_, m_, _ in order]
+        cols = [REFERENCE_GRAY, SERIES[1], SERIES[0], SERIES[1], SERIES[0]]
+        ax.bar(range(len(order)), vals, color=cols, width=.62)
+        ax.axhline(95, color=INK2, lw=.8, ls="--")
+        ax.text(-0.4, 96, "95% target", fontsize=6, color=INK2, ha="left", va="bottom")
+        ax.set_xticks(range(len(order)), [o[2].replace("|", chr(10)) for o in order], fontsize=5.4)
+        ax.set(title="b  Guarantee (B = 0.25)", ylabel="% of draws within budget", ylim=(50, 102))
+        ax = axes[2]
+        g = grp[(grp["setting"] == "in_distribution") & (grp["variable"] == "ethnicity_group")]
+        levels = ["WHITE", "UNKNOWN", "BLACK", "OTHER", "HISPANIC", "ASIAN"]
+        y = np.arange(len(levels))[::-1]
+        for k, (m, col, lab) in enumerate([("M0_fixed", REFERENCE_GRAY, "fixed threshold"),
+                                           ("M2_group_budget", SERIES[2], "group recalibrated"),
+                                           ("M3_group_budget_parity", SERIES[0], "+ parity thresholds")]):
+            v = g[g["method"] == m].set_index("level").reindex(levels)
+            ax.scatter(v["event_detection_rate"] * 100, y + (k - 1) * .2, s=16, color=col, label=lab, zorder=3)
+        ev = g[g["method"] == "M0_fixed"].set_index("level").reindex(levels)["aki_events"]
+        ax.set_yticks(y, [f"{l.capitalize()} ({int(n)})" for l, n in zip(levels, ev)], fontsize=6)
+        ax.set(title="c  Detection by ethnicity", xlabel="% of AKI events detected")
+        ax.grid(axis="y", visible=False)
+        fig.tight_layout(w_pad=0.5)
+        h, l = axes[2].get_legend_handles_labels()
+        fig.legend(h, l, loc="lower center", ncol=3, bbox_to_anchor=(0.72, -0.1), fontsize=6)
+        self.save(fig, "fig_alert_budget")
+
     # -------------------------------------------------------------------------------------------- run
     def run(self):
         for f in [self.pipeline, self.cohort_flow, self.eda, self.missingness, self.roc_pr, self.calibration, self.tradeoff,
                   self.decision_curve, self.severity, self.shap, self.patient_example, self.subgroups, self.retrain,
-                  self.system_shift, self.fairness, self.recalibration]:
+                  self.system_shift, self.fairness, self.recalibration, self.alert_budget]:
             try:
                 f()
             except FileNotFoundError as e:
