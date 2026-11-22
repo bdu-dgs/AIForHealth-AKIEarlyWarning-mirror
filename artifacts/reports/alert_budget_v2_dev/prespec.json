@@ -1,0 +1,58 @@
+{
+  "created_at": "2026-11-22T18:39:31.498320+00:00",
+  "prespec_sha256": "04c69091a79b4aa76bd09d9303765ab5c05c8f34fee6992091693906769d9b2a",
+  "specification": {
+    "config": {
+      "version": "alert-budget-v2-dev",
+      "base": "configs/alert_budget_v1.yaml",
+      "splits": {
+        "repeats": 20,
+        "fit_fraction": 0.5
+      },
+      "fixes": {
+        "A_group_offsets": {
+          "compare": {
+            "P0": "no group recalibration",
+            "P1": "offsets fitted on V1 (alert-budget-v1 method)",
+            "P2": "offsets fitted on training out-of-fold risks (22,998 patients)"
+          },
+          "measure_on_V2": "observed / expected (24 h) per insurance and ethnicity level; mean |log O/E| over levels with >= 20 V2 events"
+        },
+        "B_small_group_thresholds": {
+          "compare": {
+            "P3": "parity thresholds learned on V1 (alert-budget-v1 method, with P1 offsets)",
+            "P4": "parity thresholds learned on training out-of-fold risks (with P2 offsets); the detection target is certified against the budget on V1"
+          },
+          "reference": "P0 with the certified single threshold (M1)",
+          "measure_on_V2": "false alerts per patient-day, budget met, overall detection, detection per ethnicity group, detection range across groups and lowest group detection"
+        },
+        "C_sample_splitting": {
+          "setting": "system shift with the system-shift-v1 cross-system models, target-system validation patients only",
+          "repeats": 100,
+          "compare": {
+            "double_use": "group recalibration and certified threshold both fitted on all local fitting patients",
+            "split": "recalibration on one half of the local fitting patients, certified threshold on the other half"
+          },
+          "measure": "coverage = share of repeats whose evaluation-patient false-alert rate is within budget; detection",
+          "threshold_grid_step": 0.01
+        }
+      },
+      "adoption_rule": "A fix is carried into a new prespecified test evaluation only if it improves its measure on V2 averaged over the splits (A: lower mean |log O/E| than P1; B: smaller detection range and no lower worst-group detection than P0, with the budget met; C: coverage >= 95% where double use is below 95%). Otherwise it is reported as not helpful.",
+      "seed": 20261124,
+      "outputs": "artifacts/reports/alert_budget_v2_dev"
+    },
+    "input_sha256": {
+      "config": "827887dd7b4e707a5c2229d376a9756b63da9144f7aa33e9352c587a4577c962",
+      "base_config": "00460234e82e1f0657b57dfa7b93c5918e894200690ecce6a7e759924e19ac72",
+      "cohort": "5000e0b45f9d00265299e8271631bce35089764efb8b696799c09dfc6f8bd1d9",
+      "predictions": "7faeb590b62a8cda9487a57c69bfbde26d3222a1336326b0c9d6c59687a38a00",
+      "policy": "aa0dedd15b4672c78685a4d4d58bef329f8af4bfba4c8ba0ac920043749ab0bc"
+    },
+    "source_sha256": {
+      "src/aki_report/budget_dev.py": "ce2843a45100514ac44b0a895ad522738779154f53628d5daa32525582944b85",
+      "src/aki_report/budget.py": "9c0ba76833b1767313246888531755efdbab0326dd0efe73b124c5989e41b002"
+    },
+    "commit_before_results": false,
+    "registration": "immutable local record; not public preregistration"
+  }
+}

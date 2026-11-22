@@ -1,0 +1,34 @@
+variant,variable,level,oe_mean,events_mean
+P0_none,ethnicity_group,ASIAN,1.2297434633400355,181.1
+P0_none,ethnicity_group,BLACK,1.0376219096782868,477.9
+P0_none,ethnicity_group,HISPANIC,1.1422136137208725,258.45
+P0_none,ethnicity_group,OTHER,0.8825529162053559,154.5
+P0_none,ethnicity_group,UNKNOWN,0.9951741875834224,1300.0
+P0_none,ethnicity_group,WHITE,1.0220571259975273,5887.15
+P0_none,insurance,Government,1.0057500394185017,190.65
+P0_none,insurance,Medicaid,1.0362361936836006,583.55
+P0_none,insurance,Medicare,1.0263611094108283,5201.5
+P0_none,insurance,Private,1.0116395093262915,2228.4
+P0_none,insurance,Self Pay,1.0401181537702109,55.0
+P1_offsets_V1,ethnicity_group,ASIAN,1.4707083212521554,181.1
+P1_offsets_V1,ethnicity_group,BLACK,1.0530173752962018,477.9
+P1_offsets_V1,ethnicity_group,HISPANIC,1.0229319644623418,258.45
+P1_offsets_V1,ethnicity_group,OTHER,0.9378627607832515,154.5
+P1_offsets_V1,ethnicity_group,UNKNOWN,1.0234003083179661,1300.0
+P1_offsets_V1,ethnicity_group,WHITE,1.021509209322015,5887.15
+P1_offsets_V1,insurance,Government,1.0835801201740913,190.65
+P1_offsets_V1,insurance,Medicaid,1.092878789374745,583.55
+P1_offsets_V1,insurance,Medicare,1.0337001333051183,5201.5
+P1_offsets_V1,insurance,Private,0.9952064685002281,2228.4
+P1_offsets_V1,insurance,Self Pay,0.963366665735063,55.0
+P2_offsets_trainOOF,ethnicity_group,ASIAN,1.2596208002960378,181.1
+P2_offsets_trainOOF,ethnicity_group,BLACK,0.9483508024529671,477.9
+P2_offsets_trainOOF,ethnicity_group,HISPANIC,1.5987957217592195,258.45
+P2_offsets_trainOOF,ethnicity_group,OTHER,0.8087015419439302,154.5
+P2_offsets_trainOOF,ethnicity_group,UNKNOWN,0.9625236476935773,1300.0
+P2_offsets_trainOOF,ethnicity_group,WHITE,1.0278999364958845,5887.15
+P2_offsets_trainOOF,insurance,Government,0.8421228530500768,190.65
+P2_offsets_trainOOF,insurance,Medicaid,1.0600877075807047,583.55
+P2_offsets_trainOOF,insurance,Medicare,1.0114119632659422,5201.5
+P2_offsets_trainOOF,insurance,Private,1.0538539166871996,2228.4
+P2_offsets_trainOOF,insurance,Self Pay,1.2260271132046898,55.0

@@ -8,6 +8,7 @@
 #   artifacts/reports/fairness_structured_v1/prespec.json                         (fairness by insurance / ethnicity)
 #   artifacts/reports/sequence_model_v1/prespec.json                              (GRU go / no-go, validation)
 #   artifacts/reports/alert_budget_v1/prespec.json                                (alert-budget control)
+#   artifacts/reports/alert_budget_v2_dev/prespec.json                            (validation-only fixes)
 #   ../Cleaned/dataset_manifest.json                                              (configs/default.yaml)
 # Re-running a study checks these hashes and refuses changed files. The hashes were taken on the line endings below
 # (Windows checkouts for most, LF for files created later), so every checkout on any OS reproduces those bytes.
@@ -30,6 +31,7 @@ src/aki_report/fairness.py          text eol=lf
 src/aki_report/recalibration.py     text eol=lf
 src/aki_report/sequence.py          text eol=lf
 src/aki_report/budget.py            text eol=lf
+src/aki_report/budget_dev.py        text eol=crlf
 
 configs/default.yaml                text eol=crlf
 configs/ml.yaml                     text eol=crlf
@@ -42,6 +44,7 @@ configs/fairness_structured_v1.yaml text eol=lf
 configs/system_recalibration_v1.yaml text eol=lf
 configs/sequence_model_v1.yaml      text eol=crlf
 configs/alert_budget_v1.yaml        text eol=lf
+configs/alert_budget_v2_dev.yaml    text eol=lf
 
 artifacts/demo_i/policy.json        text eol=crlf
 artifacts/policy/policy_v3.json     text eol=crlf

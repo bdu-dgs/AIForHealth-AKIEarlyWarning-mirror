@@ -1,0 +1,16 @@
+{
+  "version": "alert-budget-v2-dev",
+  "prespec_sha256": "04c69091a79b4aa76bd09d9303765ab5c05c8f34fee6992091693906769d9b2a",
+  "finished_at": "2026-11-22T18:58:19.053012+00:00",
+  "test_split_loaded": false,
+  "outputs": [
+    "fixA_by_level.csv",
+    "fixA_calibration_by_group_repeats.csv",
+    "fixA_summary.csv",
+    "fixB_policies_repeats.csv",
+    "fixB_summary.csv",
+    "fixC_sample_splitting_repeats.csv",
+    "fixC_summary.csv",
+    "prespec.json"
+  ]
+}

@@ -1,0 +1,36 @@
+# Development of fixes for the limitations seen in alert-budget-v1, on VALIDATION patients only. The test split is NOT
+# loaded. Written before any fix is fitted. Validation patients are split at random into a fitting half (V1) and an
+# evaluation half (V2), 20 times; results are averaged over the splits. Training patients' out-of-fold risks (notebook 02,
+# lightgbm no_dc) are used as a larger calibration source. The locked model is unchanged.
+version: alert-budget-v2-dev
+base: configs/alert_budget_v1.yaml          # rule shape, threshold grid, budget 0.25, delta 0.05, groups, parity targets
+splits: {repeats: 20, fit_fraction: 0.5}
+fixes:
+  A_group_offsets:              # problem: insurance offsets learned on ~2,000 validation patients did not carry over
+    compare:
+      P0: no group recalibration
+      P1: offsets fitted on V1 (alert-budget-v1 method)
+      P2: offsets fitted on training out-of-fold risks (22,998 patients)
+    measure_on_V2: observed / expected (24 h) per insurance and ethnicity level; mean |log O/E| over levels with >= 20 V2 events
+  B_small_group_thresholds:     # problem: per-group thresholds learned from ~25 events per group were noisy
+    compare:
+      P3: parity thresholds learned on V1 (alert-budget-v1 method, with P1 offsets)
+      P4: parity thresholds learned on training out-of-fold risks (with P2 offsets); the detection target is certified
+          against the budget on V1
+    reference: P0 with the certified single threshold (M1)
+    measure_on_V2: false alerts per patient-day, budget met, overall detection, detection per ethnicity group,
+      detection range across groups and lowest group detection
+  C_sample_splitting:           # problem: recalibration and threshold fitted on the same local patients (90% coverage)
+    setting: system shift with the system-shift-v1 cross-system models, target-system validation patients only
+    repeats: 100                # random partitions: 60% local fitting patients, 40% local evaluation patients
+    compare:
+      double_use: group recalibration and certified threshold both fitted on all local fitting patients
+      split: recalibration on one half of the local fitting patients, certified threshold on the other half
+    measure: coverage = share of repeats whose evaluation-patient false-alert rate is within budget; detection
+    threshold_grid_step: 0.01   # coarser grid for speed (every repeat replays the rule)
+adoption_rule: >-
+  A fix is carried into a new prespecified test evaluation only if it improves its measure on V2 averaged over the
+  splits (A: lower mean |log O/E| than P1; B: smaller detection range and no lower worst-group detection than P0, with
+  the budget met; C: coverage >= 95% where double use is below 95%). Otherwise it is reported as not helpful.
+seed: 20261124
+outputs: artifacts/reports/alert_budget_v2_dev   # aggregate only

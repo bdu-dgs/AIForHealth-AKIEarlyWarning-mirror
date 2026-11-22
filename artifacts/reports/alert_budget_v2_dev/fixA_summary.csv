@@ -1,0 +1,4 @@
+variant,mean_abs_log_oe
+P0_none,0.12331460028385735
+P1_offsets_V1,0.23455609590084703
+P2_offsets_trainOOF,0.1700483830533534

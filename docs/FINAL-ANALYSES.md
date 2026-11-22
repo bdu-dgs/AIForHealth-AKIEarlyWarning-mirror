@@ -240,7 +240,7 @@ test false-alert rate stays within budget (target >= 95%).
   certified on the source system keeps it only 65% of the time and overshoots larger budgets (0.305 for 0.30, 0.423 for
   0.40). Certified on local CareVue patients, it keeps every budget from 0.15 to 0.40 and holds in 97.6% of redraws
   (`budget_sweep.csv`). The price is about 3 points of detection: the guarantee makes the threshold more cautious.
-- **Group recalibration closes the largest detection gap at the same burden.** Hispanic patients were under-predicted
+- **Group recalibration closes the largest detection gap at the same burden (not confirmed on validation; see 10b).** Hispanic patients were under-predicted
   (O/E 1.18 -> 1.00 after recalibration). Their detection rises from 53.6% (fixed) to 67.9% (step 1) and 75.0% (step 3),
   while total false alerts fall slightly (0.227 -> 0.224) and overall detection rises (71.7% -> 72.6%). Among the three
   groups with >= 50 events (White, Unknown, Black) detection spans 70.8-72.7% fixed and 71.6-76.4% with step 3.
@@ -250,6 +250,31 @@ test false-alert rate stays within budget (target >= 95%).
   CareVue shift reached 90.4% coverage, below the 95% target. Within the same system, the certified threshold
   (0.205-0.21) confirms that policy v3 was already close to the most sensitive threshold for this budget, so the gain
   there is the guarantee, not more detection.
+
+### 10b. Can the limitations be fixed? Validation-only check (`alert_budget_v2_dev/`)
+
+Three fixes were tested on validation patients only; the test split was not loaded. Validation was split at random into
+a fitting half and an evaluation half, 20 times, and results are averaged. The adoption rule was fixed in advance.
+
+| Fix | Idea | Result on the evaluation halves | Adopted? |
+|---|---|---|---|
+| A. Learn group offsets from 22,998 training patients instead of ~2,500 validation patients | more data, steadier offsets | Mean calibration error across groups (mean of abs(log O/E)): no recalibration 0.12, offsets from half of validation 0.24, offsets from training 0.17 | No: better than the v1 method, but worse than not recalibrating at all |
+| B. Learn per-group thresholds from training patients | more AKI events per group | Detection range across ethnicity groups: single threshold 16 points, v1 parity method 31, training-based parity 20; worst-group detection 62%, 54%, 64% | No: the range is not smaller than with one threshold |
+| C. Recalibrate on one half of the local patients and certify the threshold on the other | no double use of local data | Coverage after system change: MetaVision 86% -> 94%, CareVue 90% -> 90%; detection -2 to -3 points | No: still below 95% |
+
+**What this means.**
+
+- In validation, the groups are already well calibrated (Medicaid O/E 1.04, Government 1.01, White 1.02). The
+  under-prediction seen on test (Medicaid 1.16, Hispanic 1.18) is not a stable feature of the model.
+- Learning group offsets or group thresholds from a few hundred patients mostly adds noise. The Hispanic detection gain
+  seen on test in section 10 (54% -> 75%) is therefore **not confirmed**, and should be reported as unconfirmed.
+- The robust part of the method is step 2, the budget-certified threshold fitted on enough local patients. Its
+  coverage falls when the local sample shrinks (86-90% with 60% of the local validation patients, against 98% with all
+  of them in section 10).
+- For fairness, the defensible recommendation is to **monitor** group calibration and alert rates after deployment.
+  Correcting them needs thousands of patients per group.
+
+None of the fixes meets the adoption rule, so there is no further test evaluation.
 
 ## 11. Figures (`artifacts/reports/figures/`)
 

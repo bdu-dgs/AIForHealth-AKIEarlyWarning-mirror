@@ -19,7 +19,7 @@ It is a research prototype, not a validated clinical product. Risks and alerts a
 | Baselines (24 h AUROC) | XGBoost 0.814, random forest 0.794, logistic regression 0.788, creatinine-only model 0.703, creatinine-rise rule 0.618 |
 | Generalisability | Moving between the two MIMIC charting systems costs 0.01-0.03 AUROC but shifts calibration; recalibrating on about 500-1,000 local patients restores it |
 | Fairness | Equal AUROC across insurance and ethnicity groups; risk is underestimated for Medicaid, government-insured and Hispanic patients |
-| Alert-budget control (method) | A stated false-alert budget is met in 99-100% of recalibrations on the same system and in 98% after a system change when local patients are used, against 65% without local data; group recalibration lifts Hispanic AKI detection from 54% to 68-75% at the same total burden |
+| Alert-budget control (method) | A stated false-alert budget is met in 99-100% of recalibrations on the same system and in 98% after a system change when local patients are used, against 65% without local data. Group-specific corrections did not hold up in a validation-only check (subgroups are too small), so subgroup calibration is monitored rather than corrected |
 | Sequence model | A GRU does not beat LightGBM (-0.009 AUROC); a GRU+LightGBM ensemble gains +0.008, below the prespecified bar, so the locked model stays |
 
 Full results: [docs/FINAL-REPORT.md](docs/FINAL-REPORT.md) (main evaluation) and
