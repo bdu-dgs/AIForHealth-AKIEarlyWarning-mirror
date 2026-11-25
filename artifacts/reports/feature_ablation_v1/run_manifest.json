@@ -1,0 +1,30 @@
+{
+  "version": "feature-ablation-v1",
+  "prespec_sha256": "9203d9e19622b4e1ca20292cbc209e025288a8f960520818115c1528e62b6d18",
+  "finished_at": "2026-11-25T17:27:16.712520+00:00",
+  "variants": [
+    "top_10",
+    "top_20",
+    "top_30",
+    "top_50",
+    "top_100",
+    "drop_creatinine",
+    "drop_laboratory_other",
+    "drop_vital_signs",
+    "drop_urine_output",
+    "drop_fluids_medications_interventions",
+    "drop_demographics_admission",
+    "drop_neurological_respiratory"
+  ],
+  "features_reference": 246,
+  "validation_rows": 198524,
+  "test_scored": false,
+  "outputs": [
+    "feature_importance.csv",
+    "prespec.json",
+    "top_k_features.json",
+    "validation_differences.csv",
+    "validation_metrics.csv",
+    "variants.csv"
+  ]
+}

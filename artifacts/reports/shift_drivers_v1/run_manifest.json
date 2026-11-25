@@ -1,0 +1,15 @@
+{
+  "version": "shift-drivers-v1",
+  "prespec_sha256": "b10aa4482762ff31e82cb7fa017721ab7d9aa0e4d7c773fd074bed7a48aaece5",
+  "finished_at": "2026-11-25T17:35:36.711630+00:00",
+  "test_loaded": false,
+  "rows_loaded": 1137286,
+  "outputs": [
+    "component_coefficients.csv",
+    "component_mean_contributions.csv",
+    "component_observed_over_expected.csv",
+    "input_shift.csv",
+    "input_shift_by_component.csv",
+    "prespec.json"
+  ]
+}

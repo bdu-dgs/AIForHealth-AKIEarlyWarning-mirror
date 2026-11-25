@@ -1,0 +1,107 @@
+{
+  "created_at": "2026-11-25T17:27:38.528279+00:00",
+  "prespec_sha256": "b10aa4482762ff31e82cb7fa017721ab7d9aa0e4d7c773fd074bed7a48aaece5",
+  "specification": {
+    "config": {
+      "version": "shift-drivers-v1",
+      "system_shift_run": {
+        "run_id": "aki_ml_v1_28e0b1fb83",
+        "study": "system-shift-v1",
+        "variants": {
+          "carevue": "train_carevue",
+          "metavision": "train_metavision"
+        }
+      },
+      "horizons": [
+        6,
+        24
+      ],
+      "components": {
+        "measurement_process": {
+          "name_patterns": [
+            "_hours_since_last",
+            "_count_"
+          ]
+        },
+        "creatinine": {
+          "groups": [
+            "creatinine"
+          ]
+        },
+        "other_laboratory": {
+          "groups": [
+            "laboratory"
+          ]
+        },
+        "vital_signs": {
+          "groups": [
+            "vital_signs"
+          ]
+        },
+        "urine_output": {
+          "groups": [
+            "urine_output"
+          ]
+        },
+        "fluids_medications_interventions": {
+          "groups": [
+            "fluids_medications",
+            "interventions"
+          ]
+        },
+        "demographics_admission": {
+          "groups": [
+            "demographics_admission"
+          ]
+        },
+        "neurological_respiratory": {
+          "groups": [
+            "neurological",
+            "respiratory"
+          ]
+        },
+        "time_in_icu": {
+          "groups": [
+            "time"
+          ]
+        }
+      },
+      "part_A_input_shift": {
+        "rows": "training patients of each system (seeded sample of 300000 rows per system)",
+        "per_feature": [
+          "missing fraction per system",
+          "median per system",
+          "standardized mean difference of observed values"
+        ],
+        "ranking": "absolute standardized difference x the feature's importance share (mean |TreeSHAP| of the source model)"
+      },
+      "part_B_component_recalibration": {
+        "rows": "validation patients, eligible hours 1-72, of the TARGET system (model moved) and of the SOURCE system (reference)",
+        "method": "TreeSHAP contributions of the source model are summed per component and put on the calibrated logit scale (Platt slope x contribution). On each system's validation rows an unpenalised logistic regression y ~ intercept + sum_c beta_c * component_c is fitted. beta_c = 1 means the component carries the same evidence in that system as in training; beta_c > 1 means the model under-weights it there, < 1 over-weights it; the intercept captures a baseline risk change that no input explains.",
+        "attribution": "observed / expected on the target rows after correcting ONE component only (its contribution multiplied by its fitted beta, everything else unchanged), next to the uncorrected O/E and the O/E after the full correction; a component whose correction alone moves O/E most of the way to 1 is the main driver of the miscalibration",
+        "bootstrap": {
+          "unit": "patient",
+          "resamples": 200
+        }
+      },
+      "seed": 20261126,
+      "outputs": "artifacts/reports/shift_drivers_v1"
+    },
+    "input_sha256": {
+      "config": "e0583811a70e6534e4dba3901884e4f3069d03e1b00125dc9c2ebb8d608eeda8",
+      "snapshots": "b27c11be7dc55d01e65b16b1866c5e5e8f0824bc1e3e695c9b103db6c548bd8a",
+      "feature_dictionary": "d38521cf3714ac5444b491833b986897a5e219c2d3eaca7c7e513b4d4c60dfec",
+      "reference_pipeline": "605044df37b040285bf6f91676d4e05506f21cb84aba01119e17bf46d2043ff1",
+      "system_shift_prespec": "f39785e01393e5488a9287ce5e92f2911a06631f570b14991c83c114e3f20cc4",
+      "head_train_carevue_6h": "2606bfe37f17c360c9c475be1c22af262db4b99bddde3c5e2d2a664765e33a4d",
+      "head_train_carevue_24h": "3b9042bebcd0f3aa4502a451d371cedc3f4ddafb73944f7f413865da2244c595",
+      "head_train_metavision_6h": "8bdb6b7b132f7bb813ab3a233d2a48f772acc52051dc7d8adac90bd11540563d",
+      "head_train_metavision_24h": "7a69f3eec9cbe7e912950965c7bea470772c8d897702fa799e7c3e90c5610a6a"
+    },
+    "source_sha256": {
+      "src/aki_report/shift_drivers.py": "5234a9aa79eaf93aef21666c013fdb1b3740b6bdaa91c95a949658ac1e8b3982"
+    },
+    "commit_before_results": false,
+    "registration": "immutable local record; not public preregistration"
+  }
+}

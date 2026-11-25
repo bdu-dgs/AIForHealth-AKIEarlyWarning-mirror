@@ -63,3 +63,5 @@ artifacts/reports/*
 !artifacts/reports/sequence_model_v1/
 !artifacts/reports/alert_budget_v1/
 !artifacts/reports/alert_budget_v2_dev/
+!artifacts/reports/feature_ablation_v1/
+!artifacts/reports/shift_drivers_v1/
