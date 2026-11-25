@@ -16,7 +16,9 @@ outputs are aggregate tables.
 | Severity, literature operating point, baselines, alert trade-off, decision curves, ROC/PR/calibration points | `scripts/run_final_analyses.py`, `configs/final_analyses_v1.yaml` | `artifacts/reports/final_analyses_v1/` |
 | Exploratory data analysis (training split only) | `scripts/run_eda.py` | `artifacts/reports/eda_v1/` |
 | Sequence model (GRU) go / no-go, validation only | `scripts/run_sequence_model.py`, `configs/sequence_model_v1.yaml` | `artifacts/reports/sequence_model_v1/` |
+| Feature ablation (top-k inputs, one group dropped), validation only | `scripts/run_feature_ablation.py`, `configs/feature_ablation_v1.yaml` | `artifacts/reports/feature_ablation_v1/` |
 | CareVue <-> MetaVision transfer | `scripts/run_system_shift.py`, `configs/system_shift_v1.yaml` | `artifacts/reports/system_shift_v1/` |
+| Which inputs drive the transfer drift, train / validation only | `scripts/run_shift_drivers.py`, `configs/shift_drivers_v1.yaml` | `artifacts/reports/shift_drivers_v1/` |
 | Fairness by insurance and recorded ethnicity | `scripts/run_fairness.py`, `configs/fairness_structured_v1.yaml` | `artifacts/reports/fairness_structured_v1/` |
 | Local recalibration of a moved model | `scripts/run_recalibration.py`, `configs/system_recalibration_v1.yaml` | `artifacts/reports/system_recalibration_v1/` |
 | Alert-budget control (the method) | `scripts/run_alert_budget.py`, `configs/alert_budget_v1.yaml` | `artifacts/reports/alert_budget_v1/` |
@@ -87,6 +89,43 @@ CI above 0.
 - **Decision: stop.** The gain is below the prespecified 0.010 threshold, so the ensemble was not taken to the test
   split, and the locked system stays LightGBM. In the report this is a negative result with a positive side-finding:
   feature-engineered trees are close to the ceiling for these inputs, and the remaining headroom is small.
+
+## 1.4 Which inputs does the model need? Feature ablation (`feature_ablation_v1/`, `fig_feature_ablation`, validation only)
+
+The test split was not scored. Inputs were ranked by mean |TreeSHAP| of the locked model on 100,000 training rows per
+horizon. Each variant was retrained with the locked procedure (same folds, weights, hyperparameters, round selection
+and Platt calibration) and compared with the locked model on validation patients (paired patient bootstrap, 500
+draws). The rule fixed in advance: a smaller model shows "no meaningful loss" only if its AUROC is within 0.005 of the
+locked model at every horizon.
+
+| Inputs kept | Share of total importance | AUROC change 6 h | 12 h | 24 h (95% CI) | 48 h |
+|---|---:|---:|---:|---|---:|
+| Top 10 | 25% | -0.091 | -0.066 | -0.049 (-0.058 to -0.041) | -0.055 |
+| Top 20 | 38% | -0.024 | -0.021 | -0.023 (-0.030 to -0.016) | -0.028 |
+| Top 30 | 48% | -0.015 | -0.015 | -0.015 (-0.020 to -0.009) | -0.017 |
+| Top 50 | 63% | -0.006 | -0.007 | -0.009 (-0.013 to -0.004) | -0.012 |
+| Top 100 | 84% | -0.003 | -0.003 | -0.003 (-0.006 to 0.000) | -0.005 |
+
+| Input group dropped | Inputs left | AUROC change 6 h | 24 h (95% CI) |
+|---|---:|---:|---|
+| Creatinine | 233 | -0.033 | -0.029 (-0.038 to -0.021) |
+| Other laboratory values | 145 | -0.011 | -0.008 (-0.014 to -0.002) |
+| Vital signs | 165 | -0.008 | -0.009 (-0.013 to -0.004) |
+| Neurological and respiratory | 238 | -0.004 | -0.006 (-0.009 to -0.003) |
+| Fluids, medications, interventions | 228 | -0.007 | -0.005 (-0.008 to -0.002) |
+| Urine output | 238 | -0.008 | -0.003 (-0.007 to 0.000) |
+| Admission and demographic data | 230 | -0.001 | -0.002 (-0.005 to 0.001) |
+
+- **The model cannot be made much smaller without a loss.** The 100 most important inputs (41%) lose 0.003 AUROC at
+  6-24 h and 0.005 at 48 h, which just misses the prespecified 0.005 rule at 48 h. With 50 inputs the loss is
+  0.006-0.012; with 20 it is about 0.02-0.03. A 100-input model is a practical option for a site with fewer data feeds,
+  not a new compact model.
+- **The signal is spread across many inputs.** Importance shares: other laboratory values 41%, vital signs 18%,
+  creatinine 17%, admission data 7%, urine output 5%. The top 10 inputs carry only 25% of the total.
+- **The model is more than a creatinine trend.** Creatinine is the single most important group (-0.029 at 24 h when
+  removed), but without any creatinine input the model still reaches a validation AUROC of 0.780, against 0.70 for a
+  creatinine-only model. Every other group costs 0.002-0.011 when removed alone, because the remaining inputs partly
+  replace it.
 
 # Part 2. From prediction to alerts: what goes wrong?
 
@@ -164,6 +203,43 @@ subsampled, so size is matched). Each was tested on both systems' test patients.
 - **Implication for deployment**: a model moved to a new site or EHR version should be **recalibrated, and its alert
   threshold re-checked, on local data** before use. This matches the external-validation literature, where calibration
   drifts more than AUROC.
+
+### 2.4.1 Which inputs drive the drift? (`shift_drivers_v1/`, `fig_shift_drivers`, train / validation only)
+
+The test split was not loaded and nothing was retrained. The two system-shift-v1 models were reused. The drift is also
+present on validation patients (24 h observed / expected: CareVue model on MetaVision 1.136, MetaVision model on
+CareVue 0.924; each model on its own system 0.994 and 1.004). Two analyses:
+
+- **Input comparison.** Each input was compared between the systems on 300,000 training rows per system. Creatinine
+  inputs barely differ (mean absolute standardized difference 0.04). The largest differences are in how data were
+  charted: weight was missing in 15.3% of CareVue rows against 0.5% of MetaVision rows, so urine output per kg was
+  missing in 19.8% against 6.6%; lactate was missing in 45% against 29%; the median time since the last pH was 6.0 h
+  against 8.4 h; temperature was charted 6 times per 24 h against 5. Weighted by importance, most of the
+  largest differences are in charting (timing, counts, missingness); measured values such as PTT and bicarbonate
+  shift less (standardized differences 0.13 and 0.08).
+- **Calibration split by input group.** The moved model's TreeSHAP contributions were summed per input group, and on
+  the new system's validation patients each group (and the baseline risk) was refitted with one coefficient. Then only
+  one part was corrected at a time, to see which single correction brings observed / expected back to 1.
+
+| Moved model (24 h) | O/E before | Best single correction | O/E after it | Creatinine coefficient (95% CI) |
+|---|---:|---|---:|---|
+| CareVue model on MetaVision | 1.136 | baseline risk only (intercept +0.19, 95% CI 0.03 to 0.32) | 0.987 | 1.05 (0.90 to 1.24) |
+| MetaVision model on CareVue | 0.924 | other laboratory values only (coefficient 0.66, 0.44 to 0.82) | 1.007 | 0.98 (0.84 to 1.13) |
+
+- **Creatinine evidence transfers.** Its coefficient is about 1 on both systems and for both models: a creatinine rise
+  means the same thing in CareVue and MetaVision.
+- **Under-prediction on MetaVision is a baseline change.** No single input group explains it; one baseline shift
+  (MetaVision patients have more AKI at the same inputs) brings O/E to 0.99. This is exactly what Platt recalibration
+  on local patients corrects (section 3.1).
+- **Over-prediction on CareVue comes from the other laboratory values.** The MetaVision model's laboratory
+  contributions push CareVue risks up (mean +0.085 logit, against +0.020 on MetaVision), and weighting them down alone
+  brings O/E to 1.01. The same laboratory values (not their measurement timing, which is a separate group) carry
+  less AKI risk in CareVue than the MetaVision model assumes; era, case mix or laboratory methods could cause this,
+  and these data cannot tell which.
+- **Limits.** The per-group coefficients are not exactly 1 even on the model's own system (for small groups the 95%
+  CIs are wide), because TreeSHAP groups are correlated. Only the large, consistent effects above are interpreted.
+- **Implication**: when moving the model, check the laboratory inputs and the charting (timing, missingness, weight
+  for urine per kg) first; creatinine inputs carry the same evidence across systems.
 
 ## 2.5 What differs between patient groups? Fairness by insurance and recorded ethnicity (`fairness_structured_v1/`, `fig_fairness`)
 
@@ -300,5 +376,6 @@ None of the fixes meets the adoption rule, so there is no further test evaluatio
 
 `fig_pipeline` (system overview), `fig_cohort_flow`, `fig_eda`, `fig_missingness`, `fig_roc_pr`, `fig_calibration`,
 `fig_alert_tradeoff`, `fig_decision_curve`, `fig_severity`, `fig_shap`, `fig_patient_example` (synthetic demo
-patient), `fig_subgroups`, `fig_retrain_sensitivity`, `fig_system_shift`, `fig_recalibration`, `fig_fairness`, `fig_alert_budget`. Each is a PDF (vector, for LaTeX) and a
+patient), `fig_subgroups`, `fig_retrain_sensitivity`, `fig_feature_ablation`, `fig_system_shift`, `fig_shift_drivers`,
+`fig_recalibration`, `fig_fairness`, `fig_alert_budget`. Each is a PDF (vector, for LaTeX) and a
 300 dpi PNG.

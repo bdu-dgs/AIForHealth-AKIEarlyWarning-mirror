@@ -70,6 +70,8 @@ report.
 | 13b | GRU go / no-go on validation | `python scripts/run_sequence_model.py` | `artifacts/reports/sequence_model_v1/` | ~11 min |
 | 13c | Alert-budget control (group recalibration, certified threshold, parity) | `python scripts/run_alert_budget.py` | `artifacts/reports/alert_budget_v1/` | ~4 min |
 | 13d | Validation-only fixes for the alert-budget limitations | `python scripts/run_alert_budget_dev.py` | `artifacts/reports/alert_budget_v2_dev/` | ~20 min |
+| 13e | Feature ablation on validation (top-k inputs, one group dropped) | `python scripts/run_feature_ablation.py` | `artifacts/reports/feature_ablation_v1/` | ~2 h |
+| 13f | Which inputs drive the CareVue <-> MetaVision drift (needs step 11) | `python scripts/run_shift_drivers.py` | `artifacts/reports/shift_drivers_v1/` | ~8 min |
 | 14 | All report figures | `python scripts/make_report_figures.py` | `artifacts/reports/figures/*.pdf, *.png` | ~1 min |
 
 `pipeline/06_test_evaluation_summary.ipynb` summarises steps 7-8. `pipeline/07_results_prediction.ipynb` (Part 1) and

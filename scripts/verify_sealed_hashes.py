@@ -40,6 +40,11 @@ RECORD_INPUTS = {
     "artifacts/reports/fairness_structured_v1/prespec.json":
         {"config": "configs/fairness_structured_v1.yaml", "evaluation_config": "configs/evaluation_test_v1.yaml",
          "policy": "artifacts/policy/policy_v3.json"},
+    "artifacts/reports/feature_ablation_v1/prespec.json":
+        {"config": "configs/feature_ablation_v1.yaml"},
+    "artifacts/reports/shift_drivers_v1/prespec.json":
+        {"config": "configs/shift_drivers_v1.yaml",
+         "system_shift_prespec": "artifacts/reports/system_shift_v1/prespec.json"},
 }
 
 

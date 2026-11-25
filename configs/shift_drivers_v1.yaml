@@ -1,0 +1,35 @@
+# Which inputs make a moved model over- or under-estimate risk? Follow-up to system-shift-v1, on TRAINING and
+# VALIDATION patients only; the test split is not loaded. Written before anything is computed. Nothing is retrained:
+# the frozen system-shift-v1 heads (one trained on CareVue, one on MetaVision patients) are reused.
+version: shift-drivers-v1
+system_shift_run: {run_id: aki_ml_v1_28e0b1fb83, study: system-shift-v1, variants: {carevue: train_carevue, metavision: train_metavision}}
+horizons: [6, 24]                 # 6 h relies most on measurement-process inputs; 24 h is the alerting horizon
+components:                       # every input belongs to exactly one component; first matching rule wins
+  measurement_process: {name_patterns: ["_hours_since_last", "_count_"]}   # how recently / how often measured
+  creatinine: {groups: [creatinine]}
+  other_laboratory: {groups: [laboratory]}
+  vital_signs: {groups: [vital_signs]}
+  urine_output: {groups: [urine_output]}
+  fluids_medications_interventions: {groups: [fluids_medications, interventions]}
+  demographics_admission: {groups: [demographics_admission]}
+  neurological_respiratory: {groups: [neurological, respiratory]}
+  time_in_icu: {groups: [time]}
+part_A_input_shift:
+  rows: training patients of each system (seeded sample of 300000 rows per system)
+  per_feature: [missing fraction per system, median per system, standardized mean difference of observed values]
+  ranking: absolute standardized difference x the feature's importance share (mean |TreeSHAP| of the source model)
+part_B_component_recalibration:
+  rows: validation patients, eligible hours 1-72, of the TARGET system (model moved) and of the SOURCE system (reference)
+  method: >-
+    TreeSHAP contributions of the source model are summed per component and put on the calibrated logit scale
+    (Platt slope x contribution). On each system's validation rows an unpenalised logistic regression
+    y ~ intercept + sum_c beta_c * component_c is fitted. beta_c = 1 means the component carries the same evidence
+    in that system as in training; beta_c > 1 means the model under-weights it there, < 1 over-weights it; the
+    intercept captures a baseline risk change that no input explains.
+  attribution: >-
+    observed / expected on the target rows after correcting ONE component only (its contribution multiplied by its
+    fitted beta, everything else unchanged), next to the uncorrected O/E and the O/E after the full correction; a
+    component whose correction alone moves O/E most of the way to 1 is the main driver of the miscalibration
+  bootstrap: {unit: patient, resamples: 200}
+seed: 20261126
+outputs: artifacts/reports/shift_drivers_v1   # aggregate only

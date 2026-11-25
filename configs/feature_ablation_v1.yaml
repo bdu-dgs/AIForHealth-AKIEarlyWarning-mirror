@@ -1,0 +1,39 @@
+# Feature ablation of the locked LightGBM no_dc model, on VALIDATION patients only. The test split is not scored.
+# Written before any variant is trained. Questions: (1) how many of the 246 inputs does the model need (top-k by
+# importance), and (2) which kind of input carries the signal (drop one feature group at a time).
+# The locked system (model, policy v3) is not changed by this study.
+version: feature-ablation-v1
+reference: {run_id: aki_ml_v1_28e0b1fb83, family: lightgbm, feature_set: no_dc}   # the locked model
+procedure: same as configs/robustness_retrain_v1.yaml (notebook-02 folds, weights, per-horizon hyperparameters,
+  round selection on held-out log-loss, final refit on all training patients, Platt on training out-of-fold scores)
+importance:                     # ranking for the top-k variants, computed on TRAINING patients only
+  model: locked LightGBM no_dc heads
+  method: mean absolute TreeSHAP contribution (LightGBM pred_contrib) on a seeded sample of eligible training rows
+  sample_rows_per_horizon: 100000
+  combine: share of total per horizon, averaged over the four horizons
+feature_source: stored notebook-01 snapshot features (legacy_prefix_v1, the engine the weights were trained on)
+evaluation_splits: [validation]
+horizons: [6, 12, 24, 48]
+monitoring_hours: [1, 72]
+metrics: [auroc, auprc, brier, calibration_slope, observed_over_expected]
+comparison: {against: reference (locked model), metric: [auroc], split: validation, bootstrap: {unit: patient, resamples: 500}}
+seed: 20261125
+variants:
+  - {name: top_10, top_k: 10}
+  - {name: top_20, top_k: 20}
+  - {name: top_30, top_k: 30}
+  - {name: top_50, top_k: 50}
+  - {name: top_100, top_k: 100}
+  # One group dropped at a time (groups of the notebook-01 feature dictionary; "time" = hours since ICU admission is kept)
+  - {name: drop_creatinine, drop_groups: [creatinine]}
+  - {name: drop_laboratory_other, drop_groups: [laboratory]}
+  - {name: drop_vital_signs, drop_groups: [vital_signs]}
+  - {name: drop_urine_output, drop_groups: [urine_output]}
+  - {name: drop_fluids_medications_interventions, drop_groups: [fluids_medications, interventions]}
+  - {name: drop_demographics_admission, drop_groups: [demographics_admission]}
+  - {name: drop_neurological_respiratory, drop_groups: [neurological, respiratory]}
+decision_note: >-
+  A compact model is reported as "no meaningful loss" if its validation AUROC is within 0.005 of the locked model at
+  every horizon. This is a development finding; no compact model replaces the locked system and none is test-scored.
+fit_sample_rows: 300000
+outputs: artifacts/reports/feature_ablation_v1   # aggregate only; fitted variant heads stay local under artifacts/models

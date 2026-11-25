@@ -47,7 +47,8 @@ class Figures:
         r = self.root / "artifacts" / "reports"
         self.dirs = {"eda": r / "eda_v1", "test": r / "test_v1", "final": r / "final_analyses_v1",
                      "retrain": r / "robustness_retrain_v1", "shift": r / "system_shift_v1",
-                     "fair": r / "fairness_structured_v1", "recal": r / "system_recalibration_v1"}
+                     "fair": r / "fairness_structured_v1", "recal": r / "system_recalibration_v1",
+                     "ablation": r / "feature_ablation_v1", "drivers": r / "shift_drivers_v1"}
         self.demo = self.root / "dashboard" / "web" / "public" / "static-demo" / "demo.json"
         self.out = r / "figures"
         self.out.mkdir(parents=True, exist_ok=True)
@@ -547,11 +548,76 @@ class Figures:
         fig.legend(h, l, loc="lower center", ncol=3, bbox_to_anchor=(0.72, -0.1), fontsize=6)
         self.save(fig, "fig_alert_budget")
 
+    # -------------------------------------------------------------------------------------------- feature ablation
+    def feature_ablation(self):
+        d = self.csv("ablation", "validation_differences.csv")
+        fig, axes = plt.subplots(1, 2, figsize=(WIDTH, 2.4), gridspec_kw={"width_ratios": [1, 1.15]})
+        ax = axes[0]
+        top = d[d["variant"].str.startswith("top_")]
+        for h in [6, 12, 24, 48]:
+            t = top[top["horizon_h"] == h].sort_values("n_inputs")
+            x = list(t["n_inputs"]) + [246]
+            y = list(t["auroc_difference"]) + [0.0]
+            ax.plot(x, y, marker="o", ms=3, color=HORIZON_COLOR[h], lw=1.2, label=f"{h} h")
+        ax.axhspan(-0.005, 0.005, color=GRID, alpha=.6, lw=0)
+        ax.set_xscale("log")
+        ax.set_xticks([10, 20, 30, 50, 100, 246], ["10", "20", "30", "50", "100", "246"])
+        ax.minorticks_off()
+        ax.set(title="a  Keep the k most important inputs", xlabel="inputs kept (log scale)",
+               ylabel="AUROC change vs locked (validation)")
+        ax.legend(loc="lower right", ncol=2)
+        ax = axes[1]
+        names = {"drop_creatinine": "creatinine", "drop_laboratory_other": "other laboratory",
+                 "drop_vital_signs": "vital signs", "drop_urine_output": "urine output",
+                 "drop_fluids_medications_interventions": "fluids, drugs, procedures",
+                 "drop_neurological_respiratory": "neuro / respiratory", "drop_demographics_admission": "admission data"}
+        g = d[(d["horizon_h"] == 24) & d["variant"].isin(list(names))].set_index("variant").reindex(list(names))
+        y = np.arange(len(g))[::-1]
+        ax.errorbar(g["auroc_difference"], y, xerr=[g["auroc_difference"] - g["ci_low"], g["ci_high"] - g["auroc_difference"]],
+                    fmt="o", ms=3.2, color=HORIZON_COLOR[24], ecolor=HORIZON_COLOR[24], elinewidth=.9)
+        ax.axvline(0, color=INK2, lw=.8)
+        ax.set_yticks(y, [names[v] for v in g.index], fontsize=6.5)
+        ax.set(title="b  Drop one input group (24 h)", xlabel="AUROC change vs locked (validation)")
+        ax.grid(axis="y", visible=False)
+        fig.tight_layout(w_pad=1.0)
+        self.save(fig, "fig_feature_ablation")
+
+    # -------------------------------------------------------------------------------------------- shift drivers
+    def shift_drivers(self):
+        o = self.csv("drivers", "component_observed_over_expected.csv")
+        o = o[o["role"].str.startswith("target") & (o["horizon_h"] == 24)]
+        nice = {"uncorrected": "no correction", "intercept_only": "baseline risk only",
+                "only_creatinine": "creatinine", "only_other_laboratory": "other laboratory",
+                "only_measurement_process": "measurement timing", "only_vital_signs": "vital signs",
+                "only_urine_output": "urine output", "only_fluids_medications_interventions": "fluids, drugs, procedures",
+                "only_demographics_admission": "admission data", "only_neurological_respiratory": "neuro / respiratory",
+                "only_time_in_icu": "time in ICU"}
+        panels = [("trained_on_carevue", "a  CareVue model \u2192 MetaVision"), ("trained_on_metavision", "b  MetaVision model \u2192 CareVue")]
+        fig, axes = plt.subplots(1, 2, figsize=(WIDTH, 2.6), sharey=True)
+        order = list(nice)
+        y = np.arange(len(order))[::-1]
+        for ax, (model, title) in zip(axes, panels):
+            t = o[o["model"] == model].set_index("correction").reindex(order)
+            colors = [REFERENCE_GRAY if k == "uncorrected" else SERIES[0] for k in order]
+            ax.barh(y, t["observed_over_expected"] - 1, left=1, color=colors, height=.65)
+            ax.axvline(1, color=INK2, lw=.9)
+            ax.set_title(title, fontsize=8)
+            ax.grid(axis="y", visible=False)
+        axes[0].set_yticks(y, [nice[k] for k in order], fontsize=6.5)
+        lo = min(ax.get_xlim()[0] for ax in axes)
+        hi = max(ax.get_xlim()[1] for ax in axes)
+        for ax in axes:
+            ax.set_xlim(lo, hi)
+        fig.supxlabel("observed / expected AKI after correcting one part only (24 h, validation)", fontsize=8)
+        fig.tight_layout(w_pad=1.2)
+        self.save(fig, "fig_shift_drivers")
+
     # -------------------------------------------------------------------------------------------- run
     def run(self):
         for f in [self.pipeline, self.cohort_flow, self.eda, self.missingness, self.roc_pr, self.calibration, self.tradeoff,
                   self.decision_curve, self.severity, self.shap, self.patient_example, self.subgroups, self.retrain,
-                  self.system_shift, self.fairness, self.recalibration, self.alert_budget]:
+                  self.system_shift, self.fairness, self.recalibration, self.alert_budget, self.feature_ablation,
+                  self.shift_drivers]:
             try:
                 f()
             except FileNotFoundError as e:

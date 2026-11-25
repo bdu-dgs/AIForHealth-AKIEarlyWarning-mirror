@@ -9,6 +9,8 @@
 #   artifacts/reports/sequence_model_v1/prespec.json                              (GRU go / no-go, validation)
 #   artifacts/reports/alert_budget_v1/prespec.json                                (alert-budget control)
 #   artifacts/reports/alert_budget_v2_dev/prespec.json                            (validation-only fixes)
+#   artifacts/reports/feature_ablation_v1/prespec.json                            (feature ablation, validation)
+#   artifacts/reports/shift_drivers_v1/prespec.json                               (system-shift drivers, train/validation)
 #   ../Cleaned/dataset_manifest.json                                              (configs/default.yaml)
 # Re-running a study checks these hashes and refuses changed files. The hashes were taken on the line endings below
 # (Windows checkouts for most, LF for files created later), so every checkout on any OS reproduces those bytes.
@@ -32,12 +34,16 @@ src/aki_report/recalibration.py     text eol=lf
 src/aki_report/sequence.py          text eol=lf
 src/aki_report/budget.py            text eol=lf
 src/aki_report/budget_dev.py        text eol=crlf
+src/aki_report/ablation.py          text eol=lf
+src/aki_report/shift_drivers.py     text eol=lf
 
 configs/default.yaml                text eol=crlf
 configs/ml.yaml                     text eol=crlf
 configs/alert_policy_v3.yaml        text eol=crlf
 configs/evaluation_test_v1.yaml     text eol=lf
 configs/robustness_retrain_v1.yaml  text eol=lf
+configs/feature_ablation_v1.yaml    text eol=lf
+configs/shift_drivers_v1.yaml       text eol=lf
 configs/final_analyses_v1.yaml      text eol=lf
 configs/system_shift_v1.yaml        text eol=lf
 configs/fairness_structured_v1.yaml text eol=lf
