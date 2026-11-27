@@ -6,7 +6,8 @@ still ranks patients correctly, but its probabilities drift, and a fixed alert t
 burden and the share of AKI events caught. We show this on MIMIC-III and give an alerting method that guarantees a
 stated false-alert budget using local calibration data.
 
-The analyses below follow that story in three parts. All of them use the locked model; the test split had already been
+The analyses below follow that story in three parts, which are the three steps of the main README: Part 1 = Step 1
+(build the model to its ceiling), Part 2 = Step 2 (move it and see what breaks), Part 3 = Step 3 (repair the alerts). All of them use the locked model; the test split had already been
 opened once (test-evaluation-v1), so everything here that uses test data is secondary and prespecified. Nothing here
 chose or tuned the model. Each study froze its configuration and code hashes (`prespec.json`) before it ran. All
 outputs are aggregate tables.

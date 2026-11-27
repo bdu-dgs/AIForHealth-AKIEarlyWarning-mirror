@@ -2,22 +2,22 @@
 
 Command-line entry points, run from the repository root with the research environment (`python scripts/<name>.py`).
 Website scripts use the website's `.venv`. Scripts stay in one folder because tests and the website import some of
-them as the `scripts` package. They are grouped below by the part of the project they serve.
+them as the `scripts` package. They are grouped below by the step of the project they serve (see the main README).
 
 | Part | Script | Purpose |
 |---|---|---|
-| 1. Prediction | `run_retrain_robustness.py` | Retraining sensitivity analyses (feature windows, missing values) |
+| 1. Build the model | `run_retrain_robustness.py` | Retraining sensitivity analyses (feature windows, missing values) |
 | | `run_eda.py` | Exploratory data analysis on the training split |
 | | `run_sequence_model.py` | GRU sequence model against LightGBM, validation only (go / no-go) |
 | | `run_feature_ablation.py` | Which inputs the model needs: top-k inputs and one group dropped, validation only |
 | 1-2. Locked evaluation | `evaluate_test.py` | The one locked test evaluation of model and alert policy (`configs/evaluation_test_v1.yaml`) |
 | | `run_final_analyses.py` | Baselines, severity, literature operating point, alert trade-off, decision curves |
-| 2. From prediction to alerts | `rescore_validation_feature_v2.py` | Rescore validation with the batch-independent feature engine (locked weights) |
+| 2. Move it | `rescore_validation_feature_v2.py` | Rescore validation with the batch-independent feature engine (locked weights) |
 | | `evaluate_alert_policy.py`, `summarize_alert_policy.py` | Alert-policy study used by notebook 05, and its aggregate report |
 | | `run_system_shift.py` | Train on one MIMIC charting system, test on the other: ranking holds, probabilities drift |
 | | `run_shift_drivers.py` | Which input groups cause that drift (train / validation only) |
 | | `run_fairness.py` | Performance and alerts by insurance and recorded ethnicity |
-| 3. Reliable alerting | `run_recalibration.py` | Local recalibration of a moved model (needs `run_system_shift.py`) |
+| 3. Repair the alerts | `run_recalibration.py` | Local recalibration of a moved model (needs `run_system_shift.py`) |
 | | `run_alert_budget.py` | **Alert-budget control**: group recalibration, budget-certified threshold, detection parity |
 | | `run_alert_budget_dev.py` | Validation-only check of fixes for the method's limitations |
 | Figures and integrity | `make_report_figures.py` | Draw every report figure from the aggregate tables |
