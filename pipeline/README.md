@@ -1,12 +1,12 @@
 # Pipeline notebooks
 
-The notebooks follow the project's three steps: **build the model to its ceiling; move it to another record system and
-see what breaks; repair the alerts with local data.** Steps 1-3 are Parts 1-3 in `docs/FINAL-ANALYSES.md`. The
+The notebooks follow the project's three steps: **build a strong baseline; move it to another record system and see
+what breaks and why; repair the alerts with local data.** Steps 1-3 are Parts 1-3 in `docs/FINAL-ANALYSES.md`. The
 notebooks are numbered in the order the work was run.
 Each reads the previous outputs from disk (Parquet, joblib, JSON); nothing is passed in memory. Settings are in
 `configs/`, shared code in `src/`, and long computations run as scripts (see [INSTALL.md](../INSTALL.md)).
 
-## Step 1. Build the model to its ceiling: is a better model the answer?
+## Step 1. Build a strong baseline: how good can an AKI model get on this data?
 
 | # | Notebook | What it does | Writes |
 |---|---|---|---|
@@ -15,7 +15,7 @@ Each reads the previous outputs from disk (Parquet, joblib, JSON); nothing is pa
 | 04 | `04_stability_analysis.ipynb` | Calibration by ICU-time segment, TreeSHAP stability, feature shift, risk volatility and horizon monotonicity on validation. | `artifacts/handoff/jiaju/` |
 | 07 | `07_results_prediction.ipynb` | **Results, Step 1** (read-only): cohort and EDA, test discrimination and calibration against baselines, the GRU headroom check, the feature ablation (top-k inputs, one group dropped), prediction drivers and robustness. | - |
 
-## Step 2. Move it and see what breaks
+## Step 2. Move it and see what breaks, and why
 
 | # | Notebook | What it does | Writes |
 |---|---|---|---|

@@ -7,7 +7,7 @@ burden and the share of AKI events caught. We show this on MIMIC-III and give an
 stated false-alert budget using local calibration data.
 
 The analyses below follow that story in three parts, which are the three steps of the main README: Part 1 = Step 1
-(build the model to its ceiling), Part 2 = Step 2 (move it and see what breaks), Part 3 = Step 3 (repair the alerts). All of them use the locked model; the test split had already been
+(build a strong baseline), Part 2 = Step 2 (move it and see what breaks), Part 3 = Step 3 (repair the alerts). All of them use the locked model; the test split had already been
 opened once (test-evaluation-v1), so everything here that uses test data is secondary and prespecified. Nothing here
 chose or tuned the model. Each study froze its configuration and code hashes (`prespec.json`) before it ran. All
 outputs are aggregate tables.
@@ -31,7 +31,7 @@ environment (`requirements-research.txt`, with xgboost), not the website's `.ven
 
 # Part 1. Prediction: how good can AKI risk prediction get?
 
-Establishes that the risk model is accurate, calibrated and close to its ceiling, so better alerting has to come from somewhere other than a better model.
+Establishes a strong baseline: the risk model is accurate and calibrated, and with creatinine-defined AKI and this training set it is close to its ceiling (a sequence model, other feature statistics and fewer inputs give no meaningful gain). Part 2 then moves this baseline to another record system.
 
 ## 1.1 What the data look like: exploratory analysis (training split only, `eda_v1/`, `fig_eda`, `fig_missingness`, `fig_cohort_flow`)
 

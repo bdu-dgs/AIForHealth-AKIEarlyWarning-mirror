@@ -18,15 +18,16 @@ control of training (retraining on one record system, calibrating with out-of-fo
 
 | Step | Question | What we did | What we found |
 |---|---|---|---|
-| **1. Build the model to its ceiling** | Is a better model the answer? | One adult ICU stay per patient (earliest; at least 7 h of follow-up): **32,907 patients**. A snapshot every ICU hour 1-72 with **246 features** from the past only, and four answers: AKI within **6/12/24/48 h**. Logistic regression, random forest, LightGBM and XGBoost, one model per horizon (20 models). Ceiling checks: a GRU sequence model, retraining with other feature windows and missing-value handling, and an input ablation | LightGBM is best: test AUROC 0.866 / 0.841 / 0.817 / 0.792, observed / expected 0.98, about 0.11 above a creatinine-only model, in the range of published models. GRU + LightGBM gains only 0.009; other feature windows change AUROC by at most 0.003; the top 100 inputs lose 0.003-0.005, and without creatinine the model still reaches 0.780. **The model is near its ceiling** |
-| **2. Move it and see what breaks** | What fails after a move? | Alert rule **policy v3** (24 h risk >= 21% and 12 h risk >= 10.5%) chosen on validation for the model trained on both record systems. Then two models retrained on one system each (CareVue 2001-08, MetaVision 2008-12) and used on the other, with policy v3 applied unchanged. Which inputs cause the drift; the same check across insurance and ethnicity groups | In place, policy v3 warns before 71.7% of AKI events about 12 h ahead (40 of 41 later dialysis cases). After a move, **ranking holds** (AUROC -0.01 to -0.03) but **risks drift** (observed / expected 1.16 and 0.86), so the fixed threshold fails: false alerts exceed the budget (0.258 > 0.25) or detection falls from 75.8% to 67.4%. Creatinine transfers; the drift comes from a baseline-risk change and the other laboratory inputs, and charting differs most. Some patient groups are under-predicted and get fewer alerts |
+| **1. Build a strong baseline** | How good can an AKI model get on this data? | One adult ICU stay per patient (earliest; at least 7 h of follow-up): **32,907 patients**. A snapshot every ICU hour 1-72 with **246 features** from the past only, and four answers: AKI within **6/12/24/48 h**. Logistic regression, random forest, LightGBM and XGBoost, one model per horizon (20 models). Improvement checks: a GRU sequence model (another way to read the data), retraining with other feature statistics, and an input ablation (fewer inputs) | LightGBM is best: test AUROC 0.866 / 0.841 / 0.817 / 0.792, observed / expected 0.98, about 0.11 above a creatinine-only model, in the range of published models. GRU + LightGBM gains only 0.009; other feature windows change AUROC by at most 0.003; the top 100 inputs lose 0.003-0.005, and without creatinine the model still reaches 0.780. **With creatinine-defined AKI and this training set, the model is near its ceiling: a strong baseline** |
+| **2. Move it and see what breaks** | Does the baseline's alerting hold up on a new record system, and if not, why? | Alert rule **policy v3** (24 h risk >= 21% and 12 h risk >= 10.5%) chosen on validation for the model trained on both record systems. Then two models retrained on one system each (CareVue 2001-08, MetaVision 2008-12) and used on the other, with policy v3 applied unchanged. Which inputs cause the drift; the same check across insurance and ethnicity groups | In place, policy v3 warns before 71.7% of AKI events about 12 h ahead (40 of 41 later dialysis cases). After a move, **ranking holds** (AUROC -0.01 to -0.03) but **risks drift** (observed / expected 1.16 and 0.86), so the fixed threshold fails: false alerts exceed the budget (0.258 > 0.25) or detection falls from 75.8% to 67.4%, as the literature reports. Creatinine transfers; the drift comes from a baseline-risk change and the other laboratory inputs, and charting differs most. This is information only the new system's own data contain. Some patient groups are under-predicted and get fewer alerts |
 | **3. Repair the alerts** | Can the alert burden be kept? | On patients from the new system: **recalibrate** the risks (refit Platt calibration; 500-1,000 patients are enough), let the unit **set a false-alert budget**, then **certify the threshold**: test thresholds from strict to loose and keep the most sensitive one that stays within budget with 95% confidence (Learn-then-Test). Website panel to switch budgets | Without local data the budget holds 65% of the time; with local data **98-100%**, at a cost of -3 to +2 points of detection. Group-specific corrections were unstable (too few patients per group), so group calibration is monitored instead |
 
-**Main line.** We first push the model to its ceiling and show that a better model or more training cannot fix the
-problem. We then work on what clinicians actually see, the alerts: we find why they fail after a move (risk drift and
-a fixed threshold), repair the risks with local data, and choose a threshold that is guaranteed to stay within the
-false-alert budget the unit can accept. This moves a strong model to a new setting with little computation and gives
-alerts that can be trusted.
+**Main line.** We first build a strong baseline: with creatinine-defined AKI and without more training data, the model
+is near its ceiling, because a sequence model, other feature statistics and fewer inputs give no meaningful gain. We
+then move it between record systems. As the literature reports, its alerts fail, and the cause is not a loss of
+ranking but probability drift that breaks the fixed threshold. The drift comes from the new system's baseline risk and
+inputs, which only local data reveal. So we repair the output layer with a small local sample: we recalibrate the risks,
+then choose the most sensitive threshold that stays within the false-alert budget the unit sets.
 
 **Limits.** Both record systems come from one hospital, so this is not a fully external validation; only creatinine
 AKI is predicted (a urine-output AKI model would be separate); the small loss of ranking after a move needs local
@@ -47,11 +48,11 @@ Every number: [docs/FINAL-ANALYSES.md](docs/FINAL-ANALYSES.md) (its Parts 1-3 ar
 ```text
 MIMIC-III v1.4 (local, credentialed)
  |
- |  Step 1  Build the model to its ceiling
+ |  Step 1  Build a strong baseline
  |   01 dataset construction ---- cohort, KDIGO creatinine labels, hourly features from the past only
  |   02 model training ---------- LR, RF, LightGBM (locked), XGBoost; one model per horizon; Platt calibration
  |   04 stability analysis ------ calibration, SHAP and risk stability across ICU time (validation)
- |   07 results ----------------- baselines, calibration, GRU, retraining, feature ablation
+ |   07 results ----------------- baselines, calibration, improvement checks (GRU, retraining, ablation)
  |
  |  Step 2  Move it and see what breaks
  |   03 first alert threshold --- Demo I rule
